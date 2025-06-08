@@ -688,6 +688,11 @@ public final class LuaJavaAPI {
                 waitOverwrite.clear();
 
                 for (int i = 0; i < paramsCount; i++) {
+                    if (currentPriority >= priority) {
+                        currentPriority = -1;
+                        break;
+                    }
+
                     overwrite.clear();
                     int p = isConvertableType(objs[i], parameters[i], overwrite);
                     if (p == -1) {
@@ -705,8 +710,8 @@ public final class LuaJavaAPI {
                     priority = currentPriority;
                     overrideParams.clear();
                     overrideParams.putAll(waitOverwrite);
+                    if (currentPriority == 0) break;
                 }
-                if (currentPriority == 0) break;
             }
             c = c.getSuperclass();
         }

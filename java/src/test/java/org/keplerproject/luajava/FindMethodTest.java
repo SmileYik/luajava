@@ -114,4 +114,20 @@ class A {
     public static void a(Object[] array) {
         System.out.println("A Object[]: " + Arrays.toString(array));
     }
+
+    public static void b(Double a, Double b, Double c, Double d, Double e, Object o) {
+        System.out.println("5double + 1object: " + a + " " + b + " " + c + " " + d + " " + e + " " + o);
+    }
+
+    public static void b(Double a, Double b, Double c, Double d, Double e, float f) {
+        System.out.println("5Double + 1float: " + a + " " + b + " " + c + " " + d + " " + e + " " + f);
+    }
+
+    public static void b(double a, double b, double c, double d, double e, double f, double g, double h, double i, Object o) {
+        System.out.println("9double + 1object: " + a + " " + b + " " + c + " " + d + " " + e + " " + o);
+    }
+
+    public static void b(Double a, Double b, Double c, Double d, Double e, Double f, Double g, Double h, Double i, float j) {
+        System.out.println("9Double + 1float: " + a + " " + b + " " + c + " " + d + " " + e + " " + f);
+    }
 }
