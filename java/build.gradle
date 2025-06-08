@@ -1,0 +1,42 @@
+plugins {
+    id 'java'
+}
+
+def baseName = 'luajava'
+group = 'org.keplerproject'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+    jvmArgs = ["--add-opens=java.base/java.util=ALL-UNNAMED"]
+}
+
+jar {
+    archiveBaseName = baseName
+    from rootProject.layout.projectDirectory.file("License.txt")
+    doLast {
+        copy {
+            from layout.buildDirectory.file("libs/${baseName}-${version}.jar")
+            into rootProject.layout.buildDirectory.dir("outputs")
+        }
+    }
+}
+
+classes {
+    doLast {
+        copy {
+            from project.layout.buildDirectory.file("generated/sources/headers/java/main/org_keplerproject_luajava_LuaState.h")
+            into project.layout.buildDirectory.dir("include")
+            rename 'org_keplerproject_luajava_LuaState.h', 'luajava.h'
+        }
+    }
+}
