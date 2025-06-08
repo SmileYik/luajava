@@ -53,7 +53,11 @@ public class LuaArray extends LuaTable {
 
     @Override
     public String toString() {
-        return "[Lua Array]";
+        try {
+            return asDeepList(Object.class).toString();
+        } catch (Exception e) {
+            return "[Lua Array]";
+        }
     }
 
     @Override
@@ -139,6 +143,50 @@ public class LuaArray extends LuaTable {
         List<Character> list = new ArrayList<>(len);
         forEachValue(String.class, it -> list.add(it.charAt(0)));
         return list;
+    }
+
+    /**
+     * for example: <code>{{1, 2, 3}, {}}</code> -> <code>[[1.0, 2.0, 3.0], []]</code>
+     * @param clazz
+     * @return
+     * @param <T>
+     * @throws Exception
+     */
+    public <T> List<T> asDeepList(Class<?> clazz) throws Exception {
+        if (clazz.isPrimitive()) {
+            throw new IllegalArgumentException("Primitive type is not supported");
+        } else if (clazz == Character.class) {
+            return asDeepCharacterList();
+        }
+        List<Object> list = new ArrayList<>(len);
+        forEachValue(v -> {
+            if (v instanceof LuaArray) {
+                try {
+                    list.add(((LuaArray) v).asDeepList(clazz));
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("LuaArray.asDeepList Error", e);
+                }
+            } else {
+                list.add(clazz.cast(v));
+            }
+        });
+        return (List<T>) list;
+    }
+
+    public <T> List<T> asDeepCharacterList() throws Exception {
+        List<Object> list = new ArrayList<>(len);
+        forEachValue(v -> {
+            if (v instanceof LuaArray) {
+                try {
+                    list.add(((LuaArray) v).asDeepCharacterList());
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            } else {
+                list.add(String.valueOf(v).charAt(0));
+            }
+        });
+        return (List<T>) list;
     }
 
     public Object[] asArray() throws Exception {

@@ -98,7 +98,9 @@ class LuaArrayTest {
                 "bools = {true, false, true, false}\n" +
                 "funcs = {function() end, function() end, function() end, function() end}\n" +
                 "tables = {{i = 0}, {}, {}, {}, {}, {}, {}, {}}\n" +
-                "chars = {'a', 'b', 'c', 'd'}";
+                "chars = {'a', 'b', 'c', 'd'}\n" +
+                "d2list = {{1, 2, 3}, {4, 5, 6}, {7}, {}, {8, 9}}\n" +
+                "d2list_str = {{'1'}, {'str'}}";
         LuaState L = LuaStateFactory.newLuaState();
         L.openLibs();
         int exp = L.LdoString(lua);
@@ -122,6 +124,19 @@ class LuaArrayTest {
 
         array = (LuaArray) L.getLuaObject("chars");
         assert Objects.equals(array.asList(Character.class), Arrays.asList('a', 'b', 'c', 'd')) : "as Character List Failed";
+
+        array = (LuaArray) L.getLuaObject("d2list");
+        assert Objects.equals(array.asDeepList(Double.class),
+                Arrays.asList(Arrays.asList(1d, 2d, 3d),
+                        Arrays.asList(4d, 5d, 6d),
+                        Arrays.asList(7d),
+                        Arrays.asList(),
+                        Arrays.asList(8d, 9d)));
+
+        array = (LuaArray) L.getLuaObject("d2list_str");
+        assert Objects.equals(array.asDeepList(String.class), Arrays.asList(
+                Arrays.asList("1"), Arrays.asList("str")
+        ));
 
         array = (LuaArray) L.getLuaObject("funcs");
         System.out.println(array.asList(LuaFunction.class));
