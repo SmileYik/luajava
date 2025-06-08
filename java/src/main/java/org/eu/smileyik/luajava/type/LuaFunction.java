@@ -1,13 +1,12 @@
 package org.eu.smileyik.luajava.type;
 
-import org.keplerproject.luajava.LuaException;
 import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaState;
 
 public class LuaFunction extends LuaObject {
     public static final String TYPE_NAME = LuaType.typeName(LuaType.FUNCTION);
 
-    public LuaFunction(LuaState L, int index) {
+    protected LuaFunction(LuaState L, int index) {
         super(L, index);
     }
 

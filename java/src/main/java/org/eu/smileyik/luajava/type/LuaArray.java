@@ -4,14 +4,50 @@ import org.keplerproject.luajava.LuaState;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class LuaArray extends LuaTable {
+    private interface ArrayTransform <T> extends Function<LuaArray, T> {
+        public static final ArrayTransform<Object> EMPTY = array -> null;
+        default T apply(LuaArray array) {
+            try {
+                return transform(array);
+            } catch (Exception t) {
+                return null;
+            }
+        }
 
-    public LuaArray(LuaState L, int index) {
+        T transform(LuaArray array) throws Exception;
+    }
+    private static final Map<Class<?>, ArrayTransform<Object>> UNBOXED_ARRAY_TRANSFORMERS = new HashMap<>() {
+        {
+            put(int[].class, LuaArray::toIntArray);
+            put(long[].class, LuaArray::toLongArray);
+            put(float[].class, LuaArray::toFloatArray);
+            put(boolean[].class, LuaArray::toBooleanArray);
+            put(char[].class, LuaArray::toCharArray);
+            put(short[].class, LuaArray::toShortArray);
+            put(byte[].class, LuaArray::toByteArray);
+            put(double[].class, LuaArray::toDoubleArray);
+        }
+    };
+
+    protected final int len;
+
+    /**
+     * create lua array.
+     * @param L      lua state
+     * @param index  index
+     * @param len    array length
+     */
+    protected LuaArray(LuaState L, int index, int len) {
         super(L, index);
+        this.len = len;
     }
 
     @Override
@@ -25,17 +61,11 @@ public class LuaArray extends LuaTable {
     }
 
     public int length() {
-        synchronized (L) {
-            push();
-            int i = L.objLen(-1);
-            L.pop(1);
-            return i;
-        }
+        return len;
     }
 
-    public byte[] toByteArray() throws Throwable {
+    public byte[] toByteArray() throws Exception {
         List<Number> list = asList(Number.class);
-        int len = list.size();
         byte[] bytes = new byte[len];
         for (int i = 0; i < len; i++) {
             Number number = list.get(i);
@@ -44,9 +74,8 @@ public class LuaArray extends LuaTable {
         return bytes;
     }
 
-    public short[] toShortArray() throws Throwable {
+    public short[] toShortArray() throws Exception {
         List<Number> list = asList(Number.class);
-        int len = list.size();
         short[] shorts = new short[len];
         for (int i = 0; i < len; i++) {
             Number number = list.get(i);
@@ -55,9 +84,8 @@ public class LuaArray extends LuaTable {
         return shorts;
     }
 
-    public int[] toIntArray() throws Throwable {
+    public int[] toIntArray() throws Exception {
         List<Number> list = asList(Number.class);
-        int len = list.size();
         int[] nums = new int[len];
         for (int i = 0; i < len; i++) {
             Number number = list.get(i);
@@ -66,9 +94,8 @@ public class LuaArray extends LuaTable {
         return nums;
     }
 
-    public long[] toLongArray() throws Throwable {
+    public long[] toLongArray() throws Exception {
         List<Number> list = asList(Number.class);
-        int len = list.size();
         long[] longs = new long[len];
         for (int i = 0; i < len; i++) {
             Number number = list.get(i);
@@ -77,9 +104,8 @@ public class LuaArray extends LuaTable {
         return longs;
     }
 
-    public float[] toFloatArray() throws Throwable {
+    public float[] toFloatArray() throws Exception {
         List<Number> list = asList(Number.class);
-        int len = list.size();
         float[] floats = new float[len];
         for (int i = 0; i < len; i++) {
             Number number = list.get(i);
@@ -88,9 +114,8 @@ public class LuaArray extends LuaTable {
         return floats;
     }
 
-    public boolean[] toBooleanArray() throws Throwable {
+    public boolean[] toBooleanArray() throws Exception {
         List<Boolean> list = asList(Boolean.class);
-        int len = list.size();
         boolean[] bool = new boolean[len];
         for (int i = 0; i < len; i++) {
             bool[i] = list.get(i);;
@@ -98,9 +123,8 @@ public class LuaArray extends LuaTable {
         return bool;
     }
 
-    public char[] toCharArray() throws Throwable {
+    public char[] toCharArray() throws Exception {
         List<Character> list = asList(Character.class);
-        int len = list.size();
         char[] chars = new char[len];
         for (int i = 0; i < len; i++) {
             chars[i] = list.get(i);
@@ -108,9 +132,8 @@ public class LuaArray extends LuaTable {
         return chars;
     }
 
-    public double[] toDoubleArray() throws Throwable {
+    public double[] toDoubleArray() throws Exception {
         List<Number> list = asList(Number.class);
-        int len = list.size();
         double[] doubles = new double[len];
         for (int i = 0; i < len; i++) {
             Number number = list.get(i);
@@ -119,27 +142,31 @@ public class LuaArray extends LuaTable {
         return doubles;
     }
 
-    public List<Object> asList() throws Throwable {
+    public List<Object> asList() throws Exception {
         return asList(Object.class);
     }
 
-    public <T> List<T> asList(Class<T> clazz) throws Throwable {
+    public <T> List<T> asList(Class<T> clazz) throws Exception {
         List<T> list = new ArrayList<>();
         forEachValue(clazz, list::add);
         return list;
     }
 
-    public Object[] asArray() throws Throwable {
+    public Object[] asArray() throws Exception {
         return asArray(Object.class);
     }
 
-    public <T> T[] asArray(Class<T> clazz) throws Throwable {
+    public <T> T[] asArray(Class<T> clazz) throws Exception {
         List<T> list = asList(clazz);
         T[] t = (T[]) Array.newInstance(clazz, 0);
         return list.toArray(t);
     }
 
-    public void forEachValue(Consumer<Object> consumer) throws Throwable {
+    public <T> T asPrimitiveArray(Class<T> tClass) {
+        return (T) UNBOXED_ARRAY_TRANSFORMERS.getOrDefault(tClass, ArrayTransform.EMPTY).apply(this);
+    }
+
+    public void forEachValue(Consumer<Object> consumer) throws Exception {
         forEachValue(Object.class, consumer);
     }
 
@@ -148,19 +175,18 @@ public class LuaArray extends LuaTable {
      * @param tClass   element type
      * @param consumer consumer
      * @param <T>      element type, Cannot be primitive type
-     * @throws Throwable any exception
+     * @throws Exception any exception
      */
-    public <T> void forEachValue(Class<T> tClass, Consumer<T> consumer) throws Throwable {
+    public <T> void forEachValue(Class<T> tClass, Consumer<T> consumer) throws Exception {
         synchronized (L) {
             push();
-            int len = L.objLen(-1);
             for (int i = 1; i <= len; i++) {
                 L.rawGetI(-1, i);
                 try {
                     Object javaObject = L.toJavaObject(-1);
                     consumer.accept(tClass.cast(javaObject));
-                } catch (Throwable e) {
-                    L.pop(2);
+                } catch (Exception e) {
+                    L.pop(1);
                     throw e;
                 } finally {
                     L.pop(1);
@@ -177,20 +203,19 @@ public class LuaArray extends LuaTable {
      * @param consumer consumer
      * @param <K> Always be <code>Integer</code>, Cannot be primitive type
      * @param <V> Value type, Cannot be primitive type
-     * @throws Throwable any exception.
+     * @throws Exception any exception.
      */
     @Override
-    public <K, V> void forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) throws Throwable {
+    public <K, V> void forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) throws Exception {
         synchronized (L) {
             push();
-            int len = L.objLen(-1);
             for (int i = 1; i <= len; i++) {
                 L.rawGetI(-1, i);
                 try {
                     Object javaObject = L.toJavaObject(-1);
                     consumer.accept(kClass.cast(i - 1), vClass.cast(javaObject));
-                } catch (Throwable e) {
-                    L.pop(2);
+                } catch (Exception e) {
+                    L.pop(1);
                     throw e;
                 } finally {
                     L.pop(1);
@@ -200,17 +225,17 @@ public class LuaArray extends LuaTable {
         }
     }
 
-    public <V> void forEach(Class<V> vClass, BiConsumer<Integer, V> consumer) throws Throwable {
+    public <V> void forEach(Class<V> vClass, BiConsumer<Integer, V> consumer) throws Exception {
         forEach(Integer.class, vClass, consumer);
     }
 
     /**
      * foreach table entry. it will stop if throws exception.
      * @param consumer consumer, the first type always be <code>Integer</code>
-     * @throws Throwable any exception
+     * @throws Exception any exception
      */
     @Override
-    public void forEach(BiConsumer<Object, Object> consumer) throws Throwable {
+    public void forEach(BiConsumer<Object, Object> consumer) throws Exception {
         forEach(Object.class, Object.class, consumer);
     }
 }
