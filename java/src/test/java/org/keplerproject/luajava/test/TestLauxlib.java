@@ -87,6 +87,7 @@ public class TestLauxlib {
     /**
      * Test the check functions.
      */
+    @Test
     public void testChecks() {
         LuaState L = LuaStateFactory.newLuaState();
         L.openLibs();
@@ -113,6 +114,7 @@ public class TestLauxlib {
     /**
      * Checks the metamethods and metatable functions.
      */
+    @Test
     public void testMeta() throws LuaException {
         LuaState L = LuaStateFactory.newLuaState();
         L.openLibs();
