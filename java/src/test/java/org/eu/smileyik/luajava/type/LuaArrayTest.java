@@ -23,7 +23,7 @@ class LuaArrayTest {
             throw new LuaException(L.toString(-1));
         }
         LuaObject luaObject = L.getLuaObject("map");
-
+        System.out.println(luaObject);
         assert luaObject instanceof LuaTable;
         assert !(luaObject instanceof LuaArray);
 
@@ -167,6 +167,8 @@ class LuaArrayTest {
         assert Arrays.equals(array.toDoubleArray(), new double[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
         assert Arrays.equals(array.toFloatArray(), new float[] {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f});
         assert Arrays.equals(array.toLongArray(), new long[] {1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L});
+        assert Arrays.equals(array.asPrimitiveArray(double[].class), new double[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
+        System.out.println("primitive array: " + Arrays.toString(array.asPrimitiveArray(double[].class)));
 
         array = (LuaArray) L.getLuaObject("bools");
         assert Arrays.equals(array.asArray(Boolean.class), new Boolean[]{true, false, true, false});
@@ -190,6 +192,23 @@ class LuaArrayTest {
         array = (LuaArray) L.getLuaObject("ass");
         System.out.println(Arrays.deepToString(array.asArray(A[].class)));
 
+        L.close();
+    }
+
+    @Test
+    public void luaToArrayTest() throws LuaException {
+        String lua = "array = {1, 'a', 2, 'b', 3, function() print('c') end}\n" +
+                "strs = {'1', '2', '3', '4', '5', '6', '7', '8', '9'}\n" +
+                "nums = {1, 2, 3, 4, 5, 6, 7, 8, 9}\n" +
+                "bools = {true, false, true, false}\n" +
+                "funcs = {function() end, function() end, function() end, function() end}\n" +
+                "tables = {{i = 0}, {}, {}, {}, {}, {}, {}, {}}\n print(luajava)";
+        LuaState L = LuaStateFactory.newLuaState();
+        L.openLibs();
+        int exp = L.LdoString(lua);
+        if (exp != 0) {
+            throw new LuaException(L.toString(-1));
+        }
         L.close();
     }
 

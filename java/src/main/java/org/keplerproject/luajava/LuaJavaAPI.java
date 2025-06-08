@@ -24,7 +24,13 @@
 
 package org.keplerproject.luajava;
 
+import org.eu.smileyik.luajava.type.LuaArray;
+import org.eu.smileyik.luajava.util.BoxedTypeHelper;
+import org.eu.smileyik.luajava.util.ParamRef;
+
 import java.lang.reflect.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -187,7 +193,7 @@ public final class LuaJavaAPI {
 
             Class<?> type = field.getType();
             Optional<Object> setObjRet = compareTypes(L, type, 3);
-            if (!setObjRet.isPresent()) {
+            if (setObjRet.isEmpty()) {
                 throw new LuaException("Invalid type.");
             }
             Object setObj = setObjRet.get();
@@ -555,98 +561,161 @@ public final class LuaJavaAPI {
             okType = false;
         }
 
-//        if (!okType) {
-//            throw new LuaException(String.format(
-//                    "Invalid Parameter: expected %s, got %s", parameter, LuaType.typeName(luaType)
-//            ));
-//        }
-
         return okType ? Optional.ofNullable(obj) : Optional.empty();
     }
 
-    private static Method findMethod(LuaState L, Class<?> clazz, String methodName, Object[] retObjs, int top) {
-        Class<?> c = clazz;
-        Object[] objs = new Object[top - 1];
-        int paramsCount = top - 1;
-        Method mached = null;
+    private static int isConvertableType(Object luaObj, Class<?> toType) {
+        return isConvertableType(luaObj, toType, null);
+    }
 
-        while (c != null) {
+    private static int doubleToNumberPriority(Class<?> clazz) {
+        clazz = BoxedTypeHelper.getBoxedType(clazz);
+        if (clazz == Double.class) {
+            return 3;
+        } else if (clazz == Float.class) {
+            return 4;
+        } else if (clazz == Long.class) {
+            return 5;
+        } else if (clazz == Integer.class) {
+            return 6;
+        } else if (clazz == Short.class) {
+            return 7;
+        } else if (clazz == Byte.class) {
+            return 8;
+        }
+        return 9;
+    }
+
+    /**
+     * Check lua object can be cast to target type or not.
+     * @param luaObj     lua object
+     * @param toType     target type
+     * @param overwrite  overwrite param. can be nullable.
+     * @return the priority, -1 means cannot cast to target type.
+     */
+    private static int isConvertableType(Object luaObj, Class<?> toType, ParamRef<Object> overwrite) {
+        // 如果lua类型为null, 那么仅有能转换为非基础类型
+        if (luaObj == null) {
+            return toType.isPrimitive() ? -1 : 0;
+        }
+
+        // 当 to 为 from 的超类时, 若两个类相同则返回优先级 0, 不等返回优先级 1;
+        Class<?> fromClass = luaObj.getClass();
+        if (toType.isAssignableFrom(fromClass)) {
+            if (toType == Object.class) {
+                // 对于 object 来说, 他的优先级最低
+                return 11;
+            }
+            return toType == fromClass ? 0 : 1;
+        }
+
+        // 获取装箱类型 去除可以直接自动转换的类型
+        Class<?> boxedFromClass = BoxedTypeHelper.getBoxedType(fromClass);
+        Class<?> boxedToClass = BoxedTypeHelper.getBoxedType(toType);
+        if (boxedToClass.isAssignableFrom(boxedFromClass)) {
+            return boxedFromClass == boxedToClass ? 1 : 2;
+        }
+
+        // 如果两个都是数字类型, 因为lua不分数字, 所以要转换.
+        // 因为能够直接互相转换的已经被去除了, 剩下的都是得相互转换的.
+        if (BoxedTypeHelper.isBoxedNumberType(boxedFromClass) &&
+                BoxedTypeHelper.isBoxedNumberType(boxedToClass)) {
+            // TODO 细分优先级
+            if (overwrite != null) {
+                overwrite.setParam(LuaState.convertLuaNumber(((Number) luaObj).doubleValue(), boxedToClass));
+            }
+            return doubleToNumberPriority(boxedToClass);
+        }
+
+        // 数组转换
+        if (toType.isArray() && luaObj instanceof LuaArray) {
+            Class<?> componentType = toType.getComponentType();
+
+            if (componentType.isPrimitive()) {
+                Object primitiveArray = ((LuaArray) luaObj).asPrimitiveArray(toType);
+                if (primitiveArray == null) {
+                    return -1;
+                } else if (overwrite != null) {
+                    overwrite.setParam(primitiveArray);
+                }
+                if (BoxedTypeHelper.isUnboxedNumberType(componentType)) {
+                    return doubleToNumberPriority(componentType);
+                } else {
+                    return 9;
+                }
+            } else {
+                try {
+                    Object[] array = ((LuaArray) luaObj).asArray(componentType);
+                    if (overwrite != null) {
+                        overwrite.setParam(array);
+                    }
+                } catch (Exception e) {
+                    return -1;
+                }
+                if (BoxedTypeHelper.isBoxedNumberType(componentType)) {
+                    return doubleToNumberPriority(componentType);
+                } else {
+                    return 9;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static Method findMethod(LuaState L, Class<?> clazz, String methodName, Object[] retObjs, int top) throws LuaException {
+        // Convert lua params to java params
+        int paramsCount = top - 1;
+        Object[] objs = new Object[paramsCount];
+        for (int i = 0; i < paramsCount; i++) {
+            objs[i] = L.toJavaObject(i + 2);
+        }
+
+        // find method
+        Class<?> c = clazz;
+        Method mached = null;
+        int priority = Integer.MAX_VALUE;
+        Map<Integer, Object> overrideParams = new HashMap<>();
+        ParamRef<Object> overwrite = ParamRef.wrapper();
+        Map<Integer, Object> waitOverwrite = new HashMap<>();
+        while (mached == null && c != null) {
             for (Method method : c.getDeclaredMethods()) {
                 if (!method.getName().equals(methodName) || method.getParameterCount() != paramsCount) {
                     continue;
                 }
-                mached = method;
+
+                int currentPriority = 0;
                 Class<?>[] parameters = method.getParameterTypes();
+                waitOverwrite.clear();
+
                 for (int i = 0; i < paramsCount; i++) {
-                    Class<?> paramType = parameters[i];
-                    Optional<Object> ret;
-                    try {
-                        ret = compareTypes(L, paramType, i + 2);
-                    } catch (LuaException e) {
-                        ret = Optional.empty();
-                    }
-                    if (ret.isPresent()) {
-                        objs[i] = ret.get();
-                    } else {
-                        mached = null;
+                    overwrite.clear();
+                    int p = isConvertableType(objs[i], parameters[i], overwrite);
+                    if (p == -1) {
+                        currentPriority = -1;
                         break;
                     }
-                }
-                if (mached != null) {
-                    System.arraycopy(objs, 0, retObjs, 0, objs.length);
-                    return method;
+                    currentPriority += p;
+                    if (!overwrite.isEmpty()) {
+                        waitOverwrite.put(i, overwrite.getParamAndClear());
+                    }
                 }
 
+                if (currentPriority != -1 && currentPriority < priority) {
+                    mached = method;
+                    priority = currentPriority;
+                    overrideParams.clear();
+                    overrideParams.putAll(waitOverwrite);
+                }
+                if (currentPriority == 0) break;
             }
             c = c.getSuperclass();
         }
-
-        return null;
-    }
-
-    private static Method getMethod(LuaState L, Class<?> clazz, String methodName, Object[] retObjs, int top) {
-        Object[] objs = new Object[top - 1];
-
-        Method[] methods = clazz.getMethods();
-        Method method = null;
-
-        // gets method and arguments
-        for (int i = 0; i < methods.length; i++) {
-            if (!methods[i].getName().equals(methodName))
-
-                continue;
-
-            Class<?>[] parameters = methods[i].getParameterTypes();
-            if (parameters.length != top - 1)
-                continue;
-
-            boolean okMethod = true;
-
-            for (int j = 0; j < parameters.length; j++) {
-                Optional<Object> ret;
-                try {
-                    ret = compareTypes(L, parameters[j], j + 2);
-                } catch (LuaException e) {
-                    ret = Optional.empty();
-                }
-                if (ret.isPresent()) {
-                    objs[j] = ret.get();
-                } else {
-                    okMethod = false;
-                    break;
-                }
-            }
-
-            if (okMethod) {
-                method = methods[i];
-                System.arraycopy(objs, 0, retObjs, 0, objs.length);
-
-                break;
-            }
-
+        if (mached != null) {
+            overrideParams.forEach((idx, obj) -> objs[idx] = obj);
+            System.arraycopy(objs, 0, retObjs, 0, objs.length);
+            return mached;
         }
-
-        return method;
+        return null;
     }
 }
  
