@@ -24,18 +24,19 @@ public class LuaArray extends LuaTable {
 
         T transform(LuaArray array) throws Exception;
     }
-    private static final Map<Class<?>, ArrayTransform<Object>> UNBOXED_ARRAY_TRANSFORMERS = new HashMap<>() {
-        {
-            put(int[].class, LuaArray::toIntArray);
-            put(long[].class, LuaArray::toLongArray);
-            put(float[].class, LuaArray::toFloatArray);
-            put(boolean[].class, LuaArray::toBooleanArray);
-            put(char[].class, LuaArray::toCharArray);
-            put(short[].class, LuaArray::toShortArray);
-            put(byte[].class, LuaArray::toByteArray);
-            put(double[].class, LuaArray::toDoubleArray);
-        }
-    };
+    private static final Map<Class<?>, ArrayTransform<Object>> UNBOXED_ARRAY_TRANSFORMERS;
+
+    static {
+        UNBOXED_ARRAY_TRANSFORMERS = new HashMap<>();
+        UNBOXED_ARRAY_TRANSFORMERS.put(int[].class, LuaArray::toIntArray);
+        UNBOXED_ARRAY_TRANSFORMERS.put(long[].class, LuaArray::toLongArray);
+        UNBOXED_ARRAY_TRANSFORMERS.put(float[].class, LuaArray::toFloatArray);
+        UNBOXED_ARRAY_TRANSFORMERS.put(boolean[].class, LuaArray::toBooleanArray);
+        UNBOXED_ARRAY_TRANSFORMERS.put(char[].class, LuaArray::toCharArray);
+        UNBOXED_ARRAY_TRANSFORMERS.put(short[].class, LuaArray::toShortArray);
+        UNBOXED_ARRAY_TRANSFORMERS.put(byte[].class, LuaArray::toByteArray);
+        UNBOXED_ARRAY_TRANSFORMERS.put(double[].class, LuaArray::toDoubleArray);
+    }
 
     protected final int len;
 
@@ -65,80 +66,50 @@ public class LuaArray extends LuaTable {
     }
 
     public byte[] toByteArray() throws Exception {
-        List<Number> list = asList(Number.class);
         byte[] bytes = new byte[len];
-        for (int i = 0; i < len; i++) {
-            Number number = list.get(i);
-            bytes[i] = number.byteValue();
-        }
+        forEach(Double.class, (idx, num) -> bytes[idx] = num.byteValue());
         return bytes;
     }
 
     public short[] toShortArray() throws Exception {
-        List<Number> list = asList(Number.class);
         short[] shorts = new short[len];
-        for (int i = 0; i < len; i++) {
-            Number number = list.get(i);
-            shorts[i] = number.shortValue();
-        }
+        forEach(Double.class, (idx, num) -> shorts[idx] = num.shortValue());
         return shorts;
     }
 
     public int[] toIntArray() throws Exception {
-        List<Number> list = asList(Number.class);
         int[] nums = new int[len];
-        for (int i = 0; i < len; i++) {
-            Number number = list.get(i);
-            nums[i] = number.intValue();
-        }
+        forEach(Double.class, (idx, num) -> nums[idx] = num.intValue());
         return nums;
     }
 
     public long[] toLongArray() throws Exception {
-        List<Number> list = asList(Number.class);
         long[] longs = new long[len];
-        for (int i = 0; i < len; i++) {
-            Number number = list.get(i);
-            longs[i] = number.longValue();
-        }
+        forEach(Double.class, (idx, num) -> longs[idx] = num.longValue());
         return longs;
     }
 
     public float[] toFloatArray() throws Exception {
-        List<Number> list = asList(Number.class);
         float[] floats = new float[len];
-        for (int i = 0; i < len; i++) {
-            Number number = list.get(i);
-            floats[i] = number.floatValue();
-        }
+        forEach(Double.class, (idx, num) -> floats[idx] = num.floatValue());
         return floats;
     }
 
     public boolean[] toBooleanArray() throws Exception {
-        List<Boolean> list = asList(Boolean.class);
         boolean[] bool = new boolean[len];
-        for (int i = 0; i < len; i++) {
-            bool[i] = list.get(i);;
-        }
+        forEach(Boolean.class, (idx, b) -> bool[idx] = b);
         return bool;
     }
 
     public char[] toCharArray() throws Exception {
-        List<Character> list = asList(Character.class);
         char[] chars = new char[len];
-        for (int i = 0; i < len; i++) {
-            chars[i] = list.get(i);
-        }
+        forEach(String.class, (idx, str) -> chars[idx] = str.charAt(0));
         return chars;
     }
 
     public double[] toDoubleArray() throws Exception {
-        List<Number> list = asList(Number.class);
         double[] doubles = new double[len];
-        for (int i = 0; i < len; i++) {
-            Number number = list.get(i);
-            doubles[i] = number.doubleValue();
-        }
+        forEach(Double.class, (idx, num) -> doubles[idx] = num);
         return doubles;
     }
 
@@ -146,9 +117,27 @@ public class LuaArray extends LuaTable {
         return asList(Object.class);
     }
 
+    /**
+     * <strong>Not support primitive type!</strong>
+     * @param clazz
+     * @return
+     * @param <T>
+     * @throws Exception
+     */
     public <T> List<T> asList(Class<T> clazz) throws Exception {
-        List<T> list = new ArrayList<>();
+        if (clazz.isPrimitive()) {
+            throw new IllegalArgumentException("Primitive type is not supported");
+        } else if (clazz == Character.class) {
+            return (List<T>) asCharacterList();
+        }
+        List<T> list = new ArrayList<>(len);
         forEachValue(clazz, list::add);
+        return list;
+    }
+
+    public List<Character> asCharacterList() throws Exception {
+        List<Character> list = new ArrayList<>(len);
+        forEachValue(String.class, it -> list.add(it.charAt(0)));
         return list;
     }
 
@@ -156,14 +145,35 @@ public class LuaArray extends LuaTable {
         return asArray(Object.class);
     }
 
+    /**
+     * <strong>Not support primitive type!</strong>
+     * if you want covert to primitive type array, please use <code>asPrimitiveArray()</code>
+     * @param clazz
+     * @return
+     * @param <T>
+     * @throws Exception
+     * @see LuaArray#asPrimitiveArray(Class)
+     */
     public <T> T[] asArray(Class<T> clazz) throws Exception {
+        if (clazz.isPrimitive()) {
+            throw new IllegalArgumentException("Primitive type is not supported");
+        }
         List<T> list = asList(clazz);
         T[] t = (T[]) Array.newInstance(clazz, 0);
         return list.toArray(t);
     }
 
+    /**
+     * <strong>Only support primitive array type!</strong>
+     * @param tClass primitive array, like <code>int[].class</code>
+     * @return
+     * @param <T>
+     */
     public <T> T asPrimitiveArray(Class<T> tClass) {
-        return (T) UNBOXED_ARRAY_TRANSFORMERS.getOrDefault(tClass, ArrayTransform.EMPTY).apply(this);
+        if (!tClass.isArray() || !tClass.getComponentType().isPrimitive()) {
+            throw new IllegalArgumentException("Not a primitive array type: " + tClass);
+        }
+        return tClass.cast(UNBOXED_ARRAY_TRANSFORMERS.getOrDefault(tClass, ArrayTransform.EMPTY).apply(this));
     }
 
     public void forEachValue(Consumer<Object> consumer) throws Exception {
