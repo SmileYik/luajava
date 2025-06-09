@@ -24,6 +24,8 @@
 
 package org.keplerproject.luajava;
 
+import org.eu.smileyik.luajava.util.BoxedTypeHelper;
+
 /**
  * LuaState if the main class of LuaJava for the Java developer.
  * LuaState is a mapping of most of Lua's C API functions.
@@ -129,40 +131,7 @@ public class LuaState implements AutoCloseable {
      * @return The converted number
      */
     public static Number convertLuaNumber(Double db, Class<?> retType) {
-        // checks if retType is a primitive type
-        if (retType.isPrimitive()) {
-            if (retType == Integer.TYPE) {
-                return db.intValue();
-            } else if (retType == Long.TYPE) {
-                return db.longValue();
-            } else if (retType == Float.TYPE) {
-                return db.floatValue();
-            } else if (retType == Double.TYPE) {
-                return db;
-            } else if (retType == Byte.TYPE) {
-                return db.byteValue();
-            } else if (retType == Short.TYPE) {
-                return db.shortValue();
-            }
-        } else if (Number.class.isAssignableFrom(retType)) {
-            // Checks all possibilities of number types
-            if (Integer.class.isAssignableFrom(retType)) {
-                return db.intValue();
-            } else if (Long.class.isAssignableFrom(retType)) {
-                return db.longValue();
-            } else if (Float.class.isAssignableFrom(retType)) {
-                return db.floatValue();
-            } else if (Double.class.isAssignableFrom(retType)) {
-                return db;
-            } else if (Byte.class.isAssignableFrom(retType)) {
-                return db.byteValue();
-            } else if (Short.class.isAssignableFrom(retType)) {
-                return db.shortValue();
-            }
-        }
-
-        // if all checks fail, return null
-        return null;
+        return BoxedTypeHelper.coverNumberTo(db, retType);
     }
 
     /**
