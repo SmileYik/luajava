@@ -194,7 +194,7 @@ public class LuaStateFacade implements AutoCloseable {
      * @param idx Index in the Lua Stack
      * @return Java object equivalent to the Lua one
      */
-    public synchronized Object toJavaObject(int idx) throws LuaException {
+    public Object toJavaObject(int idx) throws LuaException {
         lock.lock();
         try {
             Object obj = null;
