@@ -36,14 +36,14 @@ public abstract class JavaFunction {
     /**
      * This is the state in which this function will exist.
      */
-    protected final LuaState L;
+    protected final LuaStateFacade L;
 
     /**
      * Constructor that receives a LuaState.
      *
      * @param L LuaState object associated with this JavaFunction object
      */
-    public JavaFunction(LuaState L) {
+    public JavaFunction(LuaStateFacade L) {
         this.L = L;
     }
 
@@ -77,9 +77,9 @@ public abstract class JavaFunction {
      * @param name name of the function.
      */
     public void register(String name) throws LuaException {
-        synchronized (L) {
+        L.lockThrow(L -> {
             L.pushJavaFunction(this);
             L.setGlobal(name);
-        }
+        });
     }
 }
