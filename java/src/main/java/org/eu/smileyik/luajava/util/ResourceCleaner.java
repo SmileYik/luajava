@@ -29,7 +29,7 @@ public class ResourceCleaner implements Runnable, Closeable {
         monitorTask();
     }
 
-    public synchronized Ref register(Object o, Runnable finalizer) {
+    public synchronized PhantomReference<Object> register(Object o, Runnable finalizer) {
         Ref ref = new Ref(o, referenceQueue, finalizer);
         refs.add(ref);
         return ref;
@@ -53,7 +53,7 @@ public class ResourceCleaner implements Runnable, Closeable {
         }
     }
 
-    public static final class Ref extends PhantomReference<Object> {
+    private static final class Ref extends PhantomReference<Object> {
 
         private final Runnable finalizer;
 
