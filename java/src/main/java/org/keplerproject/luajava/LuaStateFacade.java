@@ -1,5 +1,7 @@
 package org.keplerproject.luajava;
 
+import org.eu.smileyik.luajava.util.BoxedTypeHelper;
+
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -223,6 +225,20 @@ public class LuaStateFacade implements AutoCloseable {
         } finally {
             lock.unlock();
         }
+    }
+
+    /**
+     * When you call a function in lua, it may return a number, and the
+     * number will be interpreted as a <code>Double</code>.<br>
+     * This function converts the number into a type specified by
+     * <code>retType</code>
+     *
+     * @param db      lua number to be converted
+     * @param retType type to convert to
+     * @return The converted number
+     */
+    public static Number convertLuaNumber(Double db, Class<?> retType) {
+        return BoxedTypeHelper.coverNumberTo(db, retType);
     }
 
     // STACK MANIPULATION
