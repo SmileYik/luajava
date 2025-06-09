@@ -86,7 +86,7 @@ public class BoxedTypeHelper {
      * @return if target is not number type will return null.
      * @see BoxedTypeHelper#isNumberType(Class)
      */
-    public static Number coverNumberTo(Double db, Class<?> target) {
+    public static Number covertNumberTo(Double db, Class<?> target) {
         Function<Double, Number> function = NUMBER_TRANSFORM.get(target);
         return function == null ? null : function.apply(db);
     }

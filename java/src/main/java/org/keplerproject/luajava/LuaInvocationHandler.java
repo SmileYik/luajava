@@ -68,7 +68,7 @@ public class LuaInvocationHandler implements InvocationHandler {
             } else {
                 ret = func.call(args, 1)[0];
                 if (ret instanceof Double) {
-                    ret = BoxedTypeHelper.coverNumberTo((Double) ret, retType);
+                    ret = BoxedTypeHelper.covertNumberTo((Double) ret, retType);
                 }
             }
 

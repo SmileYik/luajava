@@ -238,7 +238,7 @@ public class LuaStateFacade implements AutoCloseable {
      * @return The converted number
      */
     public static Number convertLuaNumber(Double db, Class<?> retType) {
-        return BoxedTypeHelper.coverNumberTo(db, retType);
+        return BoxedTypeHelper.covertNumberTo(db, retType);
     }
 
     // STACK MANIPULATION
