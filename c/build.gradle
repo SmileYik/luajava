@@ -42,7 +42,7 @@ model {
                 c {
                     lib library: 'luajit', linkage: 'static'
                     exportedHeaders {
-                        srcDir project(':java').layout.buildDirectory.dir("include")
+                        srcDir layout.buildDirectory.dir('headers')
                         srcDir "${System.properties['java.home']}/include"
                         srcDir "${System.properties['java.home']}/include/linux"
                         srcDir "${System.properties['java.home']}/include/win32"
@@ -57,6 +57,7 @@ model {
 
             binaries.all {
                 checkedBy $.tasks.buildLuaJIT
+                checkedBy $.tasks.generateHeader
                 def luajit_src = file('luajit/src')
                 if (toolChain in VisualCpp) {
                     cppCompiler.define 'WIN64'
@@ -66,6 +67,22 @@ model {
                 }
             }
         }
+    }
+}
+
+tasks.register('generateHeader') {
+    group("luajava")
+    exec {
+        workingDir project(':java').layout.projectDirectory.dir("src/main/java")
+        commandLine file("${System.properties['java.home']}/bin/javac"),
+                    "-d", "${layout.buildDirectory.dir("classes").get()}",
+                    "-h", "${layout.buildDirectory.dir("generated-headers").get()}",
+                    "org/keplerproject/luajava/LuaState.java"
+    }
+    copy {
+        from layout.buildDirectory.dir("generated-headers")
+        into layout.buildDirectory.dir("headers")
+        rename 'org_keplerproject_luajava_LuaState.h', 'luajava.h'
     }
 }
 

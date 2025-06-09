@@ -30,13 +30,3 @@ jar {
         }
     }
 }
-
-classes {
-    doLast {
-        copy {
-            from project.layout.buildDirectory.file("generated/sources/headers/java/main/org_keplerproject_luajava_LuaState.h")
-            into project.layout.buildDirectory.dir("include")
-            rename 'org_keplerproject_luajava_LuaState.h', 'luajava.h'
-        }
-    }
-}
