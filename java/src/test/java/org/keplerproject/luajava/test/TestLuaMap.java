@@ -75,36 +75,44 @@ public class TestLuaMap {
 
 
         // test using a lua table
-        LuaState L = LuaStateFactory.newLuaState();
-        L.openLibs();
-        int err = L.LdoFile("test/testMap.lua");
-        if (err != 0) {
-            switch (err) {
-                case 1:
-                    System.out.println("Runtime error. " + L.toString(-1));
-                    break;
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        luaMap = facade.lockThrow(L -> {
+           try {
+               L.openLibs();
+               int err = L.LdoFile("test/testMap.lua");
+               if (err != 0) {
+                   switch (err) {
+                       case 1:
+                           System.out.println("Runtime error. " + L.toString(-1));
+                           break;
 
-                case 2:
-                    System.out.println("File not found. " + L.toString(-1));
-                    break;
+                       case 2:
+                           System.out.println("File not found. " + L.toString(-1));
+                           break;
 
-                case 3:
-                    System.out.println("Syntax error. " + L.toString(-1));
-                    break;
+                       case 3:
+                           System.out.println("Syntax error. " + L.toString(-1));
+                           break;
 
-                case 4:
-                    System.out.println("Memory error. " + L.toString(-1));
-                    break;
+                       case 4:
+                           System.out.println("Memory error. " + L.toString(-1));
+                           break;
 
-                default:
-                    System.out.println("Error. " + L.toString(-1));
-                    break;
-            }
-        }
+                       default:
+                           System.out.println("Error. " + L.toString(-1));
+                           break;
+                   }
+               }
 
-        L.getGlobal("map");
-        luaMap = (Map) L.getLuaObject(-1).createProxy("java.util.Map");
-        L.pop(1);
+               L.getGlobal("map");
+               Map proxy = (Map) facade.getLuaObject(-1).createProxy("java.util.Map");
+               L.pop(1);
+               return proxy;
+           } catch (Exception e) {
+               throw new RuntimeException(e);
+           }
+        });
+
 
         luaMap.put("test", "testValue");
         luaMap.putAll(table);
@@ -133,47 +141,54 @@ public class TestLuaMap {
  * @author thiago
  */
 class LuaMap implements Map, AutoCloseable, Closeable {
-    private final LuaState L;
+    private final LuaStateFacade facade;
     private LuaObject table;
 
     /**
      * Initializes the Luastate used and the table
      */
     public LuaMap() {
-        L = LuaStateFactory.newLuaState();
-        L.openLibs();
-        L.newTable();
-        table = L.getLuaObject(-1);
-        L.pop(1);
+        facade = LuaStateFactory.newLuaState();
+        facade.lock(L -> {
+            L.openLibs();
+            L.newTable();
+            table = facade.getLuaObject(-1);
+            L.pop(1);
+        });
     }
 
     @Override
     public void close() throws IOException {
-        L.close();
+        facade.close();
     }
 
     /**
      * @see java.util.Map#size()
      */
     public int size() {
-        table.push();
-        L.pushNil();
+        return facade.lock(facade -> {
+            table.push();
+            facade.pushNil();
 
-        int n;
-        for (n = 0; L.next(-2) != 0; n++) L.pop(1);
+            int n;
+            for (n = 0; facade.next(-2) != 0; n++) facade.pop(1);
 
-        L.pop(2);
+            facade.pop(2);
 
-        return n;
+            return n;
+        });
     }
 
     /**
      * @see java.util.Map#clear()
      */
     public void clear() {
-        L.newTable();
-        table = L.getLuaObject(-1);
-        L.pop(1);
+        facade.lock(L -> {
+            L.newTable();
+            table = facade.getLuaObject(-1);
+            L.pop(1);
+        });
+
     }
 
     /**
@@ -188,13 +203,16 @@ class LuaMap implements Map, AutoCloseable, Closeable {
      */
     public boolean containsKey(Object key) {
         try {
-            L.pushObjectValue(key);
-            LuaObject obj = L.getLuaObject(-1);
-            L.pop(1);
+            return facade.lockThrow(L -> {
+                facade.pushObjectValue(key);
+                LuaObject obj = facade.getLuaObject(-1);
+                L.pop(1);
 
-            LuaObject temp = L.getLuaObject(table, obj);
+                LuaObject temp = facade.getLuaObject(table, obj);
 
-            return !temp.isNil();
+                return !temp.isNil();
+            });
+
         } catch (LuaException e) {
             return false;
         }
@@ -205,20 +223,23 @@ class LuaMap implements Map, AutoCloseable, Closeable {
      */
     public boolean containsValue(Object value) {
         try {
-            L.pushObjectValue(value);
-            table.push();
-            L.pushNil();
+            return facade.lockThrow(L -> {
+                facade.pushObjectValue(value);
+                table.push();
+                L.pushNil();
 
-            while (L.next(-2) != 0)/* `key' is at index -2 and `value' at index -1 */ {
-                if (L.equal(-4, -1) != 0) {
-                    L.pop(4);
-                    return true;
+                while (L.next(-2) != 0)/* `key' is at index -2 and `value' at index -1 */ {
+                    if (L.equal(-4, -1) != 0) {
+                        L.pop(4);
+                        return true;
+                    }
+                    L.pop(1);
                 }
-                L.pop(1);
-            }
 
-            L.pop(3);
-            return false;
+                L.pop(3);
+                return false;
+            });
+
         } catch (LuaException e) {
             return false;
         }
@@ -264,16 +285,19 @@ class LuaMap implements Map, AutoCloseable, Closeable {
      */
     public Object get(Object key) {
         try {
-            table.push();
-            L.pushObjectValue(key);
+            return facade.lockThrow(L -> {
+                table.push();
+                facade.pushObjectValue(key);
 
-            L.getTable(-2);
+                L.getTable(-2);
 
-            Object ret = L.toJavaObject(-1);
+                Object ret = facade.toJavaObject(-1);
 
-            L.pop(2);
+                L.pop(2);
 
-            return ret;
+                return ret;
+            });
+
         } catch (LuaException e) {
             return null;
         }
@@ -284,17 +308,20 @@ class LuaMap implements Map, AutoCloseable, Closeable {
      */
     public Object remove(Object key) {
         try {
-            Object ret = get(key);
+            return facade.lockThrow(L -> {
+                Object ret = get(key);
 
-            table.push();
-            L.pushObjectValue(key);
-            L.pushNil();
+                table.push();
+                facade.pushObjectValue(key);
+                L.pushNil();
 
-            L.setTable(-3);
+                L.setTable(-3);
 
-            L.pop(2);
+                L.pop(2);
 
-            return ret;
+                return ret;
+            });
+
         } catch (LuaException e) {
             return null;
         }
@@ -305,17 +332,20 @@ class LuaMap implements Map, AutoCloseable, Closeable {
      */
     public Object put(Object key, Object value) {
         try {
-            Object ret = get(key);
+            return facade.lockThrow(L -> {
+                Object ret = get(key);
 
-            table.push();
-            L.pushObjectValue(key);
-            L.pushObjectValue(value);
+                table.push();
+                facade.pushObjectValue(key);
+                facade.pushObjectValue(value);
 
-            L.setTable(-3);
+                L.setTable(-3);
 
-            L.pop(1);
+                L.pop(1);
 
-            return ret;
+                return ret;
+            });
+
         } catch (LuaException e) {
             return null;
         }

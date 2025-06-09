@@ -23,10 +23,7 @@
 
 package org.keplerproject.luajava.test.node;
 
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaObject;
-import org.keplerproject.luajava.LuaState;
-import org.keplerproject.luajava.LuaStateFactory;
+import org.keplerproject.luajava.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +35,7 @@ import java.util.List;
  * @author thiago
  */
 public class LuaNode {
-    private static LuaState L;
+    private static LuaStateFacade facade;
     private static IConfig configLib;
     private final LuaObject configFile;
 
@@ -58,25 +55,28 @@ public class LuaNode {
     }
 
     protected LuaNode(String fileName) throws ClassNotFoundException, LuaException {
-        if (L == null) {
-            L = LuaStateFactory.newLuaState();
-            L.openLibs();
-            int err = L.LdoFile(configFileName);
-            if (err != 0) {
-                switch (err) {
-                    case 1:
-                        throw new LuaException("Runtime error. " + L.toString(-1));
-                    case 2:
-                        throw new LuaException("File not found. " + L.toString(-1));
-                    case 3:
-                        throw new LuaException("Syntax error. " + L.toString(-1));
-                    case 4:
-                        throw new LuaException("Memory error. " + L.toString(-1));
-                    default:
-                        throw new LuaException("Error. " + L.toString(-1));
+        if (facade == null) {
+            facade = LuaStateFactory.newLuaState();
+            facade.lockThrow(LuaState::openLibs);
+            facade.lockThrow(L -> {
+                int err = L.LdoFile(configFileName);
+                if (err != 0) {
+                    switch (err) {
+                        case 1:
+                            throw new LuaException("Runtime error. " + L.toString(-1));
+                        case 2:
+                            throw new LuaException("File not found. " + L.toString(-1));
+                        case 3:
+                            throw new LuaException("Syntax error. " + L.toString(-1));
+                        case 4:
+                            throw new LuaException("Memory error. " + L.toString(-1));
+                        default:
+                            throw new LuaException("Error. " + L.toString(-1));
+                    }
                 }
-            }
-            configLib = (IConfig) L.getLuaObject("configLib").createProxy("org.keplerproject.luajava.test.node.IConfig");
+            });
+            configLib = (IConfig) facade.getLuaObject("configLib").createProxy("org.keplerproject.luajava.test.node.IConfig");
+
         }
 
         configFile = configLib.processConfigFile(fileName);
@@ -108,22 +108,24 @@ public class LuaNode {
         LuaObject obj = configLib.getChildren(configFile);
         List list = new ArrayList();
 
-        int i = 1;
-        obj.push();
-        L.pushNumber(i);
-        L.getTable(-2);
-        while (!L.isNil(-1)) {
-            if (L.isTable(-1)) {
-                list.add(new LuaNode(L.getLuaObject(-1)));
-            }
-            L.pop(1);
-
-            i++;
+        facade.lock(L -> {
+            int i = 1;
+            obj.push();
             L.pushNumber(i);
             L.getTable(-2);
-        }
+            while (!L.isNil(-1)) {
+                if (L.isTable(-1)) {
+                    list.add(new LuaNode(facade.getLuaObject(-1)));
+                }
+                L.pop(1);
 
-        L.pop(1);
+                i++;
+                L.pushNumber(i);
+                L.getTable(-2);
+            }
+
+            L.pop(1);
+        });
 
         return list;
     }
@@ -136,22 +138,24 @@ public class LuaNode {
         LuaObject obj = configLib.getChildren(configFile, childName);
         List list = new ArrayList();
 
-        int i = 1;
-        obj.push();
-        L.pushNumber(i);
-        L.getTable(-2);
-        while (!L.isNil(-1)) {
-            if (L.isTable(-1)) {
-                list.add(new LuaNode(L.getLuaObject(-1)));
-            }
-            L.pop(1);
-
-            i++;
+        facade.lock(L -> {
+            int i = 1;
+            obj.push();
             L.pushNumber(i);
             L.getTable(-2);
-        }
+            while (!L.isNil(-1)) {
+                if (L.isTable(-1)) {
+                    list.add(new LuaNode(facade.getLuaObject(-1)));
+                }
+                L.pop(1);
 
-        L.pop(1);
+                i++;
+                L.pushNumber(i);
+                L.getTable(-2);
+            }
+
+            L.pop(1);
+        });
 
         return list;
     }

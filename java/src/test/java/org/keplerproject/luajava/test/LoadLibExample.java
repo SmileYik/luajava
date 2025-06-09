@@ -3,6 +3,7 @@ package org.keplerproject.luajava.test;
 import org.keplerproject.luajava.JavaFunction;
 import org.keplerproject.luajava.LuaException;
 import org.keplerproject.luajava.LuaState;
+import org.keplerproject.luajava.LuaStateFacade;
 
 import java.util.Date;
 
@@ -28,29 +29,31 @@ public class LoadLibExample {
     /**
      * Method called by loadLib
      */
-    public static void open(LuaState L) throws LuaException {
-        getLibTable(L);
+    public static void open(LuaStateFacade facade) throws LuaException {
+        facade.lockThrow(L -> {
+            getLibTable(L);
 
-        L.pushString("example");
+            L.pushString("example");
 
-        L.pushJavaFunction(new JavaFunction(L) {
-            /**
-             * Example for loadLib.
-             * Prints the time and the first parameter, if any.
-             */
-            public int execute() throws LuaException {
-                System.out.println(new Date());
+            L.pushJavaFunction(new JavaFunction(facade) {
+                /**
+                 * Example for loadLib.
+                 * Prints the time and the first parameter, if any.
+                 */
+                public int execute() throws LuaException {
+                    System.out.println(new Date());
 
-                if (L.getTop() > 1) {
-                    System.out.println(getParam(2));
+                    if (L.lock(LuaState::getTop) > 1) {
+                        System.out.println(getParam(2));
+                    }
+
+                    return 0;
                 }
+            });
 
-                return 0;
-            }
+            L.setTable(-3);
+
+            L.pop(1);
         });
-
-        L.setTable(-3);
-
-        L.pop(1);
     }
 }

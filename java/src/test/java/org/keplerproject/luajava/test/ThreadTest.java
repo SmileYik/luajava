@@ -26,7 +26,7 @@ package org.keplerproject.luajava.test;
 import org.junit.jupiter.api.Test;
 import org.keplerproject.luajava.LoadLibrary;
 import org.keplerproject.luajava.LuaObject;
-import org.keplerproject.luajava.LuaState;
+import org.keplerproject.luajava.LuaStateFacade;
 import org.keplerproject.luajava.LuaStateFactory;
 
 /**
@@ -49,19 +49,27 @@ public class ThreadTest {
 
     @Test
     public void test() throws Exception {
-        LuaState L = LuaStateFactory.newLuaState();
-        L.openBase();
-        L.openIo();
-        //L.openLibs();
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.lockThrow(L -> {
+            try {
+                L.openBase();
+                L.openIo();
+                //L.openLibs();
 
-        L.LdoString(lua);
+                L.LdoString(lua);
 
-        for (int i = 0; i < 100; i++) {
-            LuaObject obj = L.getLuaObject("tb");
-            Object runnable = obj.createProxy("java.lang.Runnable");
-            Thread thread = new Thread((Runnable) runnable);
-            thread.start();
-        }
+                for (int i = 0; i < 100; i++) {
+                    LuaObject obj = facade.getLuaObject("tb");
+                    Object runnable = obj.createProxy("java.lang.Runnable");
+                    Thread thread = new Thread((Runnable) runnable);
+                    thread.start();
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
         System.out.println("end main");
+        Thread.sleep(10000);
     }
 }

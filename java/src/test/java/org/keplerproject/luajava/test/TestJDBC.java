@@ -23,7 +23,7 @@
 
 package org.keplerproject.luajava.test;
 
-import org.keplerproject.luajava.LuaState;
+import org.keplerproject.luajava.LuaStateFacade;
 import org.keplerproject.luajava.LuaStateFactory;
 
 import java.sql.Connection;
@@ -56,40 +56,43 @@ public class TestJDBC {
             st.executeUpdate("INSERT INTO luatest (id, str, number) values(" + i + ", '" + 2 * i + "', " + System.currentTimeMillis() + ")");
         }
 
-        LuaState L = LuaStateFactory.newLuaState();
-        L.openLibs();
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.lockThrow(L -> {
+            L.openLibs();
 
-        //L.pushString("st");
-        L.pushObjectValue(st);
-        //L.setTable(LuaState.LUA_GLOBALSINDEX.intValue());
-        L.setGlobal("st");
+            //L.pushString("st");
+            facade.pushObjectValue(st);
+            //L.setTable(LuaState.LUA_GLOBALSINDEX.intValue());
+            L.setGlobal("st");
 
-        int err = L.LdoFile("test/testJDBC.lua");
-        if (err != 0) {
-            switch (err) {
-                case 1:
-                    System.out.println("Runtime error. " + L.toString(-1));
-                    break;
+            int err = L.LdoFile("test/testJDBC.lua");
+            if (err != 0) {
+                switch (err) {
+                    case 1:
+                        System.out.println("Runtime error. " + L.toString(-1));
+                        break;
 
-                case 2:
-                    System.out.println("File not found. " + L.toString(-1));
-                    break;
+                    case 2:
+                        System.out.println("File not found. " + L.toString(-1));
+                        break;
 
-                case 3:
-                    System.out.println("Syntax error. " + L.toString(-1));
-                    break;
+                    case 3:
+                        System.out.println("Syntax error. " + L.toString(-1));
+                        break;
 
-                case 4:
-                    System.out.println("Memory error. " + L.toString(-1));
-                    break;
+                    case 4:
+                        System.out.println("Memory error. " + L.toString(-1));
+                        break;
 
-                default:
-                    System.out.println("Error. " + L.toString(-1));
-                    break;
+                    default:
+                        System.out.println("Error. " + L.toString(-1));
+                        break;
+                }
             }
-        }
 
-        L.close();
+        });
+
+        facade.close();
         st.close();
         con.close();
     }

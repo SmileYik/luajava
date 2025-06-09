@@ -24,10 +24,7 @@
 package org.keplerproject.luajava.test;
 
 import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.LoadLibrary;
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaState;
-import org.keplerproject.luajava.LuaStateFactory;
+import org.keplerproject.luajava.*;
 
 import java.io.FileInputStream;
 import java.util.Objects;
@@ -50,38 +47,45 @@ public class TestLauxlib {
     @Test
     public void testLoadRun() throws Exception {
         // test loadfile
-        LuaState L = LuaStateFactory.newLuaState();
-        L.openLibs();
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.lockThrow(L -> {
+            try {
 
-        int loadRes = L.LloadFile("test/wrongLuaFile.lua");
-        assert Objects.equals(loadRes, LuaState.LUA_ERRSYNTAX);
-        System.out.println(L.toString(-1));
-        L.pop(1);
+                L.openLibs();
 
-        loadRes = L.LloadFile("test/simpleLuaFile.lua");
-        assert Objects.equals(loadRes, 0);
-        L.pcall(0, 0, 0);
+                int loadRes = L.LloadFile("test/wrongLuaFile.lua");
+                assert Objects.equals(loadRes, LuaState.LUA_ERRSYNTAX);
+                System.out.println(L.toString(-1));
+                L.pop(1);
 
-        // test loadbuffer
-        FileInputStream input = new FileInputStream("test/wrongLuaFile.lua");
-        byte[] bytes = new byte[input.available()];
-        input.read(bytes);
-        input.close();
+                loadRes = L.LloadFile("test/simpleLuaFile.lua");
+                assert Objects.equals(loadRes, 0);
+                L.pcall(0, 0, 0);
 
-        loadRes = L.LloadBuffer(bytes, "test");
-        assert Objects.equals(LuaState.LUA_ERRSYNTAX, loadRes);
-        System.out.println(L.toString(-1));
+                // test loadbuffer
+                FileInputStream input = new FileInputStream("test/wrongLuaFile.lua");
+                byte[] bytes = new byte[input.available()];
+                input.read(bytes);
+                input.close();
 
-        input = new FileInputStream("test/simpleLuaFile.lua");
-        bytes = new byte[input.available()];
-        input.read(bytes);
-        input.close();
+                loadRes = L.LloadBuffer(bytes, "test");
+                assert Objects.equals(LuaState.LUA_ERRSYNTAX, loadRes);
+                System.out.println(L.toString(-1));
 
-        loadRes = L.LloadBuffer(bytes, "test2");
-        assert Objects.equals(0, loadRes);
-        L.pcall(0, 0, 0);
+                input = new FileInputStream("test/simpleLuaFile.lua");
+                bytes = new byte[input.available()];
+                input.read(bytes);
+                input.close();
 
-        L.close();
+                loadRes = L.LloadBuffer(bytes, "test2");
+                assert Objects.equals(0, loadRes);
+                L.pcall(0, 0, 0);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        facade.close();
     }
 
     /**
@@ -89,26 +93,28 @@ public class TestLauxlib {
      */
     @Test
     public void testChecks() {
-        LuaState L = LuaStateFactory.newLuaState();
-        L.openLibs();
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.lock(L -> {
+            L.openLibs();
 
-        String testCheckStr = "testCheck";
+            String testCheckStr = "testCheck";
 
-        L.pushString(testCheckStr);
-        assert Objects.equals(testCheckStr, L.LcheckString(-1));
-        assert Objects.equals(testCheckStr, L.LoptString(-1, "test"));
+            L.pushString(testCheckStr);
+            assert Objects.equals(testCheckStr, L.LcheckString(-1));
+            assert Objects.equals(testCheckStr, L.LoptString(-1, "test"));
 
-        L.pushNumber(1.0);
-        L.LcheckNumber(-1);
+            L.pushNumber(1.0);
+            L.LcheckNumber(-1);
 
-        assert (L.LoptNumber(2, 2.0) == 1.0);
-        assert (L.LcheckNumber(2) == 1.0);
+            assert (L.LoptNumber(2, 2.0) == 1.0);
+            assert (L.LcheckNumber(2) == 1.0);
 
-        L.LcheckAny(2);
+            L.LcheckAny(2);
 
-        L.LcheckType(1, LuaState.LUA_TSTRING);
+            L.LcheckType(1, LuaState.LUA_TSTRING);
+        });
 
-        L.close();
+        facade.close();
     }
 
     /**
@@ -116,33 +122,35 @@ public class TestLauxlib {
      */
     @Test
     public void testMeta() throws LuaException {
-        LuaState L = LuaStateFactory.newLuaState();
-        L.openLibs();
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.lockThrow(L -> {
+            L.openLibs();
 
-        L.newTable();
-        L.newTable();
-        L.pushString("__index");
-        L.LdoString("return function()" +
-                "io.write( 'metatest\\n') io.stdout:flush() " +
-                "return 'foo' " +
-                "end");
-        L.setTable(-3);
-        L.setMetaTable(-2);
+            L.newTable();
+            L.newTable();
+            L.pushString("__index");
+            L.LdoString("return function()" +
+                    "io.write( 'metatest\\n') io.stdout:flush() " +
+                    "return 'foo' " +
+                    "end");
+            L.setTable(-3);
+            L.setMetaTable(-2);
 
-        L.LcallMeta(-1, "__index");
-        System.out.println(L.toString(-1));
-        L.pop(1);
-        L.LgetMetaField(-1, "__index");
-        L.call(0, 1);
-        System.out.println(L.toString(-1));
-        L.pop(1);
-        L.pushString("testTable");
-        L.pushValue(-2);
-        L.setTable(LuaState.LUA_GLOBALSINDEX);
-        L.pop(1);
-        L.LdoString("str = testTable.ff; print(str..'fromLua');" +
-                " io.stdout:flush()");
+            L.LcallMeta(-1, "__index");
+            System.out.println(L.toString(-1));
+            L.pop(1);
+            L.LgetMetaField(-1, "__index");
+            L.call(0, 1);
+            System.out.println(L.toString(-1));
+            L.pop(1);
+            L.pushString("testTable");
+            L.pushValue(-2);
+            L.setTable(LuaState.LUA_GLOBALSINDEX);
+            L.pop(1);
+            L.LdoString("str = testTable.ff; print(str..'fromLua');" +
+                    " io.stdout:flush()");
 
-        L.close();
+            L.close();
+        });
     }
 }

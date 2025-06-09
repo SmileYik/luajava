@@ -43,24 +43,30 @@ public class Main {
 
     @Test
     public void test() throws LuaException, ClassNotFoundException {
-        LuaState L = LuaStateFactory.newLuaState();
-        L.openBase();
+        LuaStateFacade luaState = LuaStateFactory.newLuaState();
+        luaState.lockThrow(L -> {
+            L.openBase();
 
-        L.LdoString(str);
+            L.LdoString(str);
 
-        LuaObject func = L.getLuaObject("imprime");
-        Object[] teste = func.call(new Object[]{"TESTANDO"}, 2);
-        System.out.println(teste[0]);
-        System.out.println(teste[1]);
+            LuaObject func = luaState.getLuaObject("imprime");
+            Object[] teste = func.call(new Object[]{"TESTANDO"}, 2);
+            System.out.println(teste[0]);
+            System.out.println(teste[1]);
 
-        System.out.println("PROXY TEST :");
-        Printable p = new ObjPrint();
-        p.print("TESTE 1");
+            System.out.println("PROXY TEST :");
+            Printable p = new ObjPrint();
+            p.print("TESTE 1");
 
-        LuaObject o = L.getLuaObject("luaPrint");
-        p = (Printable) o.createProxy("org.keplerproject.luajava.test.Printable");
-        p.print("Teste 2");
+            LuaObject o = luaState.getLuaObject("luaPrint");
+            try {
+                p = (Printable) o.createProxy("org.keplerproject.luajava.test.Printable");
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+            p.print("Teste 2");
+        });
 
-        L.close();
+        luaState.close();
     }
 }

@@ -11,22 +11,20 @@ public class FindMethodTest {
 
     @Test
     public void aTest() {
-        LuaState L = LuaStateFactory.newLuaState();
-        L.openLibs();
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.lock(L -> {
+            L.openLibs();
 
+            L.pushJavaObject(A.class);
+            L.setGlobal("a");
 
-        L.pushJavaObject(A.class);
-        L.setGlobal("a");
+            int exp = L.LdoFile("test/findMethodTest.lua");
+            if (exp != 0) {
+                System.out.println(L.toString(-1));
+            }
+        });
 
-        int exp = L.LdoFile("test/findMethodTest.lua");
-        if (exp != 0) {
-            System.out.println(L.toString(-1));
-        }
-
-
-
-
-        L.close();
+        facade.close();
     }
 }
 

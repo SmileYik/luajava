@@ -35,30 +35,32 @@ public class TestClass {
 
     @Test
     public void test() throws LuaException {
-        LuaState L = LuaStateFactory.newLuaState();
-        L.openBase();
+        LuaStateFacade luaState = LuaStateFactory.newLuaState();
+        luaState.lockThrow(L -> {
+            L.openBase();
 
-        TestClassInner test = new TestClassInner(L);
+            TestClassInner test = new TestClassInner(luaState);
 
-        test.jf.register("javaFuncTest");
+            test.jf.register("javaFuncTest");
 
-        test.Lf.LdoString(" f=javaFuncTest(); print(f) ");
+            test.Lf.lock(it -> { it.LdoString(" f=javaFuncTest(); print(f) "); });
 
-        L.close();
+            L.close();
+        });
     }
 
 
     public static class TestClassInner {
-        public final LuaState Lf;
+        public final LuaStateFacade Lf;
 
         public JavaFunction jf;
 
-        public TestClassInner(LuaState L) {
+        public TestClassInner(LuaStateFacade L) {
             this.Lf = L;
 
             jf = new JavaFunction(L) {
                 public int execute() {
-                    this.L.pushString("Returned String");
+                    this.L.lock(it -> { it.pushString("Returned String"); });
                     System.out.println("Printing from Java Function");
                     return 1;
                 }
