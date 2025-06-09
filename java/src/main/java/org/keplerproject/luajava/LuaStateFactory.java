@@ -24,8 +24,11 @@
 
 package org.keplerproject.luajava;
 
-import java.util.ArrayList;
-import java.util.List;
+import org.eu.smileyik.luajava.util.ParamRef;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This class is responsible for instantiating new LuaStates.
@@ -38,9 +41,14 @@ import java.util.List;
  */
 public final class LuaStateFactory {
     /**
-     * Array with all luaState's instances
+     * state id generator
      */
-    private static final List<LuaStateFacade> states = new ArrayList<>();
+    private static final AtomicInteger COUNTER = new AtomicInteger(0);
+    /**
+     * all lua state instances
+     */
+    private static final ConcurrentMap<Integer, LuaStateFacade> STATES = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Long, Integer> CPER_TP_STATE_ID_MAP = new ConcurrentHashMap<>();
 
     /**
      * Non-public constructor.
@@ -54,11 +62,9 @@ public final class LuaStateFactory {
      * @return LuaState
      */
     public synchronized static LuaStateFacade newLuaState() {
-        int i = getNextStateIndex();
-        LuaStateFacade facade = new LuaStateFacade(i);
-
-        states.add(i, facade);
-
+        LuaStateFacade facade = new LuaStateFacade(COUNTER.getAndIncrement());
+        STATES.put(facade.getStateId(), facade);
+        CPER_TP_STATE_ID_MAP.put(facade.getCPtrPeer(), facade.getStateId());
         return facade;
     }
 
@@ -68,57 +74,43 @@ public final class LuaStateFactory {
      * @param index
      * @return LuaState
      */
-    public synchronized static LuaStateFacade getExistingState(int index) {
-        return states.get(index);
+    public static LuaStateFacade getExistingState(int index) {
+        return STATES.get(index);
     }
 
     /**
      * Receives a existing LuaState and checks if it exists in the states list.
      * If it doesn't exist adds it to the list.
      *
-     * @param L    lua state
-     * @param cPtr cPtr overwrite
+     * @param L              lua state
+     * @param cPtr           cPtr overwrite
+     * @param existLuaState  will set luaStateFacade if cPtr exist
      * @return int
      */
-    public synchronized static int insertLuaState(LuaStateFacade L, CPtr cPtr) {
-        int i;
-        for (i = 0; i < states.size(); i++) {
-            LuaStateFacade state = states.get(i);
-
-            if (state != null) {
-                if (cPtr != null) {
-                    if (cPtr.getPeer() == state.getCPtrPeer())
-                        return i;
-                } else if (state.getCPtrPeer() == L.getCPtrPeer())
-                    return i;
-            }
+    public synchronized static int insertLuaState(LuaStateFacade L, CPtr cPtr, ParamRef<LuaStateFacade> existLuaState) {
+        long target = cPtr == null ? L.getCPtrPeer() : cPtr.getPeer();
+        Integer stateId = CPER_TP_STATE_ID_MAP.get(target);
+        if (stateId == null) {
+            stateId = COUNTER.incrementAndGet();
+            CPER_TP_STATE_ID_MAP.put(target, stateId);
+            STATES.put(stateId, L);
+        } else {
+            existLuaState.setParam(STATES.get(stateId));
         }
-
-        i = getNextStateIndex();
-
-        states.set(i, L);
-
-        return i;
+        return stateId;
     }
 
     /**
      * removes the luaState from the states list
+     * this method normally called when close LuaStateFacade.
      *
      * @param idx
      */
-    public synchronized static void removeLuaState(int idx) {
-        states.set(idx, null);
-    }
-
-    /**
-     * Get next available index
-     *
-     * @return int
-     */
-    private synchronized static int getNextStateIndex() {
-        int i;
-        for (i = 0; i < states.size() && states.get(i) != null; i++) ;
-
-        return i;
+    public static void removeLuaState(int idx) {
+        LuaStateFacade remove = STATES.remove(idx);
+        if (remove != null) {
+            long cPtrPeer = remove.getCPtrPeer();
+            CPER_TP_STATE_ID_MAP.remove(cPtrPeer, idx);
+        }
     }
 }

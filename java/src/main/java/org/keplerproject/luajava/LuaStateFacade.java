@@ -1,5 +1,7 @@
 package org.keplerproject.luajava;
 
+import org.eu.smileyik.luajava.util.ParamRef;
+
 import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -42,8 +44,10 @@ public class LuaStateFacade implements AutoCloseable {
     }
 
     protected LuaStateFacade(CPtr cPtr) {
-        this.stateId = LuaStateFactory.insertLuaState(this, cPtr);
-        this.luaState = new LuaState(cPtr, this.stateId);
+        ParamRef<LuaStateFacade> existLuaState = ParamRef.wrapper();
+        this.stateId = LuaStateFactory.insertLuaState(this, cPtr, existLuaState);
+        this.luaState = existLuaState.isEmpty() ?
+                new LuaState(cPtr, this.stateId) : existLuaState.getParamAndClear().luaState;
     }
 
     public long getCPtrPeer() {
@@ -99,6 +103,23 @@ public class LuaStateFacade implements AutoCloseable {
         lock.lock();
         try {
             consumer.accept(luaState);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public int getStateId() {
+        return stateId;
+    }
+
+    @Override
+    public void close() {
+        lock.lock();
+        try {
+            LuaStateFactory.removeLuaState(stateId);
+            if (luaState != null && !luaState.isClosed()) {
+                luaState.clearRef();
+            }
         } finally {
             lock.unlock();
         }
@@ -285,17 +306,6 @@ public class LuaStateFacade implements AutoCloseable {
         lock.lock();
         try {
             luaState.xmove(to.luaState, n);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public void close() {
-        lock.lock();
-        try {
-            LuaStateFactory.removeLuaState(stateId);
-            luaState.clearRef();
         } finally {
             lock.unlock();
         }
