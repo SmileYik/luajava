@@ -163,22 +163,21 @@ public class LuaTable extends LuaObject {
      * @throws Exception any exception
      */
     public <K, V> void forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) throws Exception {
-        luaState.lockThrow(l ->  {
-            push();
-            l.pushNil();
-            while (l.next(-2) != 0) {
-                try {
+        luaState.lockThrowAll(l ->  {
+            int top = l.getTop();
+            try {
+                push();
+                l.pushNil();
+                while (l.next(-2) != 0) {
                     Object key = luaState.toJavaObject(-2);
                     Object value = luaState.toJavaObject(-1);
                     consumer.accept(kClass.cast(key), vClass.cast(value));
-                } catch (Exception e) {
-                    l.pop(1);
-                    throw e;
-                } finally {
                     l.pop(1);
                 }
+                l.pop(1);
+            } finally {
+                l.setTop(top);
             }
-            l.pop(1);
         });
     }
 

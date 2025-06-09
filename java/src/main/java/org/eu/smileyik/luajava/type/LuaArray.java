@@ -239,21 +239,20 @@ public class LuaArray extends LuaTable {
      * @throws Exception any exception
      */
     public <T> void forEachValue(Class<T> tClass, Consumer<T> consumer) throws Exception {
-        luaState.lockThrow(l -> {
-            push();
-            for (int i = 1; i <= len; i++) {
-                l.rawGetI(-1, i);
-                try {
+        luaState.lockThrowAll(l -> {
+            int top = l.getTop();
+            try {
+                push();
+                for (int i = 1; i <= len; i++) {
+                    l.rawGetI(-1, i);
                     Object javaObject = luaState.toJavaObject(-1);
                     consumer.accept(tClass.cast(javaObject));
-                } catch (Exception e) {
-                    l.pop(1);
-                    throw e;
-                } finally {
                     l.pop(1);
                 }
+                l.pop(1);
+            } finally {
+                l.setTop(top);
             }
-            l.pop(1);
         });
     }
 
@@ -268,21 +267,21 @@ public class LuaArray extends LuaTable {
      */
     @Override
     public <K, V> void forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) throws Exception {
-        luaState.lockThrow(l -> {
-            push();
-            for (int i = 1; i <= len; i++) {
-                l.rawGetI(-1, i);
-                try {
+        luaState.lockThrowAll(l -> {
+            int top = l.getTop();
+            try {
+                push();
+                for (int i = 1; i <= len; i++) {
+                    l.rawGetI(-1, i);
                     Object javaObject = luaState.toJavaObject(-1);
                     consumer.accept(kClass.cast(i - 1), vClass.cast(javaObject));
-                } catch (Exception e) {
-                    l.pop(1);
-                    throw e;
-                } finally {
                     l.pop(1);
                 }
+                l.pop(1);
+            } finally {
+                l.setTop(top);
             }
-            l.pop(1);
+
         });
     }
 
