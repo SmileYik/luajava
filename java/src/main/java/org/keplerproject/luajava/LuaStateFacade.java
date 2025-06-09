@@ -52,11 +52,7 @@ public class LuaStateFacade implements AutoCloseable {
     public <T> T lockThrowAll(LuaStateDangerFunction<T> function) throws Exception {
         lock.lock();
         try {
-            T apply = function.apply(luaState);
-            if (apply instanceof LuaState) {
-                throw new RuntimeException("Cannot return LuaState instance");
-            }
-            return apply;
+            return function.apply(luaState);
         } finally {
             lock.unlock();
         }
@@ -65,11 +61,7 @@ public class LuaStateFacade implements AutoCloseable {
     public <T> T lockThrow(LuaStateFunction<T> function) throws LuaException {
         lock.lock();
         try {
-            T apply = function.apply(luaState);
-            if (apply instanceof LuaState) {
-                throw new RuntimeException("Cannot return LuaState instance");
-            }
-            return apply;
+            return function.apply(luaState);
         } finally {
             lock.unlock();
         }
@@ -78,11 +70,7 @@ public class LuaStateFacade implements AutoCloseable {
     public <T> T lock(LuaStateSafeFunction<T> function) {
         lock.lock();
         try {
-            T apply = function.apply(luaState);
-            if (apply instanceof LuaState) {
-                throw new RuntimeException("Cannot return LuaState instance");
-            }
-            return apply;
+            return function.apply(luaState);
         } finally {
             lock.unlock();
         }
