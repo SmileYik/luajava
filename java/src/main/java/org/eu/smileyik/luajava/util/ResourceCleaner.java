@@ -25,7 +25,7 @@ public class ResourceCleaner implements Runnable, Closeable {
     }
 
     @Override
-    public synchronized void run() {
+    public void run() {
         monitorTask();
     }
 
@@ -40,7 +40,7 @@ public class ResourceCleaner implements Runnable, Closeable {
         cleanerThread.interrupt();
     }
 
-    private synchronized void monitorTask() {
+    private void monitorTask() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 Ref removed = (Ref) referenceQueue.remove();
