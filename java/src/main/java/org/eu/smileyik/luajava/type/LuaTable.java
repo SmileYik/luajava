@@ -2,6 +2,7 @@ package org.eu.smileyik.luajava.type;
 
 import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaState;
+import org.keplerproject.luajava.LuaStateFacade;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,17 +12,26 @@ import java.util.function.BiConsumer;
 public class LuaTable extends LuaObject {
     public static final String TYPE_NAME = LuaType.typeName(LuaType.TABLE);
 
-    protected LuaTable(LuaState L, int index) {
+    /**
+     * <strong>SHOULD NOT USE CONSTRUCTOR DIRECTLY, EXPECT YOU KNOW WHAT YOU ARE DOING</strong>
+     *
+     * @param L     lua state
+     * @param index index
+     * @see LuaObject#create(LuaStateFacade, int)
+     */
+    protected LuaTable(LuaStateFacade L, int index) {
         super(L, index);
     }
 
-    protected static LuaTable create(LuaState L, int index) {
-        Optional<Integer> result = isArrayTable(L, index);
-        if (result.isPresent()) {
-            return new LuaArray(L, index, result.get());
-        } else {
-            return new LuaTable(L, index);
-        }
+    protected static LuaTable create(LuaStateFacade luaStateFacade, int index) {
+        return luaStateFacade.lock(l -> {
+            Optional<Integer> result = isArrayTable(l, index);
+            if (result.isPresent()) {
+                return new LuaArray(luaStateFacade, index, result.get());
+            } else {
+                return new LuaTable(luaStateFacade, index);
+            }
+        });
     }
 
     @Override
@@ -153,23 +163,23 @@ public class LuaTable extends LuaObject {
      * @throws Exception any exception
      */
     public <K, V> void forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) throws Exception {
-        synchronized (luaState) {
+        luaState.lockThrow(l ->  {
             push();
-            luaState.pushNil();
-            while (luaState.next(-2) != 0) {
+            l.pushNil();
+            while (l.next(-2) != 0) {
                 try {
                     Object key = luaState.toJavaObject(-2);
                     Object value = luaState.toJavaObject(-1);
                     consumer.accept(kClass.cast(key), vClass.cast(value));
                 } catch (Exception e) {
-                    luaState.pop(1);
+                    l.pop(1);
                     throw e;
                 } finally {
-                    luaState.pop(1);
+                    l.pop(1);
                 }
             }
-            luaState.pop(1);
-        }
+            l.pop(1);
+        });
     }
 
     /**
@@ -183,31 +193,30 @@ public class LuaTable extends LuaObject {
 
     /**
      * Check the table is Array or not. Will traverse the table.
+     * <strong>SHOULD CALL IN LuaStateFacade.lock()</strong>
      * @param L     lua state
      * @param index index
      * @return the array length, if the table is empty ({})
      *         or the table only a series of consecutive numbers starting with 1 as key.
      */
-    protected static Optional<Integer> isArrayTable(LuaState L, int index) {
-        synchronized (L) {
-            if (index < 0) index -= 1;
-            int i = 0;
-            L.pushNil();
-            while (L.next(index) != 0) {
-                if (L.type(-2) != LuaType.NUMBER) {
-                    L.pop(2);
-                    return Optional.empty();
-                }
-                double number = L.toNumber(-2);
-                int idx = (int) number;
-                if (number != idx || idx <= i) {
-                    L.pop(2);
-                    return Optional.empty();
-                }
-                i = idx;
-                L.pop(1);
+    private static Optional<Integer> isArrayTable(LuaState L, int index) {
+        if (index < 0) index -= 1;
+        int i = 0;
+        L.pushNil();
+        while (L.next(index) != 0) {
+            if (L.type(-2) != LuaType.NUMBER) {
+                L.pop(2);
+                return Optional.empty();
             }
-            return Optional.of(i);
+            double number = L.toNumber(-2);
+            int idx = (int) number;
+            if (number != idx || idx <= i) {
+                L.pop(2);
+                return Optional.empty();
+            }
+            i = idx;
+            L.pop(1);
         }
+        return Optional.of(i);
     }
 }

@@ -116,7 +116,7 @@ public class LuaObject implements AutoCloseable {
      */
     protected static LuaObject create(LuaStateFacade luaState, int index) {
         return luaState.lock((L) -> {
-            return InnerTypeHelper.createLuaObject(L, index)
+            return InnerTypeHelper.createLuaObject(luaState, index)
                     .orElseGet(() -> new LuaObject(luaState, index));
         });
     }
@@ -197,14 +197,10 @@ public class LuaObject implements AutoCloseable {
             if (!parent.isTable() && !parent.isUserdata())
                 throw new LuaException("Object parent should be a table or userdata .");
 
-            LuaState L = parent.getLuaState();
-
             parent.push();
             name.push();
             L.getTable(-2);
             L.remove(-2);
-
-
 
             LuaObject luaObject = create(luaState, -1);
             L.pop(1);

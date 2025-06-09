@@ -1,6 +1,6 @@
 package org.eu.smileyik.luajava.type;
 
-import org.keplerproject.luajava.LuaState;
+import org.keplerproject.luajava.LuaStateFacade;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -41,12 +41,15 @@ public class LuaArray extends LuaTable {
     protected final int len;
 
     /**
-     * create lua array.
+     * create lua array. and make sure the object at this index is exactly array style table.
+     * actually a LuaArray instance could be created by the factory method of LuaTable.
+     * <strong>SHOULD NOT USE CONSTRUCTOR DIRECTLY, EXPECT YOU KNOW WHAT YOU ARE DOING</strong>
+     *
      * @param L      lua state
      * @param index  index
      * @param len    array length
      */
-    protected LuaArray(LuaState L, int index, int len) {
+    protected LuaArray(LuaStateFacade L, int index, int len) {
         super(L, index);
         this.len = len;
     }
@@ -188,22 +191,22 @@ public class LuaArray extends LuaTable {
      * @throws Exception any exception
      */
     public <T> void forEachValue(Class<T> tClass, Consumer<T> consumer) throws Exception {
-        synchronized (luaState) {
+        luaState.lockThrow(l -> {
             push();
             for (int i = 1; i <= len; i++) {
-                luaState.rawGetI(-1, i);
+                l.rawGetI(-1, i);
                 try {
                     Object javaObject = luaState.toJavaObject(-1);
                     consumer.accept(tClass.cast(javaObject));
                 } catch (Exception e) {
-                    luaState.pop(1);
+                    l.pop(1);
                     throw e;
                 } finally {
-                    luaState.pop(1);
+                    l.pop(1);
                 }
             }
-            luaState.pop(1);
-        }
+            l.pop(1);
+        });
     }
 
     /**
@@ -217,22 +220,22 @@ public class LuaArray extends LuaTable {
      */
     @Override
     public <K, V> void forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) throws Exception {
-        synchronized (luaState) {
+        luaState.lockThrow(l -> {
             push();
             for (int i = 1; i <= len; i++) {
-                luaState.rawGetI(-1, i);
+                l.rawGetI(-1, i);
                 try {
                     Object javaObject = luaState.toJavaObject(-1);
                     consumer.accept(kClass.cast(i - 1), vClass.cast(javaObject));
                 } catch (Exception e) {
-                    luaState.pop(1);
+                    l.pop(1);
                     throw e;
                 } finally {
-                    luaState.pop(1);
+                    l.pop(1);
                 }
             }
-            luaState.pop(1);
-        }
+            l.pop(1);
+        });
     }
 
     public <V> void forEach(Class<V> vClass, BiConsumer<Integer, V> consumer) throws Exception {
