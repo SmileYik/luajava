@@ -91,7 +91,6 @@ public class LuaState implements AutoCloseable {
     }
 
     private CPtr luaState;
-    private final int stateId;
 
     /**
      * Constructor to instance a new LuaState and initialize it with LuaJava's functions
@@ -101,7 +100,6 @@ public class LuaState implements AutoCloseable {
     protected LuaState(int stateId) {
         luaState = _open();
         luajava_open(luaState, stateId);
-        this.stateId = stateId;
     }
 
     /**
@@ -109,9 +107,8 @@ public class LuaState implements AutoCloseable {
      *
      * @param luaState
      */
-    protected LuaState(CPtr luaState) {
+    protected LuaState(CPtr luaState, int stateId) {
         this.luaState = luaState;
-        this.stateId = LuaStateFactory.insertLuaState(this);
         luajava_open(luaState, stateId);
     }
 
@@ -119,57 +116,9 @@ public class LuaState implements AutoCloseable {
     private static synchronized native int _LdoFile(CPtr ptr, String fileName);
 
     /**
-     * When you call a function in lua, it may return a number, and the
-     * number will be interpreted as a <code>Double</code>.<br>
-     * This function converts the number into a type specified by
-     * <code>retType</code>
-     *
-     * @param db      lua number to be converted
-     * @param retType type to convert to
-     * @return The converted number
-     */
-    public static Number convertLuaNumber(Double db, Class<?> retType) {
-        // checks if retType is a primitive type
-        if (retType.isPrimitive()) {
-            if (retType == Integer.TYPE) {
-                return db.intValue();
-            } else if (retType == Long.TYPE) {
-                return db.longValue();
-            } else if (retType == Float.TYPE) {
-                return db.floatValue();
-            } else if (retType == Double.TYPE) {
-                return db;
-            } else if (retType == Byte.TYPE) {
-                return db.byteValue();
-            } else if (retType == Short.TYPE) {
-                return db.shortValue();
-            }
-        } else if (Number.class.isAssignableFrom(retType)) {
-            // Checks all possibilities of number types
-            if (Integer.class.isAssignableFrom(retType)) {
-                return db.intValue();
-            } else if (Long.class.isAssignableFrom(retType)) {
-                return db.longValue();
-            } else if (Float.class.isAssignableFrom(retType)) {
-                return db.floatValue();
-            } else if (Double.class.isAssignableFrom(retType)) {
-                return db;
-            } else if (Byte.class.isAssignableFrom(retType)) {
-                return db.byteValue();
-            } else if (Short.class.isAssignableFrom(retType)) {
-                return db.shortValue();
-            }
-        }
-
-        // if all checks fail, return null
-        return null;
-    }
-
-    /**
      * Closes state and removes the object from the LuaStateFactory
      */
     public synchronized void close() {
-        LuaStateFactory.removeLuaState(stateId);
         _close(luaState);
         this.luaState = null;
     }
@@ -196,7 +145,7 @@ public class LuaState implements AutoCloseable {
 
     private synchronized native void _close(CPtr ptr);
 
-    private synchronized native CPtr _newthread(CPtr ptr);
+    private native CPtr _newthread(CPtr ptr);
 
     // Stack manipulation
     private synchronized native int _getTop(CPtr ptr);
@@ -213,7 +162,7 @@ public class LuaState implements AutoCloseable {
 
     private synchronized native int _checkStack(CPtr ptr, int sz);
 
-    private synchronized native void _xmove(CPtr from, CPtr to, int n);
+    private native void _xmove(CPtr from, CPtr to, int n);
 
     // Access functions
     private synchronized native int _isNumber(CPtr ptr, int idx);
@@ -244,7 +193,7 @@ public class LuaState implements AutoCloseable {
 
     private synchronized native int _objlen(CPtr ptr, int idx);
 
-    private synchronized native CPtr _toThread(CPtr ptr, int idx);
+    private native CPtr _toThread(CPtr ptr, int idx);
 
     // Push functions
     private synchronized native void _pushNil(CPtr ptr);
@@ -411,10 +360,8 @@ public class LuaState implements AutoCloseable {
 
     // STACK MANIPULATION
 
-    public LuaState newThread() {
-        LuaState l = new LuaState(_newthread(luaState));
-        LuaStateFactory.insertLuaState(l);
-        return l;
+    public CPtr newThread() {
+        return _newthread(luaState);
     }
 
     public int getTop() {
@@ -447,7 +394,7 @@ public class LuaState implements AutoCloseable {
 
     // ACCESS FUNCTION
 
-    public void xmove(LuaState to, int n) {
+    protected void xmove(LuaState to, int n) {
         _xmove(luaState, to.luaState, n);
     }
 
@@ -541,8 +488,8 @@ public class LuaState implements AutoCloseable {
 
     //PUSH FUNCTIONS
 
-    public LuaState toThread(int idx) {
-        return new LuaState(_toThread(luaState, idx));
+    public CPtr toThread(int idx) {
+        return _toThread(luaState, idx);
     }
 
     public void pushNil() {
@@ -967,136 +914,5 @@ public class LuaState implements AutoCloseable {
      */
     public boolean isJavaFunction(int idx) {
         return _isJavaFunction(luaState, idx);
-    }
-
-    /**
-     * Pushes into the stack any object value.<br>
-     * This function checks if the object could be pushed as a lua type, if not
-     * pushes the java object.
-     *
-     * @param obj
-     */
-    public void pushObjectValue(Object obj) throws LuaException {
-        if (obj == null) {
-            pushNil();
-        } else if (obj instanceof Boolean) {
-            pushBoolean((Boolean) obj);
-        } else if (obj instanceof Number) {
-            pushNumber(((Number) obj).doubleValue());
-        } else if (obj instanceof String) {
-            pushString((String) obj);
-        } else if (obj instanceof JavaFunction) {
-            pushJavaFunction((JavaFunction) obj);
-        } else if (obj instanceof LuaObject) {
-            ((LuaObject) obj).push();
-        } else if (obj instanceof byte[]) {
-            pushString((byte[]) obj);
-        } else if (obj.getClass().isArray()) {
-            pushJavaArray(obj);
-        } else {
-            pushJavaObject(obj);
-        }
-    }
-
-    /**
-     * Function that returns a Java Object equivalent to the one in the given
-     * position of the Lua Stack.
-     *
-     * @param idx Index in the Lua Stack
-     * @return Java object equivalent to the Lua one
-     */
-    public synchronized Object toJavaObject(int idx) throws LuaException {
-        Object obj = null;
-        int type = type(idx);
-        switch (type) {
-            case LUA_TBOOLEAN:
-                obj = toBoolean(idx);
-                break;
-            case LUA_TSTRING:
-                obj = toString(idx);
-                break;
-            case LUA_TFUNCTION:
-            case LUA_TTABLE:
-                obj = getLuaObject(idx);
-                break;
-            case LUA_TNUMBER:
-                obj = toNumber(idx);
-                break;
-            case LUA_TUSERDATA:
-                obj = isObject(idx) ? getObjectFromUserdata(idx) : getLuaObject(idx);
-                break;
-        }
-
-        return obj;
-    }
-
-    /**
-     * Creates a reference to an object in the variable globalName
-     *
-     * @param globalName
-     * @return LuaObject
-     */
-    public LuaObject getLuaObject(String globalName) {
-        return LuaObject.create(this, globalName);
-    }
-
-    /**
-     * Creates a reference to an object inside another object
-     *
-     * @param parent The Lua Table or Userdata that contains the Field.
-     * @param name   The name that index the field
-     * @return LuaObject
-     * @throws LuaException if parent is not a table or userdata
-     */
-    public LuaObject getLuaObject(LuaObject parent, String name)
-            throws LuaException {
-        if (parent.L.getCPtrPeer() != luaState.getPeer())
-            throw new LuaException("Object must have the same LuaState as the parent!");
-
-        return LuaObject.create(parent, name);
-    }
-
-    /**
-     * This constructor creates a LuaObject from a table that is indexed by a number.
-     *
-     * @param parent The Lua Table or Userdata that contains the Field.
-     * @param name   The name (number) that index the field
-     * @return LuaObject
-     * @throws LuaException When the parent object isn't a Table or Userdata
-     */
-    public LuaObject getLuaObject(LuaObject parent, Number name)
-            throws LuaException {
-        if (parent.L.getCPtrPeer() != luaState.getPeer())
-            throw new LuaException("Object must have the same LuaState as the parent!");
-
-        return LuaObject.create(parent, name);
-    }
-
-    /**
-     * This constructor creates a LuaObject from a table that is indexed by any LuaObject.
-     *
-     * @param parent The Lua Table or Userdata that contains the Field.
-     * @param name   The name (LuaObject) that index the field
-     * @return LuaObject
-     * @throws LuaException When the parent object isn't a Table or Userdata
-     */
-    public LuaObject getLuaObject(LuaObject parent, LuaObject name)
-            throws LuaException {
-        if (parent.getLuaState().getCPtrPeer() != luaState.getPeer() ||
-                parent.getLuaState().getCPtrPeer() != name.getLuaState().getCPtrPeer())
-            throw new LuaException("Object must have the same LuaState as the parent!");
-
-        return LuaObject.create(parent, name);
-    }
-
-    /**
-     * Creates a reference to an object in the <code>index</code> position
-     * of the stack
-     *
-     * @param index position on the stack
-     * @return LuaObject
-     */
-    public LuaObject getLuaObject(int index) {
-        return LuaObject.create(this, index);
     }
 }

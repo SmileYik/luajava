@@ -24,6 +24,8 @@
 
 package org.keplerproject.luajava;
 
+import org.eu.smileyik.luajava.util.BoxedTypeHelper;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 
@@ -48,7 +50,7 @@ public class LuaInvocationHandler implements InvocationHandler {
      * Function called when a proxy object function is invoked.
      */
     public Object invoke(Object proxy, Method method, Object[] args) throws LuaException {
-        synchronized (obj.L) {
+        return obj.getLuaState().lockThrow(l -> {
             String methodName = method.getName();
             LuaObject func = obj.getField(methodName);
 
@@ -66,11 +68,11 @@ public class LuaInvocationHandler implements InvocationHandler {
             } else {
                 ret = func.call(args, 1)[0];
                 if (ret instanceof Double) {
-                    ret = LuaState.convertLuaNumber((Double) ret, retType);
+                    ret = BoxedTypeHelper.covertNumberTo((Double) ret, retType);
                 }
             }
 
             return ret;
-        }
+        });
     }
 }
