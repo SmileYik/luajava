@@ -25,6 +25,7 @@
 package org.keplerproject.luajava;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * LuaState if the main class of LuaJava for the Java developer.
@@ -94,6 +95,7 @@ public class LuaState {
     }
 
     private CPtr luaState;
+    private final AtomicBoolean closed = new AtomicBoolean(false);
 
     /**
      * Constructor to instance a new LuaState and initialize it with LuaJava's functions
@@ -122,15 +124,17 @@ public class LuaState {
      * Closes state and removes the object from the LuaStateFactory
      */
     protected void clearRef() {
-        _close(luaState);
-        this.luaState = null;
+        if (closed.compareAndSet(false, true)) {
+            _close(luaState);
+            this.luaState = null;
+        }
     }
 
     /**
      * Returns <code>true</code> if state is closed.
      */
     public boolean isClosed() {
-        return luaState == null;
+        return closed.get();
     }
 
     /**
