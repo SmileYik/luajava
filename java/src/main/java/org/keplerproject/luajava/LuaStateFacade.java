@@ -16,6 +16,14 @@ public class LuaStateFacade implements AutoCloseable {
         public void accept(LuaState luaState) throws LuaException;
     }
 
+    public interface LuaStateDangerFunction<T> {
+        public T apply(LuaState luaState) throws Exception;
+    }
+
+    public interface LuaStateDangerConsumer {
+        public void accept(LuaState luaState) throws Exception;
+    }
+
     public interface LuaStateSafeFunction<T> {
         public T apply(LuaState luaState);
     }
@@ -43,6 +51,19 @@ public class LuaStateFacade implements AutoCloseable {
         return luaState.getCPtrPeer();
     }
 
+    public <T> T lockThrowAll(LuaStateDangerFunction<T> function) throws Exception {
+        lock.lock();
+        try {
+            T apply = function.apply(luaState);
+            if (apply instanceof LuaState) {
+                throw new RuntimeException("Cannot return LuaState instance");
+            }
+            return apply;
+        } finally {
+            lock.unlock();
+        }
+    }
+
     public <T> T lockThrow(LuaStateFunction<T> function) throws LuaException {
         lock.lock();
         try {
@@ -64,6 +85,15 @@ public class LuaStateFacade implements AutoCloseable {
                 throw new RuntimeException("Cannot return LuaState instance");
             }
             return apply;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void lockThrowAll(LuaStateDangerConsumer consumer) throws Exception {
+        lock.lock();
+        try {
+            consumer.accept(luaState);
         } finally {
             lock.unlock();
         }
@@ -275,7 +305,7 @@ public class LuaStateFacade implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         LuaStateFactory.removeLuaState(stateId);
         luaState.close();
     }

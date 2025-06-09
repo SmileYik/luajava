@@ -476,18 +476,24 @@ public class LuaObject implements AutoCloseable {
      * @param implem Interfaces that are implemented, separated by <code>,</code>
      */
     public Object createProxy(String implem) throws ClassNotFoundException, LuaException {
-        synchronized (luaState) {
-            if (!isTable())
-                throw new LuaException("Invalid Object. Must be Table.");
+        try {
+            return luaState.lockThrowAll(L -> {
+                if (!isTable())
+                    throw new LuaException("Invalid Object. Must be Table.");
 
-            StringTokenizer st = new StringTokenizer(implem, ",");
-            Class<?>[] interfaces = new Class[st.countTokens()];
-            for (int i = 0; st.hasMoreTokens(); i++)
-                interfaces[i] = Class.forName(st.nextToken());
+                StringTokenizer st = new StringTokenizer(implem, ",");
+                Class<?>[] interfaces = new Class[st.countTokens()];
+                for (int i = 0; st.hasMoreTokens(); i++)
+                    interfaces[i] = Class.forName(st.nextToken());
 
-            InvocationHandler handler = new LuaInvocationHandler(this);
+                InvocationHandler handler = new LuaInvocationHandler(this);
 
-            return Proxy.newProxyInstance(this.getClass().getClassLoader(), interfaces, handler);
+                return Proxy.newProxyInstance(this.getClass().getClassLoader(), interfaces, handler);
+            });
+        } catch (ClassNotFoundException | LuaException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new LuaException(e);
         }
     }
 }
