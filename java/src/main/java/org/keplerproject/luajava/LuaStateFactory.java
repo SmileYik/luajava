@@ -40,7 +40,7 @@ public final class LuaStateFactory {
     /**
      * Array with all luaState's instances
      */
-    private static final List<LuaState> states = new ArrayList<>();
+    private static final List<LuaStateFacade> states = new ArrayList<>();
 
     /**
      * Non-public constructor.
@@ -53,13 +53,13 @@ public final class LuaStateFactory {
      *
      * @return LuaState
      */
-    public synchronized static LuaState newLuaState() {
+    public synchronized static LuaStateFacade newLuaState() {
         int i = getNextStateIndex();
-        LuaState L = new LuaState(i);
+        LuaStateFacade facade = new LuaStateFacade(i);
 
-        states.add(i, L);
+        states.add(i, facade);
 
-        return L;
+        return facade;
     }
 
     /**
@@ -68,24 +68,28 @@ public final class LuaStateFactory {
      * @param index
      * @return LuaState
      */
-    public synchronized static LuaState getExistingState(int index) {
-        return (LuaState) states.get(index);
+    public synchronized static LuaStateFacade getExistingState(int index) {
+        return states.get(index);
     }
 
     /**
      * Receives a existing LuaState and checks if it exists in the states list.
      * If it doesn't exist adds it to the list.
      *
-     * @param L
+     * @param L    lua state
+     * @param cPtr cPtr overwrite
      * @return int
      */
-    public synchronized static int insertLuaState(LuaState L) {
+    public synchronized static int insertLuaState(LuaStateFacade L, CPtr cPtr) {
         int i;
         for (i = 0; i < states.size(); i++) {
-            LuaState state = (LuaState) states.get(i);
+            LuaStateFacade state = states.get(i);
 
             if (state != null) {
-                if (state.getCPtrPeer() == L.getCPtrPeer())
+                if (cPtr != null) {
+                    if (cPtr.getPeer() == state.getCPtrPeer())
+                        return i;
+                } else if (state.getCPtrPeer() == L.getCPtrPeer())
                     return i;
             }
         }

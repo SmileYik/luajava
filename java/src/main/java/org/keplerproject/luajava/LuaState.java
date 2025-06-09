@@ -93,7 +93,6 @@ public class LuaState implements AutoCloseable {
     }
 
     private CPtr luaState;
-    private final int stateId;
 
     /**
      * Constructor to instance a new LuaState and initialize it with LuaJava's functions
@@ -103,7 +102,6 @@ public class LuaState implements AutoCloseable {
     protected LuaState(int stateId) {
         luaState = _open();
         luajava_open(luaState, stateId);
-        this.stateId = stateId;
     }
 
     /**
@@ -111,9 +109,8 @@ public class LuaState implements AutoCloseable {
      *
      * @param luaState
      */
-    protected LuaState(CPtr luaState) {
+    protected LuaState(CPtr luaState, int stateId) {
         this.luaState = luaState;
-        this.stateId = LuaStateFactory.insertLuaState(this);
         luajava_open(luaState, stateId);
     }
 
@@ -138,7 +135,6 @@ public class LuaState implements AutoCloseable {
      * Closes state and removes the object from the LuaStateFactory
      */
     public synchronized void close() {
-        LuaStateFactory.removeLuaState(stateId);
         _close(luaState);
         this.luaState = null;
     }
@@ -165,7 +161,7 @@ public class LuaState implements AutoCloseable {
 
     private synchronized native void _close(CPtr ptr);
 
-    private synchronized native CPtr _newthread(CPtr ptr);
+    private native CPtr _newthread(CPtr ptr);
 
     // Stack manipulation
     private synchronized native int _getTop(CPtr ptr);
@@ -182,7 +178,7 @@ public class LuaState implements AutoCloseable {
 
     private synchronized native int _checkStack(CPtr ptr, int sz);
 
-    private synchronized native void _xmove(CPtr from, CPtr to, int n);
+    private native void _xmove(CPtr from, CPtr to, int n);
 
     // Access functions
     private synchronized native int _isNumber(CPtr ptr, int idx);
@@ -213,7 +209,7 @@ public class LuaState implements AutoCloseable {
 
     private synchronized native int _objlen(CPtr ptr, int idx);
 
-    private synchronized native CPtr _toThread(CPtr ptr, int idx);
+    private native CPtr _toThread(CPtr ptr, int idx);
 
     // Push functions
     private synchronized native void _pushNil(CPtr ptr);
@@ -380,10 +376,8 @@ public class LuaState implements AutoCloseable {
 
     // STACK MANIPULATION
 
-    public LuaState newThread() {
-        LuaState l = new LuaState(_newthread(luaState));
-        LuaStateFactory.insertLuaState(l);
-        return l;
+    public CPtr newThread() {
+        return _newthread(luaState);
     }
 
     public int getTop() {
@@ -416,7 +410,7 @@ public class LuaState implements AutoCloseable {
 
     // ACCESS FUNCTION
 
-    public void xmove(LuaState to, int n) {
+    protected void xmove(LuaState to, int n) {
         _xmove(luaState, to.luaState, n);
     }
 
@@ -510,8 +504,8 @@ public class LuaState implements AutoCloseable {
 
     //PUSH FUNCTIONS
 
-    public LuaState toThread(int idx) {
-        return new LuaState(_toThread(luaState, idx));
+    public CPtr toThread(int idx) {
+        return _toThread(luaState, idx);
     }
 
     public void pushNil() {
