@@ -1,5 +1,6 @@
 package org.keplerproject.luajava;
 
+import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -101,6 +102,19 @@ public class LuaStateFacade implements AutoCloseable {
         } finally {
             lock.unlock();
         }
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) return true;
+        if (object == null || getClass() != object.getClass()) return false;
+        LuaStateFacade facade = (LuaStateFacade) object;
+        return stateId == facade.stateId && Objects.equals(luaState, facade.luaState);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(stateId, luaState);
     }
 
     // === LUA OBJECT ===

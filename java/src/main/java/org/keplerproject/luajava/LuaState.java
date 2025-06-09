@@ -24,6 +24,8 @@
 
 package org.keplerproject.luajava;
 
+import java.util.Objects;
+
 /**
  * LuaState if the main class of LuaJava for the Java developer.
  * LuaState is a mapping of most of Lua's C API functions.
@@ -87,7 +89,8 @@ public class LuaState {
      * Opens the library containing the luajava API
      */
     static {
-//        System.loadLibrary(LUAJAVA_LIB);
+        // Remove
+        // System.loadLibrary(LUAJAVA_LIB);
     }
 
     private CPtr luaState;
@@ -137,6 +140,19 @@ public class LuaState {
      */
     public long getCPtrPeer() {
         return (luaState != null) ? luaState.getPeer() : 0;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) return true;
+        if (object == null || getClass() != object.getClass()) return false;
+        LuaState luaState1 = (LuaState) object;
+        return Objects.equals(luaState, luaState1.luaState);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(luaState);
     }
 
     /********************* Lua Native Interface *************************/

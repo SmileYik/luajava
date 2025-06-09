@@ -24,6 +24,8 @@
 
 package org.keplerproject.luajava;
 
+import java.util.Objects;
+
 /**
  * An abstraction for a C pointer data type.  A CPtr instance represents, on
  * the Java side, a C pointer.  The C pointer could be any <em>type</em> of C
@@ -56,6 +58,11 @@ public class CPtr {
         if (CPtr.class != other.getClass())
             return false;
         return peer == ((CPtr) other).peer;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(peer);
     }
 
     /**
