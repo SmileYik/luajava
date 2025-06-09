@@ -42,4 +42,8 @@ public class ParamRef <T> {
     public static <T> ParamRef<T> wrapper(T param) {
         return new ParamRef<T>(param);
     }
+
+    public T orElse(T other) {
+        return param == null ? other : param;
+    }
 }
