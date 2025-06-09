@@ -48,7 +48,7 @@ public class LuaInvocationHandler implements InvocationHandler {
      * Function called when a proxy object function is invoked.
      */
     public Object invoke(Object proxy, Method method, Object[] args) throws LuaException {
-        synchronized (obj.L) {
+        synchronized (obj.luaState) {
             String methodName = method.getName();
             LuaObject func = obj.getField(methodName);
 

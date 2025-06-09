@@ -188,21 +188,21 @@ public class LuaArray extends LuaTable {
      * @throws Exception any exception
      */
     public <T> void forEachValue(Class<T> tClass, Consumer<T> consumer) throws Exception {
-        synchronized (L) {
+        synchronized (luaState) {
             push();
             for (int i = 1; i <= len; i++) {
-                L.rawGetI(-1, i);
+                luaState.rawGetI(-1, i);
                 try {
-                    Object javaObject = L.toJavaObject(-1);
+                    Object javaObject = luaState.toJavaObject(-1);
                     consumer.accept(tClass.cast(javaObject));
                 } catch (Exception e) {
-                    L.pop(1);
+                    luaState.pop(1);
                     throw e;
                 } finally {
-                    L.pop(1);
+                    luaState.pop(1);
                 }
             }
-            L.pop(1);
+            luaState.pop(1);
         }
     }
 
@@ -217,21 +217,21 @@ public class LuaArray extends LuaTable {
      */
     @Override
     public <K, V> void forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) throws Exception {
-        synchronized (L) {
+        synchronized (luaState) {
             push();
             for (int i = 1; i <= len; i++) {
-                L.rawGetI(-1, i);
+                luaState.rawGetI(-1, i);
                 try {
-                    Object javaObject = L.toJavaObject(-1);
+                    Object javaObject = luaState.toJavaObject(-1);
                     consumer.accept(kClass.cast(i - 1), vClass.cast(javaObject));
                 } catch (Exception e) {
-                    L.pop(1);
+                    luaState.pop(1);
                     throw e;
                 } finally {
-                    L.pop(1);
+                    luaState.pop(1);
                 }
             }
-            L.pop(1);
+            luaState.pop(1);
         }
     }
 
