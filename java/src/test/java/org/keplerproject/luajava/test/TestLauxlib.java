@@ -150,7 +150,7 @@ public class TestLauxlib {
             L.LdoString("str = testTable.ff; print(str..'fromLua');" +
                     " io.stdout:flush()");
 
-            L.close();
         });
+        facade.close();
     }
 }

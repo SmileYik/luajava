@@ -32,7 +32,7 @@ package org.keplerproject.luajava;
  *
  * @author Thiago Ponte
  */
-public class LuaState implements AutoCloseable {
+public class LuaState {
     final public static int LUA_GLOBALSINDEX = -10002;
     final public static int LUA_REGISTRYINDEX = -10000;
     final public static int LUA_TNONE = -1;
@@ -113,12 +113,12 @@ public class LuaState implements AutoCloseable {
     }
 
     // LuaLibAux
-    private static synchronized native int _LdoFile(CPtr ptr, String fileName);
+    private static native int _LdoFile(CPtr ptr, String fileName);
 
     /**
      * Closes state and removes the object from the LuaStateFactory
      */
-    public synchronized void close() {
+    protected void clearRef() {
         _close(luaState);
         this.luaState = null;
     }
@@ -126,7 +126,7 @@ public class LuaState implements AutoCloseable {
     /**
      * Returns <code>true</code> if state is closed.
      */
-    public synchronized boolean isClosed() {
+    public boolean isClosed() {
         return luaState == null;
     }
 
@@ -141,222 +141,222 @@ public class LuaState implements AutoCloseable {
 
     /********************* Lua Native Interface *************************/
 
-    private synchronized native CPtr _open();
+    private native CPtr _open();
 
-    private synchronized native void _close(CPtr ptr);
+    private native void _close(CPtr ptr);
 
     private native CPtr _newthread(CPtr ptr);
 
     // Stack manipulation
-    private synchronized native int _getTop(CPtr ptr);
+    private native int _getTop(CPtr ptr);
 
-    private synchronized native void _setTop(CPtr ptr, int idx);
+    private native void _setTop(CPtr ptr, int idx);
 
-    private synchronized native void _pushValue(CPtr ptr, int idx);
+    private native void _pushValue(CPtr ptr, int idx);
 
-    private synchronized native void _remove(CPtr ptr, int idx);
+    private native void _remove(CPtr ptr, int idx);
 
-    private synchronized native void _insert(CPtr ptr, int idx);
+    private native void _insert(CPtr ptr, int idx);
 
-    private synchronized native void _replace(CPtr ptr, int idx);
+    private native void _replace(CPtr ptr, int idx);
 
-    private synchronized native int _checkStack(CPtr ptr, int sz);
+    private native int _checkStack(CPtr ptr, int sz);
 
     private native void _xmove(CPtr from, CPtr to, int n);
 
     // Access functions
-    private synchronized native int _isNumber(CPtr ptr, int idx);
+    private native int _isNumber(CPtr ptr, int idx);
 
-    private synchronized native int _isString(CPtr ptr, int idx);
+    private native int _isString(CPtr ptr, int idx);
 
-    private synchronized native int _isCFunction(CPtr ptr, int idx);
+    private native int _isCFunction(CPtr ptr, int idx);
 
-    private synchronized native int _isUserdata(CPtr ptr, int idx);
+    private native int _isUserdata(CPtr ptr, int idx);
 
-    private synchronized native int _type(CPtr ptr, int idx);
+    private native int _type(CPtr ptr, int idx);
 
-    private synchronized native String _typeName(CPtr ptr, int tp);
+    private native String _typeName(CPtr ptr, int tp);
 
-    private synchronized native int _equal(CPtr ptr, int idx1, int idx2);
+    private native int _equal(CPtr ptr, int idx1, int idx2);
 
-    private synchronized native int _rawequal(CPtr ptr, int idx1, int idx2);
+    private native int _rawequal(CPtr ptr, int idx1, int idx2);
 
-    private synchronized native int _lessthan(CPtr ptr, int idx1, int idx2);
+    private native int _lessthan(CPtr ptr, int idx1, int idx2);
 
-    private synchronized native double _toNumber(CPtr ptr, int idx);
+    private native double _toNumber(CPtr ptr, int idx);
 
-    private synchronized native int _toInteger(CPtr ptr, int idx);
+    private native int _toInteger(CPtr ptr, int idx);
 
-    private synchronized native int _toBoolean(CPtr ptr, int idx);
+    private native int _toBoolean(CPtr ptr, int idx);
 
-    private synchronized native String _toString(CPtr ptr, int idx);
+    private native String _toString(CPtr ptr, int idx);
 
-    private synchronized native int _objlen(CPtr ptr, int idx);
+    private native int _objlen(CPtr ptr, int idx);
 
     private native CPtr _toThread(CPtr ptr, int idx);
 
     // Push functions
-    private synchronized native void _pushNil(CPtr ptr);
+    private native void _pushNil(CPtr ptr);
 
-    private synchronized native void _pushNumber(CPtr ptr, double number);
+    private native void _pushNumber(CPtr ptr, double number);
 
-    private synchronized native void _pushInteger(CPtr ptr, int integer);
+    private native void _pushInteger(CPtr ptr, int integer);
 
-    private synchronized native void _pushString(CPtr ptr, String str);
+    private native void _pushString(CPtr ptr, String str);
 
-    private synchronized native void _pushString(CPtr ptr, byte[] bytes, int n);
+    private native void _pushString(CPtr ptr, byte[] bytes, int n);
 
-    private synchronized native void _pushBoolean(CPtr ptr, int bool);
+    private native void _pushBoolean(CPtr ptr, int bool);
 
     // Get functions
-    private synchronized native void _getTable(CPtr ptr, int idx);
+    private native void _getTable(CPtr ptr, int idx);
 
-    private synchronized native void _getField(CPtr ptr, int idx, String k);
+    private native void _getField(CPtr ptr, int idx, String k);
 
-    private synchronized native void _rawGet(CPtr ptr, int idx);
+    private native void _rawGet(CPtr ptr, int idx);
 
-    private synchronized native void _rawGetI(CPtr ptr, int idx, int n);
+    private native void _rawGetI(CPtr ptr, int idx, int n);
 
-    private synchronized native void _createTable(CPtr ptr, int narr, int nrec);
+    private native void _createTable(CPtr ptr, int narr, int nrec);
 
-    private synchronized native int _getMetaTable(CPtr ptr, int idx);
+    private native int _getMetaTable(CPtr ptr, int idx);
 
-    private synchronized native void _getFEnv(CPtr ptr, int idx);
+    private native void _getFEnv(CPtr ptr, int idx);
 
     // Set functions
-    private synchronized native void _setTable(CPtr ptr, int idx);
+    private native void _setTable(CPtr ptr, int idx);
 
-    private synchronized native void _setField(CPtr ptr, int idx, String k);
+    private native void _setField(CPtr ptr, int idx, String k);
 
-    private synchronized native void _rawSet(CPtr ptr, int idx);
+    private native void _rawSet(CPtr ptr, int idx);
 
-    private synchronized native void _rawSetI(CPtr ptr, int idx, int n);
+    private native void _rawSetI(CPtr ptr, int idx, int n);
 
-    private synchronized native int _setMetaTable(CPtr ptr, int idx);
+    private native int _setMetaTable(CPtr ptr, int idx);
 
-    private synchronized native int _setFEnv(CPtr ptr, int idx);
+    private native int _setFEnv(CPtr ptr, int idx);
 
-    private synchronized native void _call(CPtr ptr, int nArgs, int nResults);
+    private native void _call(CPtr ptr, int nArgs, int nResults);
 
-    private synchronized native int _pcall(CPtr ptr, int nArgs, int Results, int errFunc);
+    private native int _pcall(CPtr ptr, int nArgs, int Results, int errFunc);
 
     // Coroutine Functions
-    private synchronized native int _yield(CPtr ptr, int nResults);
+    private native int _yield(CPtr ptr, int nResults);
 
-    private synchronized native int _resume(CPtr ptr, int nargs);
+    private native int _resume(CPtr ptr, int nargs);
 
-    private synchronized native int _status(CPtr ptr);
+    private native int _status(CPtr ptr);
 
-    private synchronized native int _gc(CPtr ptr, int what, int data);
+    private native int _gc(CPtr ptr, int what, int data);
 
     // Miscellaneous Functions
-    private synchronized native int _error(CPtr ptr);
+    private native int _error(CPtr ptr);
 
-    private synchronized native int _next(CPtr ptr, int idx);
+    private native int _next(CPtr ptr, int idx);
 
-    private synchronized native void _concat(CPtr ptr, int n);
+    private native void _concat(CPtr ptr, int n);
 
     // Some macros
-    private synchronized native void _pop(CPtr ptr, int n);
+    private native void _pop(CPtr ptr, int n);
 
-    private synchronized native void _newTable(CPtr ptr);
+    private native void _newTable(CPtr ptr);
 
-    private synchronized native int _strlen(CPtr ptr, int idx);
+    private native int _strlen(CPtr ptr, int idx);
 
-    private synchronized native int _isFunction(CPtr ptr, int idx);
+    private native int _isFunction(CPtr ptr, int idx);
 
-    private synchronized native int _isTable(CPtr ptr, int idx);
+    private native int _isTable(CPtr ptr, int idx);
 
-    private synchronized native int _isNil(CPtr ptr, int idx);
+    private native int _isNil(CPtr ptr, int idx);
 
-    private synchronized native int _isBoolean(CPtr ptr, int idx);
+    private native int _isBoolean(CPtr ptr, int idx);
 
-    private synchronized native int _isThread(CPtr ptr, int idx);
+    private native int _isThread(CPtr ptr, int idx);
 
-    private synchronized native int _isNone(CPtr ptr, int idx);
+    private native int _isNone(CPtr ptr, int idx);
 
-    private synchronized native int _isNoneOrNil(CPtr ptr, int idx);
+    private native int _isNoneOrNil(CPtr ptr, int idx);
 
-    private synchronized native void _setGlobal(CPtr ptr, String name);
+    private native void _setGlobal(CPtr ptr, String name);
 
-    private synchronized native void _getGlobal(CPtr ptr, String name);
+    private native void _getGlobal(CPtr ptr, String name);
 
-    private synchronized native int _getGcCount(CPtr ptr);
-    //private synchronized native int _doBuffer(CPtr ptr, byte[] buff, long sz, String n);
+    private native int _getGcCount(CPtr ptr);
+    //private native int _doBuffer(CPtr ptr, byte[] buff, long sz, String n);
 
-    private synchronized native int _LdoString(CPtr ptr, String string);
+    private native int _LdoString(CPtr ptr, String string);
 
-    private synchronized native int _LgetMetaField(CPtr ptr, int obj, String e);
+    private native int _LgetMetaField(CPtr ptr, int obj, String e);
 
-    private synchronized native int _LcallMeta(CPtr ptr, int obj, String e);
+    private native int _LcallMeta(CPtr ptr, int obj, String e);
 
-    private synchronized native int _Ltyperror(CPtr ptr, int nArg, String tName);
+    private native int _Ltyperror(CPtr ptr, int nArg, String tName);
 
-    private synchronized native int _LargError(CPtr ptr, int numArg, String extraMsg);
+    private native int _LargError(CPtr ptr, int numArg, String extraMsg);
 
-    private synchronized native String _LcheckString(CPtr ptr, int numArg);
+    private native String _LcheckString(CPtr ptr, int numArg);
 
-    private synchronized native String _LoptString(CPtr ptr, int numArg, String def);
+    private native String _LoptString(CPtr ptr, int numArg, String def);
 
-    private synchronized native double _LcheckNumber(CPtr ptr, int numArg);
+    private native double _LcheckNumber(CPtr ptr, int numArg);
 
-    private synchronized native double _LoptNumber(CPtr ptr, int numArg, double def);
+    private native double _LoptNumber(CPtr ptr, int numArg, double def);
 
-    private synchronized native int _LcheckInteger(CPtr ptr, int numArg);
+    private native int _LcheckInteger(CPtr ptr, int numArg);
 
-    private synchronized native int _LoptInteger(CPtr ptr, int numArg, int def);
+    private native int _LoptInteger(CPtr ptr, int numArg, int def);
 
-    private synchronized native void _LcheckStack(CPtr ptr, int sz, String msg);
+    private native void _LcheckStack(CPtr ptr, int sz, String msg);
 
-    private synchronized native void _LcheckType(CPtr ptr, int nArg, int t);
+    private native void _LcheckType(CPtr ptr, int nArg, int t);
 
-    private synchronized native void _LcheckAny(CPtr ptr, int nArg);
+    private native void _LcheckAny(CPtr ptr, int nArg);
 
-    private synchronized native int _LnewMetatable(CPtr ptr, String tName);
+    private native int _LnewMetatable(CPtr ptr, String tName);
 
-    private synchronized native void _LgetMetatable(CPtr ptr, String tName);
+    private native void _LgetMetatable(CPtr ptr, String tName);
 
-    private synchronized native void _Lwhere(CPtr ptr, int lvl);
+    private native void _Lwhere(CPtr ptr, int lvl);
 
-    private synchronized native int _Lref(CPtr ptr, int t);
+    private native int _Lref(CPtr ptr, int t);
 
-    private synchronized native void _LunRef(CPtr ptr, int t, int ref);
+    private native void _LunRef(CPtr ptr, int t, int ref);
 
     // luaL_getn 方法在 LuaJIT 2.1.1748459687 中不存在
-    // private synchronized native int _LgetN(CPtr ptr, int t);
+    // private native int _LgetN(CPtr ptr, int t);
 
     // luaL_setn 方法在 LuaJIT 2.1.1748459687 中不存在
-    // private synchronized native void _LsetN(CPtr ptr, int t, int n);
+    // private native void _LsetN(CPtr ptr, int t, int n);
 
-    private synchronized native int _LloadFile(CPtr ptr, String fileName);
+    private native int _LloadFile(CPtr ptr, String fileName);
 
-    private synchronized native int _LloadBuffer(CPtr ptr, byte[] buff, long sz, String name);
+    private native int _LloadBuffer(CPtr ptr, byte[] buff, long sz, String name);
 
-    private synchronized native int _LloadString(CPtr ptr, String s);
+    private native int _LloadString(CPtr ptr, String s);
 
-    private synchronized native String _Lgsub(CPtr ptr, String s, String p, String r);
+    private native String _Lgsub(CPtr ptr, String s, String p, String r);
 
-    private synchronized native String _LfindTable(CPtr ptr, int idx, String fname, int szhint);
+    private native String _LfindTable(CPtr ptr, int idx, String fname, int szhint);
 
-    private synchronized native void _openBase(CPtr ptr);
+    private native void _openBase(CPtr ptr);
 
-    private synchronized native void _openTable(CPtr ptr);
+    private native void _openTable(CPtr ptr);
 
-    private synchronized native void _openIo(CPtr ptr);
+    private native void _openIo(CPtr ptr);
 
-    private synchronized native void _openOs(CPtr ptr);
+    private native void _openOs(CPtr ptr);
 
-    private synchronized native void _openString(CPtr ptr);
+    private native void _openString(CPtr ptr);
 
-    private synchronized native void _openMath(CPtr ptr);
+    private native void _openMath(CPtr ptr);
 
-    private synchronized native void _openDebug(CPtr ptr);
+    private native void _openDebug(CPtr ptr);
 
-    private synchronized native void _openPackage(CPtr ptr);
+    private native void _openPackage(CPtr ptr);
 
     // Java Interface -----------------------------------------------------
 
-    private synchronized native void _openLibs(CPtr ptr);
+    private native void _openLibs(CPtr ptr);
 
     // STACK MANIPULATION
 
@@ -746,13 +746,13 @@ public class LuaState implements AutoCloseable {
         _pop(luaState, n);
     }
 
-    public synchronized void getGlobal(String global) {
+    public void getGlobal(String global) {
 //    pushString(global);
 //    getTable(LUA_GLOBALSINDEX.intValue());
         _getGlobal(luaState, global);
     }
 
-    public synchronized void setGlobal(String name) {
+    public void setGlobal(String name) {
         //pushString(name);
         //insert(-2);
         //setTable(LUA_GLOBALSINDEX.intValue());
@@ -805,7 +805,7 @@ public class LuaState implements AutoCloseable {
      * @param cptr
      * @param stateId
      */
-    private synchronized native void luajava_open(CPtr cptr, int stateId);
+    private native void luajava_open(CPtr cptr, int stateId);
 
     /**
      * Gets a Object from a userdata
@@ -814,7 +814,7 @@ public class LuaState implements AutoCloseable {
      * @param idx index of the lua stack
      * @return Object
      */
-    private synchronized native Object _getObjectFromUserdata(CPtr L, int idx) throws LuaException;
+    private native Object _getObjectFromUserdata(CPtr L, int idx) throws LuaException;
 
     /**
      * Returns whether a userdata contains a Java Object
@@ -823,7 +823,7 @@ public class LuaState implements AutoCloseable {
      * @param idx index of the lua stack
      * @return boolean
      */
-    private synchronized native boolean _isObject(CPtr L, int idx);
+    private native boolean _isObject(CPtr L, int idx);
 
     /**
      * Pushes a Java Object into the state stack
@@ -831,7 +831,7 @@ public class LuaState implements AutoCloseable {
      * @param L
      * @param obj
      */
-    private synchronized native void _pushJavaObject(CPtr L, Object obj);
+    private native void _pushJavaObject(CPtr L, Object obj);
 
     /**
      * Pushes a Java Array into the state stack
@@ -839,7 +839,7 @@ public class LuaState implements AutoCloseable {
      * @param L
      * @param obj
      */
-    private synchronized native void _pushJavaArray(CPtr L, Object obj);
+    private native void _pushJavaArray(CPtr L, Object obj);
 
     /**
      * Pushes a JavaFunction into the state stack
@@ -847,7 +847,7 @@ public class LuaState implements AutoCloseable {
      * @param L
      * @param func
      */
-    private synchronized native void _pushJavaFunction(CPtr L, JavaFunction func) throws LuaException;
+    private native void _pushJavaFunction(CPtr L, JavaFunction func) throws LuaException;
 
     /**
      * Returns whether a userdata contains a Java Function
@@ -856,7 +856,7 @@ public class LuaState implements AutoCloseable {
      * @param idx index of the lua stack
      * @return boolean
      */
-    private synchronized native boolean _isJavaFunction(CPtr L, int idx);
+    private native boolean _isJavaFunction(CPtr L, int idx);
 
     /**
      * Gets a Object from Lua

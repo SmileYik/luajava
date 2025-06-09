@@ -306,7 +306,12 @@ public class LuaStateFacade implements AutoCloseable {
 
     @Override
     public void close() {
-        LuaStateFactory.removeLuaState(stateId);
-        luaState.close();
+        lock.lock();
+        try {
+            LuaStateFactory.removeLuaState(stateId);
+            luaState.clearRef();
+        } finally {
+            lock.unlock();
+        }
     }
 }

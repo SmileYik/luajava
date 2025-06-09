@@ -44,9 +44,8 @@ public class TestClass {
             test.jf.register("javaFuncTest");
 
             test.Lf.lock(it -> { it.LdoString(" f=javaFuncTest(); print(f) "); });
-
-            L.close();
         });
+        luaState.close();
     }
 
 
