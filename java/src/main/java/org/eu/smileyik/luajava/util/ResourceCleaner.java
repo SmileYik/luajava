@@ -6,6 +6,12 @@ import java.lang.ref.ReferenceQueue;
 import java.util.LinkedList;
 
 public class ResourceCleaner implements Runnable, Closeable {
+    private static final ResourceCleaner INSTANCE = new ResourceCleaner();
+
+    public static ResourceCleaner getInstance() {
+        return INSTANCE;
+    }
+
     private final ReferenceQueue<Object> referenceQueue = new ReferenceQueue<>();
     private final LinkedList<Ref> refs = new LinkedList<>();
 
@@ -19,22 +25,22 @@ public class ResourceCleaner implements Runnable, Closeable {
     }
 
     @Override
-    public void run() {
+    public synchronized void run() {
         monitorTask();
     }
 
-    public Ref register(Object o, Runnable finalizer) {
+    public synchronized Ref register(Object o, Runnable finalizer) {
         Ref ref = new Ref(o, referenceQueue, finalizer);
         refs.add(ref);
         return ref;
     }
 
     @Override
-    public void close() {
+    public synchronized void close() {
         cleanerThread.interrupt();
     }
 
-    private void monitorTask() {
+    private synchronized void monitorTask() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 Ref removed = (Ref) referenceQueue.remove();

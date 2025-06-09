@@ -56,7 +56,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author Thiago Ponte
  */
 public class LuaObject implements AutoCloseable {
-    protected static final ResourceCleaner CLEANER = new ResourceCleaner();
     private static final class CleanTask implements Runnable {
         private final LuaStateFacade luaState;
         private final Integer ref;
@@ -103,7 +102,7 @@ public class LuaObject implements AutoCloseable {
             ref = L.Lref(LuaState.LUA_REGISTRYINDEX);
 
             CleanTask cleanTask = new CleanTask(luaState, ref);
-            CLEANER.register(this, cleanTask);
+            ResourceCleaner.getInstance().register(this, cleanTask);
             return cleanTask;
         });
     }
