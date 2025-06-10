@@ -22,10 +22,10 @@ public class LuajavaTest {
             int exp = L.LdoString(lua);
             System.out.println(exp);
             for (int i = 0; i < 10; i++) {
-                LuaObject luaObject = facade.getLuaObject("map");
+                LuaObject luaObject = facade.getLuaObject("map").getValue();
                 LuaObject b = null;
                 try {
-                    b = luaObject.getField("b");
+                    b = luaObject.getField("b").getOrThrow(LuaException.class);
                 } catch (LuaException e) {
                     throw new RuntimeException(e);
                 }

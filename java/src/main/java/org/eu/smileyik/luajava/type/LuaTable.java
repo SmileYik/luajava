@@ -1,5 +1,6 @@
 package org.eu.smileyik.luajava.type;
 
+import org.eu.smileyik.luajava.exception.Result;
 import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaState;
 import org.keplerproject.luajava.LuaStateFacade;
@@ -23,7 +24,7 @@ public class LuaTable extends LuaObject {
         super(L, index);
     }
 
-    protected static LuaTable create(LuaStateFacade luaStateFacade, int index) {
+    protected static LuaTable createTable(LuaStateFacade luaStateFacade, int index) {
         return luaStateFacade.lock(l -> {
             Optional<Integer> result = isArrayTable(l, index);
             if (result.isPresent()) {
@@ -162,15 +163,16 @@ public class LuaTable extends LuaObject {
      * @param <V> Value Type, Cannot be primitive type
      * @throws Exception any exception
      */
-    public <K, V> void forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) throws Exception {
-        luaState.lockThrowAll(l ->  {
+    public <K, V> Result<Void, ? extends Exception> forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) {
+        return luaState.lockThrowAll(l ->  {
             int top = l.getTop();
             try {
                 push();
                 l.pushNil();
                 while (l.next(-2) != 0) {
-                    Object key = luaState.toJavaObject(-2);
-                    Object value = luaState.toJavaObject(-1);
+                    // i want out of loop if happened exception.
+                    Object key = luaState.toJavaObject(-2).getOrThrow();
+                    Object value = luaState.toJavaObject(-1).getOrThrow();
                     consumer.accept(kClass.cast(key), vClass.cast(value));
                     l.pop(1);
                 }
@@ -178,6 +180,7 @@ public class LuaTable extends LuaObject {
             } finally {
                 l.setTop(top);
             }
+            return null;
         });
     }
 

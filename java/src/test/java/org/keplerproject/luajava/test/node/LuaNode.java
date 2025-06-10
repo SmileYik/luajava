@@ -75,7 +75,10 @@ public class LuaNode {
                     }
                 }
             });
-            configLib = (IConfig) facade.getLuaObject("configLib").createProxy("org.keplerproject.luajava.test.node.IConfig");
+            configLib = (IConfig) facade.getLuaObject("configLib")
+                    .getOrThrow(LuaException.class)
+                    .createProxy("org.keplerproject.luajava.test.node.IConfig")
+                    .getOrThrow(LuaException.class);
 
         }
 
@@ -115,7 +118,7 @@ public class LuaNode {
             L.getTable(-2);
             while (!L.isNil(-1)) {
                 if (L.isTable(-1)) {
-                    list.add(new LuaNode(facade.getLuaObject(-1)));
+                    list.add(new LuaNode(facade.getLuaObject(-1).getOrSneakyThrow()));
                 }
                 L.pop(1);
 
@@ -145,7 +148,7 @@ public class LuaNode {
             L.getTable(-2);
             while (!L.isNil(-1)) {
                 if (L.isTable(-1)) {
-                    list.add(new LuaNode(facade.getLuaObject(-1)));
+                    list.add(new LuaNode(facade.getLuaObject(-1).getOrSneakyThrow()));
                 }
                 L.pop(1);
 

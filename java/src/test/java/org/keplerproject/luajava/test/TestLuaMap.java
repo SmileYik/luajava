@@ -105,13 +105,13 @@ public class TestLuaMap {
                }
 
                L.getGlobal("map");
-               Map proxy = (Map) facade.getLuaObject(-1).createProxy("java.util.Map");
+               Map proxy = (Map) facade.getLuaObject(-1).getOrThrow().createProxy("java.util.Map").getOrThrow();
                L.pop(1);
                return proxy;
            } catch (Exception e) {
                throw new RuntimeException(e);
            }
-        });
+        }).getValue();
 
 
         luaMap.put("test", "testValue");
@@ -152,7 +152,7 @@ class LuaMap implements Map, AutoCloseable, Closeable {
         facade.lock(L -> {
             L.openLibs();
             L.newTable();
-            table = facade.getLuaObject(-1);
+            table = facade.getLuaObject(-1).getOrSneakyThrow();
             L.pop(1);
         });
     }
@@ -185,7 +185,7 @@ class LuaMap implements Map, AutoCloseable, Closeable {
     public void clear() {
         facade.lock(L -> {
             L.newTable();
-            table = facade.getLuaObject(-1);
+            table = facade.getLuaObject(-1).getOrSneakyThrow();
             L.pop(1);
         });
 
@@ -205,13 +205,13 @@ class LuaMap implements Map, AutoCloseable, Closeable {
         try {
             return facade.lockThrow(L -> {
                 facade.pushObjectValue(key);
-                LuaObject obj = facade.getLuaObject(-1);
+                LuaObject obj = facade.getLuaObject(-1).getOrThrow(LuaException.class);
                 L.pop(1);
 
-                LuaObject temp = facade.getLuaObject(table, obj);
+                LuaObject temp = facade.getLuaObject(table, obj).getOrThrow(LuaException.class);
 
                 return !temp.isNil();
-            });
+            }).getOrThrow(LuaException.class);
 
         } catch (LuaException e) {
             return false;
@@ -238,7 +238,7 @@ class LuaMap implements Map, AutoCloseable, Closeable {
 
                 L.pop(3);
                 return false;
-            });
+            }).getOrThrow(LuaException.class);
 
         } catch (LuaException e) {
             return false;
@@ -291,12 +291,12 @@ class LuaMap implements Map, AutoCloseable, Closeable {
 
                 L.getTable(-2);
 
-                Object ret = facade.toJavaObject(-1);
+                Object ret = facade.toJavaObject(-1).getOrThrow(LuaException.class);
 
                 L.pop(2);
 
                 return ret;
-            });
+            }).getOrThrow(LuaException.class);
 
         } catch (LuaException e) {
             return null;
@@ -320,7 +320,7 @@ class LuaMap implements Map, AutoCloseable, Closeable {
                 L.pop(2);
 
                 return ret;
-            });
+            }).getOrThrow(LuaException.class);
 
         } catch (LuaException e) {
             return null;
@@ -344,7 +344,7 @@ class LuaMap implements Map, AutoCloseable, Closeable {
                 L.pop(1);
 
                 return ret;
-            });
+            }).getOrThrow(LuaException.class);
 
         } catch (LuaException e) {
             return null;

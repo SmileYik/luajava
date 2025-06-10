@@ -52,7 +52,7 @@ public class LuaInvocationHandler implements InvocationHandler {
     public Object invoke(Object proxy, Method method, Object[] args) throws LuaException {
         return obj.getLuaState().lockThrow(l -> {
             String methodName = method.getName();
-            LuaObject func = obj.getField(methodName);
+            LuaObject func = obj.getField(methodName).getOrThrow(LuaException.class);
 
             if (func.isNil()) {
                 return null;
@@ -63,16 +63,16 @@ public class LuaInvocationHandler implements InvocationHandler {
 
             // Checks if returned type is void. if it is returns null.
             if (retType.equals(Void.class) || retType.equals(void.class)) {
-                func.call(args, 0);
+                func.call(args, 0).justThrow(LuaException.class);
                 ret = null;
             } else {
-                ret = func.call(args, 1)[0];
+                ret = func.call(args, 1).getOrThrow(LuaException.class)[0];
                 if (ret instanceof Double) {
                     ret = BoxedTypeHelper.covertNumberTo((Double) ret, retType);
                 }
             }
 
             return ret;
-        });
+        }).getOrThrow(LuaException.class);
     }
 }

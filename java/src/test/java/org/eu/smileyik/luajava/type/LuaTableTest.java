@@ -21,7 +21,7 @@ class LuaTableTest {
             if (exp != 0) {
                 throw new LuaException(L.toString(-1));
             }
-            LuaObject luaObject = facade.getLuaObject("map");
+            LuaObject luaObject = facade.getLuaObject("map").getOrThrow(LuaException.class);
 
             assert luaObject instanceof LuaTable;
             LuaTable table = (LuaTable) luaObject;
@@ -52,7 +52,7 @@ class LuaTableTest {
                 if (exp != 0) {
                     throw new LuaException(L.toString(-1));
                 }
-                LuaObject luaObject = facade.getLuaObject("map");
+                LuaObject luaObject = facade.getLuaObject("map").getOrThrow();
 
                 assert luaObject instanceof LuaTable;
                 LuaTable table = (LuaTable) luaObject;
@@ -60,7 +60,7 @@ class LuaTableTest {
                 System.out.println(table.asDeepMap());
                 System.out.println(table.asStringMap(Object.class));
 
-                table = (LuaTable) facade.getLuaObject("map2");
+                table = (LuaTable) facade.getLuaObject("map2").getOrThrow();
                 System.out.println(table.asMap());
                 System.out.println(table.asDeepMap());
             } catch (Exception e) {

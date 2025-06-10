@@ -100,7 +100,7 @@ public final class LuaJavaAPI {
             luaStateFacade.pushObjectValue(ret);
 
             return 1;
-        });
+        }).getOrThrow(LuaException.class);
     }
 
     /**
@@ -126,7 +126,7 @@ public final class LuaJavaAPI {
             luaStateFacade.pushObjectValue(Array.get(obj, index - 1));
 
             return 1;
-        });
+        }).getOrThrow(LuaException.class);
     }
 
     /**
@@ -159,7 +159,7 @@ public final class LuaJavaAPI {
             }
 
             return 0;
-        });
+        }).getOrThrow(LuaException.class);
     }
 
 
@@ -210,7 +210,7 @@ public final class LuaJavaAPI {
                 throw new LuaException("Field not accessible.", e);
             }
 
-        });
+        }).justThrow(LuaException.class);
         return 0;
     }
 
@@ -244,7 +244,7 @@ public final class LuaJavaAPI {
             Object setObj = setObjRet.get();
 
             Array.set(obj, index - 1, setObj);
-        });
+        }).justThrow(LuaException.class);
 
         return 0;
     }
@@ -272,7 +272,7 @@ public final class LuaJavaAPI {
             Object ret = getObjInstance(luaStateFacade, L, clazz);
 
             L.pushJavaObject(ret);
-        });
+        }).justThrow(LuaException.class);
 
         return 1;
     }
@@ -291,7 +291,7 @@ public final class LuaJavaAPI {
         luaStateFacade.lockThrow(L -> {
             Object ret = getObjInstance(luaStateFacade, L, clazz);
             L.pushJavaObject(ret);
-        });
+        }).justThrow(LuaException.class);
         return 1;
     }
 
@@ -328,7 +328,7 @@ public final class LuaJavaAPI {
             } catch (Exception e) {
                 throw new LuaException("Error on calling method. Library could not be loaded. " + e.getMessage());
             }
-        });
+        }).getOrThrow(LuaException.class);
     }
 
     private static Object getObjInstance(LuaStateFacade luaStateFacade, LuaState L, Class<?> clazz)
@@ -430,7 +430,7 @@ public final class LuaJavaAPI {
             luaStateFacade.pushObjectValue(ret);
 
             return 1;
-        });
+        }).getOrThrow(LuaException.class);
     }
 
     /**
@@ -482,7 +482,7 @@ public final class LuaJavaAPI {
                     throw new LuaException(
                             "Parameter is not a table. Can't create proxy.");
 
-                LuaObject luaObj = luaStateFacade.getLuaObject(2);
+                LuaObject luaObj = luaStateFacade.getLuaObject(2).getOrThrow();
 
                 Object proxy = luaObj.createProxy(implem);
                 L.pushJavaObject(proxy);
@@ -490,18 +490,19 @@ public final class LuaJavaAPI {
                 throw new LuaException(e);
             }
 
-        });
+        }).justThrow(LuaException.class);
         return 1;
     }
 
-    private static Optional<Object> compareTypes(LuaStateFacade luaStateFacade, LuaState L, Class<?> parameter, int idx)
+    private static Optional<Object> compareTypes(LuaStateFacade luaStateFacade,
+                                                 LuaState L, Class<?> parameter, int idx)
             throws LuaException {
         boolean okType = true;
         Object obj = null;
 
         // if parameter type is Object then just cast lua type to java type.
         if (parameter == Object.class) {
-            return Optional.of(luaStateFacade.toJavaObject(idx));
+            return Optional.of(luaStateFacade.toJavaObject(idx).getOrThrow(LuaException.class));
         }
 
         int luaType = L.type(idx);
@@ -522,7 +523,7 @@ public final class LuaJavaAPI {
             }
         } else if (luaType == LuaState.LUA_TFUNCTION) {
             if (LuaObject.class.isAssignableFrom(parameter)) {
-                obj = luaStateFacade.getLuaObject(idx);
+                obj = luaStateFacade.getLuaObject(idx).getOrThrow(LuaException.class);
             } else {
                 okType = false;
             }
@@ -530,7 +531,7 @@ public final class LuaJavaAPI {
             if (!LuaObject.class.isAssignableFrom(parameter)) {
                 okType = false;
             } else {
-                obj = luaStateFacade.getLuaObject(idx);
+                obj = luaStateFacade.getLuaObject(idx).getOrThrow(LuaException.class);
             }
         } else if (luaType == LuaState.LUA_TNUMBER) {
             Double db = L.toNumber(idx);
@@ -549,7 +550,7 @@ public final class LuaJavaAPI {
                 }
             } else {
                 if (LuaObject.class.isAssignableFrom(parameter)) {
-                    obj = luaStateFacade.getLuaObject(idx);
+                    obj = luaStateFacade.getLuaObject(idx).getOrThrow(LuaException.class);
                 } else {
                     okType = false;
                 }
@@ -659,12 +660,14 @@ public final class LuaJavaAPI {
         return -1;
     }
 
-    private static Method findMethod(LuaStateFacade luaStateFacade, LuaState L, Class<?> clazz, String methodName, Object[] retObjs, int top) throws LuaException {
+    private static Method findMethod(LuaStateFacade luaStateFacade,
+                                     LuaState L, Class<?> clazz,
+                                     String methodName, Object[] retObjs, int top) throws LuaException {
         // Convert lua params to java params
         int paramsCount = top - 1;
         Object[] objs = new Object[paramsCount];
         for (int i = 0; i < paramsCount; i++) {
-            objs[i] = luaStateFacade.toJavaObject(i + 2);
+            objs[i] = luaStateFacade.toJavaObject(i + 2).getOrThrow(LuaException.class);
         }
 
         // find method

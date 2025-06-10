@@ -1,5 +1,6 @@
 package org.eu.smileyik.luajava.type;
 
+import org.eu.smileyik.luajava.exception.Result;
 import org.keplerproject.luajava.LuaStateFacade;
 
 import java.lang.reflect.Array;
@@ -238,14 +239,15 @@ public class LuaArray extends LuaTable {
      * @param <T>      element type, Cannot be primitive type
      * @throws Exception any exception
      */
-    public <T> void forEachValue(Class<T> tClass, Consumer<T> consumer) throws Exception {
-        luaState.lockThrowAll(l -> {
+    public <T> Result<Void, ? extends Exception> forEachValue(Class<T> tClass, Consumer<T> consumer) {
+        return luaState.lockThrowAll(l -> {
             int top = l.getTop();
             try {
                 push();
                 for (int i = 1; i <= len; i++) {
                     l.rawGetI(-1, i);
-                    Object javaObject = luaState.toJavaObject(-1);
+                    // i want finished loop if happened error.
+                    Object javaObject = luaState.toJavaObject(-1).getOrThrow();
                     consumer.accept(tClass.cast(javaObject));
                     l.pop(1);
                 }
@@ -253,6 +255,7 @@ public class LuaArray extends LuaTable {
             } finally {
                 l.setTop(top);
             }
+            return null;
         });
     }
 
@@ -266,14 +269,14 @@ public class LuaArray extends LuaTable {
      * @throws Exception any exception.
      */
     @Override
-    public <K, V> void forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) throws Exception {
-        luaState.lockThrowAll(l -> {
+    public <K, V> Result<Void, ? extends Exception> forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) {
+        return luaState.lockThrowAll(l -> {
             int top = l.getTop();
             try {
                 push();
                 for (int i = 1; i <= len; i++) {
                     l.rawGetI(-1, i);
-                    Object javaObject = luaState.toJavaObject(-1);
+                    Object javaObject = luaState.toJavaObject(-1).getOrThrow();
                     consumer.accept(kClass.cast(i - 1), vClass.cast(javaObject));
                     l.pop(1);
                 }
@@ -281,7 +284,7 @@ public class LuaArray extends LuaTable {
             } finally {
                 l.setTop(top);
             }
-
+            return null;
         });
     }
 

@@ -59,8 +59,8 @@ public class ThreadTest {
                 L.LdoString(lua);
 
                 for (int i = 0; i < 100; i++) {
-                    LuaObject obj = facade.getLuaObject("tb");
-                    Object runnable = obj.createProxy("java.lang.Runnable");
+                    LuaObject obj = facade.getLuaObject("tb").getOrThrow();
+                    Object runnable = obj.createProxy("java.lang.Runnable").getOrThrow();
                     Thread thread = new Thread((Runnable) runnable);
                     thread.start();
                 }

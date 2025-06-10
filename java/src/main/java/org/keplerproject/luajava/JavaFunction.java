@@ -67,7 +67,7 @@ public abstract class JavaFunction {
      * @see LuaObject
      */
     public LuaObject getParam(int idx) {
-        return L.getLuaObject(idx);
+        return L.getLuaObject(idx).getValue();
     }
 
     /**

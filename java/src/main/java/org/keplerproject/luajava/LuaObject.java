@@ -24,6 +24,7 @@
 
 package org.keplerproject.luajava;
 
+import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.type.InnerTypeHelper;
 import org.eu.smileyik.luajava.util.ResourceCleaner;
 
@@ -113,11 +114,11 @@ public class LuaObject implements AutoCloseable {
      * @param luaState
      * @param index of the object on the lua stack
      */
-    protected static LuaObject create(LuaStateFacade luaState, int index) {
-        return luaState.lock((L) -> {
+    protected static Result<LuaObject, ? extends LuaException> create(LuaStateFacade luaState, int index) {
+        return Result.success(luaState.lock((L) -> {
             return InnerTypeHelper.createLuaObject(luaState, index)
                     .orElseGet(() -> new LuaObject(luaState, index));
-        });
+        }));
     }
 
     /**
@@ -126,12 +127,14 @@ public class LuaObject implements AutoCloseable {
      * @param luaState
      * @param globalName
      */
-    protected static LuaObject create(LuaStateFacade luaState, String globalName) {
-        return luaState.lock((L) -> {
+    protected static Result<LuaObject, ? extends LuaException> create(LuaStateFacade luaState, String globalName) {
+        return luaState.lockThrow((L) -> {
             L.getGlobal(globalName);
-            LuaObject luaObject = create(luaState, -1);
-            L.pop(1);
-            return luaObject;
+            try {
+                return create(luaState, -1).getOrThrow(LuaException.class);
+            } finally {
+                L.pop(1);
+            }
         });
     }
 
@@ -141,20 +144,21 @@ public class LuaObject implements AutoCloseable {
      * @param parent The Lua Table or Userdata that contains the Field.
      * @param name   The name that index the field
      */
-    protected static LuaObject create(LuaObject parent, String name) throws LuaException {
+    protected static Result<LuaObject, ? extends LuaException> create(LuaObject parent, String name) {
         LuaStateFacade luaState = parent.getLuaState();
         return luaState.lockThrow(L -> {
             if (!parent.isTable() && !parent.isUserdata()) {
                 throw new LuaException("Object parent should be a table or userdata .");
             }
-
             parent.push();
             L.pushString(name);
             L.getTable(-2);
             L.remove(-2);
-            LuaObject luaObject = create(luaState, -1);
-            L.pop(1);
-            return luaObject;
+            try {
+                return create(luaState, -1).getOrThrow(LuaException.class);
+            } finally {
+                L.pop(1);
+            }
         });
     }
 
@@ -165,19 +169,21 @@ public class LuaObject implements AutoCloseable {
      * @param name   The name (number) that index the field
      * @throws LuaException When the parent object isn't a Table or Userdata
      */
-    protected static LuaObject create(LuaObject parent, Number name) throws LuaException {
+    protected static Result<LuaObject, ? extends LuaException> create(LuaObject parent, Number name) {
         LuaStateFacade luaState = parent.getLuaState();
         return luaState.lockThrow(L -> {
-            if (!parent.isTable() && !parent.isUserdata())
+            if (!parent.isTable() && !parent.isUserdata()) {
                 throw new LuaException("Object parent should be a table or userdata .");
-
-            parent.push();
-            L.pushNumber(name.doubleValue());
-            L.getTable(-2);
-            L.remove(-2);
-            LuaObject luaObject = create(luaState, -1);
-            L.pop(1);
-            return luaObject;
+            }
+            try {
+                parent.push();
+                L.pushNumber(name.doubleValue());
+                L.getTable(-2);
+                L.remove(-2);
+                return create(luaState, -1).getOrThrow(LuaException.class);
+            } finally {
+                L.pop(1);
+            }
         });
     }
 
@@ -188,9 +194,9 @@ public class LuaObject implements AutoCloseable {
      * @param name   The name (LuaObject) that index the field
      * @throws LuaException When the parent object isn't a Table or Userdata
      */
-    protected static LuaObject create(LuaObject parent, LuaObject name) throws LuaException {
+    protected static Result<LuaObject, ? extends LuaException> create(LuaObject parent, LuaObject name) {
         if (parent.getLuaState() != name.getLuaState())
-            throw new LuaException("LuaStates must be the same!");
+            return Result.failure(new LuaException("LuaStates must be the same!"));
         LuaStateFacade luaState = parent.getLuaState();
         return luaState.lockThrow(L -> {
             if (!parent.isTable() && !parent.isUserdata())
@@ -200,10 +206,11 @@ public class LuaObject implements AutoCloseable {
             name.push();
             L.getTable(-2);
             L.remove(-2);
-
-            LuaObject luaObject = create(luaState, -1);
-            L.pop(1);
-            return luaObject;
+            try {
+                return create(luaState, -1).getOrThrow(LuaException.class);
+            } finally {
+                L.pop(1);
+            }
         });
     }
 
@@ -358,7 +365,7 @@ public class LuaObject implements AutoCloseable {
      * If <code>this</code> is a table or userdata tries to get
      * a field value.
      */
-    public LuaObject getField(String field) throws LuaException {
+    public Result<LuaObject, ? extends LuaException> getField(String field) {
         return luaState.getLuaObject(this, field);
     }
 
@@ -372,7 +379,7 @@ public class LuaObject implements AutoCloseable {
      * @return Object[] - Returned Objects
      * @throws LuaException
      */
-    public Object[] call(Object[] args, int _nres) throws LuaException {
+    public Result<Object[], ? extends LuaException> call(Object[] args, int _nres) {
         return luaState.lockThrow(innerL -> {
             if (!isFunction() && !isTable() && !isUserdata())
                 throw new LuaException("Invalid object. Not a function, table or userdata .");
@@ -421,7 +428,7 @@ public class LuaObject implements AutoCloseable {
             Object[] res = new Object[nres];
 
             for (int i = nres; i > 0; i--) {
-                res[i - 1] = luaState.toJavaObject(-1);
+                res[i - 1] = luaState.toJavaObject(-1).getOrThrow(LuaException.class);
                 innerL.pop(1);
             }
             return res;
@@ -436,8 +443,8 @@ public class LuaObject implements AutoCloseable {
      * @return Object - Returned Object
      * @throws LuaException
      */
-    public Object call(Object[] args) throws LuaException {
-        return call(args, 1)[0];
+    public Result<Object, ? extends LuaException> call(Object[] args) {
+        return call(args, 1).mapValue(it -> it[0]);
     }
 
     public String toString() {
@@ -474,25 +481,19 @@ public class LuaObject implements AutoCloseable {
      *
      * @param implem Interfaces that are implemented, separated by <code>,</code>
      */
-    public Object createProxy(String implem) throws ClassNotFoundException, LuaException {
-        try {
-            return luaState.lockThrowAll(L -> {
-                if (!isTable())
-                    throw new LuaException("Invalid Object. Must be Table.");
+    public Result<Object, ? extends Exception> createProxy(String implem) throws ClassNotFoundException, LuaException {
+        return luaState.lockThrowAll(L -> {
+            if (!isTable())
+                throw new LuaException("Invalid Object. Must be Table.");
 
-                StringTokenizer st = new StringTokenizer(implem, ",");
-                Class<?>[] interfaces = new Class[st.countTokens()];
-                for (int i = 0; st.hasMoreTokens(); i++)
-                    interfaces[i] = Class.forName(st.nextToken());
+            StringTokenizer st = new StringTokenizer(implem, ",");
+            Class<?>[] interfaces = new Class[st.countTokens()];
+            for (int i = 0; st.hasMoreTokens(); i++)
+                interfaces[i] = Class.forName(st.nextToken());
 
-                InvocationHandler handler = new LuaInvocationHandler(this);
+            InvocationHandler handler = new LuaInvocationHandler(this);
 
-                return Proxy.newProxyInstance(this.getClass().getClassLoader(), interfaces, handler);
-            });
-        } catch (ClassNotFoundException | LuaException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new LuaException(e);
-        }
+            return Proxy.newProxyInstance(this.getClass().getClassLoader(), interfaces, handler);
+        });
     }
 }

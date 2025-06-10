@@ -1,8 +1,12 @@
 package org.eu.smileyik.luajava.exception;
 
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class Result <T, E> {
+    private static final Result SUCCESS = new Result(null, null, null);
+
     private final String message;
     private final T value;
     private final E error;
@@ -13,32 +17,188 @@ public class Result <T, E> {
         this.error = error;
     }
 
+    /**
+     * get the message.
+     * @return
+     */
     public String getMessage() {
         return message;
     }
 
+    /**
+     * just get value
+     * @return the value, if this instance is error, then maybe return null.
+     */
     public T getValue() {
         return value;
     }
 
+    /**
+     * just get error
+     * @return the error value, if this instance means success, then this must be null.
+     */
     public E getError() {
         return error;
     }
 
-    boolean isError() {
+    /**
+     * check this instance means error or not
+     * @return true means error
+     */
+    public boolean isError() {
         return error != null;
     }
 
-    boolean isSuccess() {
-        return !isError();
+    /**
+     * success
+     * @return true means success
+     */
+    public boolean isSuccess() {
+        return error == null;
     }
 
+    /**
+     * get the value if success, return other value if failed.
+     * @param other the other value.
+     * @return return value or other.
+     */
     public T orElse(T other) {
         return isError() ? other : value;
     }
 
+    /**
+     * get the value if success, return other value if failed.
+     * @param other the other value.
+     * @return return value or other.
+     */
     public T orElseGet(Supplier<T> other) {
         return isError() ? other.get() : value;
+    }
+
+    /**
+     * if this is an error, then throws.
+     * @throws Exception any exception.
+     */
+    public void justThrow() throws Exception {
+        if (isError()) {
+            if (error instanceof Exception) {
+                throw (Exception) error;
+            } else {
+                throw new RuntimeException(message == null ? Objects.toString(error) : message + error);
+            }
+        }
+    }
+
+    /**
+     * if this is an error, then throws.
+     * @param clazz target exception type
+     * @param <Err> target exception type
+     * @throws Err target exception type
+     */
+    public <Err extends Exception> void justThrow(Class<Err> clazz) throws Err {
+        if (isError()) {
+            if (clazz.isAssignableFrom(error.getClass())) {
+                throw clazz.cast(error);
+            } else if (error instanceof Throwable) {
+                throw new RuntimeException(message, (Exception) error);
+            } else {
+                throw new RuntimeException(message == null ? Objects.toString(error) : message + error);
+            }
+        }
+    }
+
+    /**
+     * if error then throw, else return the value.
+     * @return the value
+     * @throws Exception exception.
+     */
+    public T getOrThrow() throws Exception {
+        justThrow();
+        return value;
+    }
+
+    /**
+     * if error then throw, else return the value.
+     * @param clazz the exception type.
+     * @return the value
+     */
+    public <Err extends Exception> T getOrThrow(Class<Err> clazz) throws Err {
+        justThrow(clazz);
+        return value;
+    }
+
+    /**
+     * get value or sneaky throw exception
+     * @return the value
+     */
+    public T getOrSneakyThrow() {
+        if (isError()) {
+            Throwable ret = (error instanceof Throwable) ? (Throwable) error :  null;
+            if (ret == null) {
+                throw new RuntimeException(message == null ? Objects.toString(error) : message + error);
+            } else {
+                throw new RuntimeException(message, ret);
+            }
+        }
+        return value;
+    }
+
+    /**
+     * just cast this result to target result.
+     * if you know it's work then you can use it.
+     * @return the target result.
+     * @param <RT>
+     * @param <RE>
+     */
+    public <RT, RE> Result<RT, RE> justCast() {
+        return (Result<RT, RE>) this;
+    }
+
+    /**
+     * transform value if success.
+     * @param f function
+     * @return result
+     * @param <RT>
+     * @param <RE>
+     */
+    public <RT, RE> Result<RT, RE> mapValue(Function<T, RT> f) {
+        if (isError()) {
+            return (Result<RT, RE>) this;
+        }
+        RT apply = f.apply(value);
+        if (apply == value) return (Result<RT, RE>) this;
+        return (this == SUCCESS || apply == null) ? success() : Result.success(apply, message);
+    }
+
+    /**
+     * transform error if failed
+     * @param f function
+     * @return result
+     * @param <RT>
+     * @param <RE>
+     */
+    public <RT, RE> Result<RT, RE> mapError(Function<E, RE> f) {
+        if (isError()) {
+            return Result.failure(f.apply(error), message);
+        }
+        return (Result<RT, RE>) this;
+    }
+
+    /**
+     * transform result
+     * @param rt transform result if success
+     * @param re transform error if failed
+     * @return the result
+     * @param <RT>
+     * @param <RE>
+     */
+    public <RT, RE> Result<RT, RE> map(Function<T, RT> rt, Function<E, RE> re) {
+        if (isError()) {
+            return Result.failure(re.apply(error), message);
+        }
+        RT apply = rt.apply(value);
+        if (apply == value) return (Result<RT, RE>) this;
+        return (this == SUCCESS || apply == null) ? success() : Result.success(apply, message);
     }
 
     public static <T, E> Result<T, E> of(T value, E error) {
@@ -49,24 +209,27 @@ public class Result <T, E> {
         return new Result<T, E>(message, value, error);
     }
 
+    public static <T, E> Result<T, E> success() {
+        return SUCCESS;
+    }
+
     public static <T, E> Result<T, E> success(T value) {
+        if (value == null) return success();
         return of(value, null);
     }
 
     public static <T, E> Result<T, E> success(T value, String message) {
+        if (value == null && message == null) return success();
         return of(value, null, message);
     }
 
     public static <T, E> Result<T, E> failure(E error) {
+        assert error != null;
         return of(null, error);
     }
 
     public static <T, E> Result<T, E> failure(E error, String message) {
-        return of(null, error, message);
-    }
-
-    public static <T, E> Result<T, E> failure(T value, E error, String message) {
         assert error != null;
-        return of(value, error, message);
+        return of(null, error, message);
     }
 }

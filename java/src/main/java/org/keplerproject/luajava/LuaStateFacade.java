@@ -55,19 +55,23 @@ public class LuaStateFacade implements AutoCloseable {
         return luaState.getCPtrPeer();
     }
 
-    public <T> T lockThrowAll(LuaStateDangerFunction<T> function) throws Exception {
+    public <T> Result<T, ? extends Exception> lockThrowAll(LuaStateDangerFunction<T> function) {
         lock.lock();
         try {
-            return function.apply(luaState);
+            return Result.success(function.apply(luaState));
+        } catch (Exception e) {
+            return Result.failure(e);
         } finally {
             lock.unlock();
         }
     }
 
-    public <T> T lockThrow(LuaStateFunction<T> function) throws LuaException {
+    public <T> Result<T, ? extends LuaException> lockThrow(LuaStateFunction<T> function) {
         lock.lock();
         try {
-            return function.apply(luaState);
+            return Result.success(function.apply(luaState));
+        } catch (LuaException e) {
+            return Result.failure(e);
         } finally {
             lock.unlock();
         }
@@ -82,19 +86,25 @@ public class LuaStateFacade implements AutoCloseable {
         }
     }
 
-    public void lockThrowAll(LuaStateDangerConsumer consumer) throws Exception {
+    public Result<?, ? extends Exception> lockThrowAll(LuaStateDangerConsumer consumer) {
         lock.lock();
         try {
             consumer.accept(luaState);
+            return Result.success();
+        } catch (Exception e) {
+            return Result.failure(e);
         } finally {
             lock.unlock();
         }
     }
 
-    public void lockThrow(LuaStateConsumer consumer) throws LuaException {
+    public Result<?, ? extends LuaException> lockThrow(LuaStateConsumer consumer) {
         lock.lock();
         try {
             consumer.accept(luaState);
+            return Result.success();
+        } catch (LuaException e) {
+            return Result.failure(e);
         } finally {
             lock.unlock();
         }
@@ -114,7 +124,7 @@ public class LuaStateFacade implements AutoCloseable {
             int exp = l.LdoString(str);
             if (exp != 0) {
                 String err = getErrorMessage(exp);
-                return Result.failure(exp, new LuaException(err), err);
+                return Result.failure(new LuaException(err), err);
             }
             return Result.success(exp);
         });
@@ -125,7 +135,7 @@ public class LuaStateFacade implements AutoCloseable {
             int exp = l.LdoFile(filename);
             if (exp != 0) {
                 String err = getErrorMessage(exp);
-                return Result.failure(exp, new LuaException(err), err);
+                return Result.failure(new LuaException(err), err);
             }
             return Result.success(exp);
         });
@@ -136,7 +146,7 @@ public class LuaStateFacade implements AutoCloseable {
             int exp = l.LloadString(str);
             if (exp != 0) {
                 String err = getErrorMessage(exp);
-                return Result.failure(exp, new LuaException(err), err);
+                return Result.failure(new LuaException(err), err);
             }
             return Result.success(exp);
         });
@@ -147,7 +157,7 @@ public class LuaStateFacade implements AutoCloseable {
             int exp = l.LloadFile(filename);
             if (exp != 0) {
                 String err = getErrorMessage(exp);
-                return Result.failure(exp, new LuaException(err), err);
+                return Result.failure(new LuaException(err), err);
             }
             return Result.success(exp);
         });
@@ -158,7 +168,7 @@ public class LuaStateFacade implements AutoCloseable {
             int exp = l.LloadBuffer(buffer, name);
             if (exp != 0) {
                 String err = getErrorMessage(exp);
-                return Result.failure(exp, new LuaException(err), err);
+                return Result.failure(new LuaException(err), err);
             }
             return Result.success(exp);
         });
@@ -233,9 +243,10 @@ public class LuaStateFacade implements AutoCloseable {
      * @return LuaObject
      * @throws LuaException if parent is not a table or userdata
      */
-    public LuaObject getLuaObject(LuaObject parent, String name) throws LuaException {
-        if (parent.luaState.getCPtrPeer() != luaState.getCPtrPeer())
-            throw new LuaException("Object must have the same LuaState as the parent!");
+    public Result<LuaObject, ? extends LuaException> getLuaObject(LuaObject parent, String name) {
+        if (parent.luaState.getCPtrPeer() != luaState.getCPtrPeer()) {
+            return Result.failure(new LuaException("Object must have the same LuaState as the parent!"));
+        }
         return LuaObject.create(parent, name);
     }
 
@@ -245,7 +256,7 @@ public class LuaStateFacade implements AutoCloseable {
      * @param globalName
      * @return LuaObject
      */
-    public LuaObject getLuaObject(String globalName) {
+    public Result<LuaObject, ? extends LuaException> getLuaObject(String globalName) {
         return LuaObject.create(this, globalName);
     }
 
@@ -257,10 +268,10 @@ public class LuaStateFacade implements AutoCloseable {
      * @return LuaObject
      * @throws LuaException When the parent object isn't a Table or Userdata
      */
-    public LuaObject getLuaObject(LuaObject parent, Number name)
-            throws LuaException {
-        if (parent.luaState.getCPtrPeer() != luaState.getCPtrPeer())
-            throw new LuaException("Object must have the same LuaState as the parent!");
+    public Result<LuaObject, ? extends LuaException> getLuaObject(LuaObject parent, Number name) {
+        if (parent.luaState.getCPtrPeer() != luaState.getCPtrPeer()) {
+            return Result.failure(new LuaException("Object must have the same LuaState as the parent!"));
+        }
 
         return LuaObject.create(parent, name);
     }
@@ -273,11 +284,11 @@ public class LuaStateFacade implements AutoCloseable {
      * @return LuaObject
      * @throws LuaException When the parent object isn't a Table or Userdata
      */
-    public LuaObject getLuaObject(LuaObject parent, LuaObject name)
-            throws LuaException {
+    public Result<LuaObject, ? extends LuaException> getLuaObject(LuaObject parent, LuaObject name) {
         if (parent.getLuaState().getCPtrPeer() != luaState.getCPtrPeer() ||
-                parent.getLuaState().getCPtrPeer() != name.getLuaState().getCPtrPeer())
-            throw new LuaException("Object must have the same LuaState as the parent!");
+                parent.getLuaState().getCPtrPeer() != name.getLuaState().getCPtrPeer()) {
+            return Result.failure(new LuaException("Object must have the same LuaState as the parent!"));
+        }
 
         return LuaObject.create(parent, name);
     }
@@ -289,7 +300,7 @@ public class LuaStateFacade implements AutoCloseable {
      * @param index position on the stack
      * @return LuaObject
      */
-    public LuaObject getLuaObject(int index) {
+    public Result<LuaObject, ? extends LuaException> getLuaObject(int index) {
         return LuaObject.create(this, index);
     }
 
@@ -300,30 +311,32 @@ public class LuaStateFacade implements AutoCloseable {
      * @param idx Index in the Lua Stack
      * @return Java object equivalent to the Lua one
      */
-    public Object toJavaObject(int idx) throws LuaException {
+    public Result<Object, ? extends LuaException> toJavaObject(int idx) {
         lock.lock();
         try {
-            Object obj = null;
             int type = luaState.type(idx);
             switch (type) {
                 case LUA_TBOOLEAN:
-                    obj = luaState.toBoolean(idx);
-                    break;
+                    return Result.success(luaState.toBoolean(idx));
                 case LUA_TSTRING:
-                    obj = luaState.toString(idx);
-                    break;
+                    return Result.success(luaState.toString(idx));
                 case LUA_TFUNCTION:
                 case LUA_TTABLE:
-                    obj = getLuaObject(idx);
-                    break;
+                    return getLuaObject(idx).justCast();
                 case LUA_TNUMBER:
-                    obj = luaState.toNumber(idx);
-                    break;
+                    return Result.success(luaState.toNumber(idx));
                 case LUA_TUSERDATA:
-                    obj = luaState.isObject(idx) ? luaState.getObjectFromUserdata(idx) : getLuaObject(idx);
-                    break;
+                    try {
+                        if (luaState.isObject(idx)) {
+                            return Result.success(luaState.getObjectFromUserdata(idx));
+                        } else {
+                            return getLuaObject(idx).justCast();
+                        }
+                    } catch (LuaException e) {
+                        return Result.failure(e);
+                    }
             }
-            return obj;
+            return Result.success();
         } finally {
             lock.unlock();
         }
@@ -706,7 +719,7 @@ public class LuaStateFacade implements AutoCloseable {
             int exp = l.pcall(nArgs, nResults, errFunc);
             if (exp != 0) {
                 String err = getErrorMessage(exp);
-                return Result.failure(exp, new LuaException(err), err);
+                return Result.failure(new LuaException(err), err);
             }
             return Result.success(exp);
         });

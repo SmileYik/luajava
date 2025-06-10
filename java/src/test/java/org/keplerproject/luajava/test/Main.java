@@ -49,8 +49,8 @@ public class Main {
 
             L.LdoString(str);
 
-            LuaObject func = luaState.getLuaObject("imprime");
-            Object[] teste = func.call(new Object[]{"TESTANDO"}, 2);
+            LuaObject func = luaState.getLuaObject("imprime").getOrThrow(LuaException.class);
+            Object[] teste = func.call(new Object[]{"TESTANDO"}, 2).getOrThrow(LuaException.class);
             System.out.println(teste[0]);
             System.out.println(teste[1]);
 
@@ -58,9 +58,9 @@ public class Main {
             Printable p = new ObjPrint();
             p.print("TESTE 1");
 
-            LuaObject o = luaState.getLuaObject("luaPrint");
+            LuaObject o = luaState.getLuaObject("luaPrint").getOrThrow(LuaException.class);
             try {
-                p = (Printable) o.createProxy("org.keplerproject.luajava.test.Printable");
+                p = (Printable) o.createProxy("org.keplerproject.luajava.test.Printable").getOrThrow(LuaException.class);
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }

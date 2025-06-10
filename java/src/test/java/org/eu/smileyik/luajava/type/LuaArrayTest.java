@@ -24,12 +24,12 @@ class LuaArrayTest {
             if (exp != 0) {
                 throw new LuaException(L.toString(-1));
             }
-            LuaObject luaObject = facade.getLuaObject("map");
+            LuaObject luaObject = facade.getLuaObject("map").getOrThrow(LuaException.class);
             System.out.println(luaObject);
             assert luaObject instanceof LuaTable;
             assert !(luaObject instanceof LuaArray);
 
-            luaObject = facade.getLuaObject("array");
+            luaObject = facade.getLuaObject("array").getOrThrow(LuaException.class);
             assert luaObject instanceof LuaTable;
             assert luaObject instanceof LuaArray;
             System.out.println(((LuaArray) luaObject).isArray());
@@ -55,7 +55,7 @@ class LuaArrayTest {
             if (exp != 0) {
                 throw new LuaException(L.toString(-1));
             }
-            LuaObject luaObject = facade.getLuaObject("array");
+            LuaObject luaObject = facade.getLuaObject("array").getOrThrow(LuaException.class);
             assert luaObject instanceof LuaArray;
             LuaArray array = (LuaArray) luaObject;
             try {
@@ -66,31 +66,31 @@ class LuaArrayTest {
                     System.out.printf("%s: %s\n", obj, obj.getClass());
                 });
 
-                array = (LuaArray) facade.getLuaObject("strs");
+                array = (LuaArray) facade.getLuaObject("strs").getOrThrow(LuaException.class);
                 array.forEachValue(String.class, System.out::println);
 
-                array = (LuaArray) facade.getLuaObject("nums");
+                array = (LuaArray) facade.getLuaObject("nums").getOrThrow(LuaException.class);
                 array.forEachValue(Number.class, System.out::println);
 
-                array = (LuaArray) facade.getLuaObject("bools");
+                array = (LuaArray) facade.getLuaObject("bools").getOrThrow(LuaException.class);
                 array.forEachValue(Boolean.class, System.out::println);
 
-                array = (LuaArray) facade.getLuaObject("funcs");
+                array = (LuaArray) facade.getLuaObject("funcs").getOrThrow(LuaException.class);
                 array.forEachValue(LuaFunction.class, it -> System.out.println(it + ": " + it.getClass()));
 
-                array = (LuaArray) facade.getLuaObject("tables");
+                array = (LuaArray) facade.getLuaObject("tables").getOrThrow(LuaException.class);
                 array.forEachValue(LuaTable.class, it -> System.out.println(it + ": " + it.getClass()));
 
                 createArray(L, "objs", new Object[] {new Object(), new Object()});
-                array = (LuaArray) facade.getLuaObject("objs");
+                array = (LuaArray) facade.getLuaObject("objs").getOrThrow(LuaException.class);
                 array.forEachValue(System.out::println);
 
                 createAArray(L, "as");
-                array = (LuaArray) facade.getLuaObject("as");
+                array = (LuaArray) facade.getLuaObject("as").getOrThrow(LuaException.class);
                 array.forEachValue(A.class, System.out::println);
 
                 createAArrayArray(L, "ass");
-                array = (LuaArray) facade.getLuaObject("ass");
+                array = (LuaArray) facade.getLuaObject("ass").getOrThrow(LuaException.class);
                 array.forEachValue(A[].class, System.out::println);
                 
             } catch (Exception e) {
@@ -119,26 +119,26 @@ class LuaArrayTest {
             if (exp != 0) {
                 throw new LuaException(L.toString(-1));
             }
-            LuaObject luaObject = facade.getLuaObject("array");
+            LuaObject luaObject = facade.getLuaObject("array").getOrThrow(LuaException.class);
             assert luaObject instanceof LuaArray;
             LuaArray array = (LuaArray) luaObject;
             try {
                 System.out.println(array.asList(Object.class));
 
-                array = (LuaArray) facade.getLuaObject("strs");
+                array = (LuaArray) facade.getLuaObject("strs").getOrThrow(LuaException.class);
                 assert array.asList(String.class).toString().equals("[1, 2, 3, 4, 5, 6, 7, 8, 9]");
 
-                array = (LuaArray) facade.getLuaObject("nums");
+                array = (LuaArray) facade.getLuaObject("nums").getOrThrow(LuaException.class);
                 assert array.asList(Number.class).toString().equals("[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]");
                 assert array.asList(Double.class).toString().equals("[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]");
 
-                array = (LuaArray) facade.getLuaObject("bools");
+                array = (LuaArray) facade.getLuaObject("bools").getOrThrow(LuaException.class);
                 assert array.asList(Boolean.class).toString().equals("[true, false, true, false]");
 
-                array = (LuaArray) facade.getLuaObject("chars");
+                array = (LuaArray) facade.getLuaObject("chars").getOrThrow(LuaException.class);
                 assert Objects.equals(array.asList(Character.class), Arrays.asList('a', 'b', 'c', 'd')) : "as Character List Failed";
 
-                array = (LuaArray) facade.getLuaObject("d2list");
+                array = (LuaArray) facade.getLuaObject("d2list").getOrThrow(LuaException.class);
                 assert Objects.equals(array.asDeepList(Double.class),
                         Arrays.asList(Arrays.asList(1d, 2d, 3d),
                                 Arrays.asList(4d, 5d, 6d),
@@ -146,27 +146,27 @@ class LuaArrayTest {
                                 Arrays.asList(),
                                 Arrays.asList(8d, 9d)));
 
-                array = (LuaArray) facade.getLuaObject("d2list_str");
+                array = (LuaArray) facade.getLuaObject("d2list_str").getOrThrow(LuaException.class);
                 assert Objects.equals(array.asDeepList(String.class), Arrays.asList(
                         Arrays.asList("1"), Arrays.asList("str")
                 ));
 
-                array = (LuaArray) facade.getLuaObject("funcs");
+                array = (LuaArray) facade.getLuaObject("funcs").getOrThrow(LuaException.class);
                 System.out.println(array.asList(LuaFunction.class));
 
-                array = (LuaArray) facade.getLuaObject("tables");
+                array = (LuaArray) facade.getLuaObject("tables").getOrThrow(LuaException.class);
                 System.out.println(array.asList(LuaTable.class));
 
                 createArray(L, "objs", new Object[] {new Object(), new Object()});
-                array = (LuaArray) facade.getLuaObject("objs");
+                array = (LuaArray) facade.getLuaObject("objs").getOrThrow(LuaException.class);
                 System.out.println(array.asList());
 
                 createAArray(L, "as");
-                array = (LuaArray) facade.getLuaObject("as");
+                array = (LuaArray) facade.getLuaObject("as").getOrThrow(LuaException.class);
                 System.out.println(array.asList(A.class));
 
                 createAArrayArray(L, "ass");
-                array = (LuaArray) facade.getLuaObject("ass");
+                array = (LuaArray) facade.getLuaObject("ass").getOrThrow(LuaException.class);
                 System.out.println(array.asList(A[].class));
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -193,15 +193,15 @@ class LuaArrayTest {
                 throw new LuaException(L.toString(-1));
             }
             try {
-                LuaObject luaObject = facade.getLuaObject("array");
+                LuaObject luaObject = facade.getLuaObject("array").getOrThrow(LuaException.class);
                 assert luaObject instanceof LuaArray;
                 LuaArray array = (LuaArray) luaObject;
                 System.out.println(array.asList(Object.class));
 
-                array = (LuaArray) facade.getLuaObject("strs");
+                array = (LuaArray) facade.getLuaObject("strs").getOrThrow(LuaException.class);
                 assert Arrays.equals(array.asArray(String.class), new String[] {"1", "2", "3", "4", "5", "6", "7", "8", "9"});
 
-                array = (LuaArray) facade.getLuaObject("nums");
+                array = (LuaArray) facade.getLuaObject("nums").getOrThrow(LuaException.class);
                 assert Arrays.equals(array.asArray(Number.class), new Number[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
                 assert Arrays.equals(array.asArray(Double.class), new Number[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
                 assert Arrays.equals(array.toDoubleArray(), new double[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
@@ -210,30 +210,30 @@ class LuaArrayTest {
                 assert Arrays.equals(array.asPrimitiveArray(double[].class), new double[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
                 System.out.println("primitive array: " + Arrays.toString(array.asPrimitiveArray(double[].class)));
 
-                array = (LuaArray) facade.getLuaObject("bools");
+                array = (LuaArray) facade.getLuaObject("bools").getOrThrow(LuaException.class);
                 assert Arrays.equals(array.asArray(Boolean.class), new Boolean[]{true, false, true, false});
                 assert Arrays.equals(array.toBooleanArray(), new boolean[]{true, false, true, false});
 
-                array = (LuaArray) facade.getLuaObject("chars");
+                array = (LuaArray) facade.getLuaObject("chars").getOrThrow(LuaException.class);
                 assert Arrays.equals(array.asArray(Character.class), new Character[]{'a', 'b', 'c', 'd'}) : "as Character Array Failed";
                 assert Arrays.equals(array.toCharArray(), new char[]{'a', 'b', 'c', 'd'}) : "toCharArray Failed";
 
-                array = (LuaArray) facade.getLuaObject("funcs");
+                array = (LuaArray) facade.getLuaObject("funcs").getOrThrow(LuaException.class);
                 System.out.println(Arrays.toString(array.asArray(LuaFunction.class)));
 
-                array = (LuaArray) facade.getLuaObject("tables");
+                array = (LuaArray) facade.getLuaObject("tables").getOrThrow(LuaException.class);
                 System.out.println(Arrays.toString(array.asArray(LuaTable.class)));
 
                 createArray(L, "objs", new Object[] {new Object(), new Object()});
-                array = (LuaArray) facade.getLuaObject("objs");
+                array = (LuaArray) facade.getLuaObject("objs").getOrThrow(LuaException.class);
                 System.out.println(Arrays.toString(array.asArray()));
 
                 createAArray(L, "as");
-                array = (LuaArray) facade.getLuaObject("as");
+                array = (LuaArray) facade.getLuaObject("as").getOrThrow(LuaException.class);
                 System.out.println(Arrays.toString(array.asArray(A.class)));
 
                 createAArrayArray(L, "ass");
-                array = (LuaArray) facade.getLuaObject("ass");
+                array = (LuaArray) facade.getLuaObject("ass").getOrThrow(LuaException.class);
                 System.out.println(Arrays.deepToString(array.asArray(A[].class)));
             } catch (Exception e) {
                 throw new RuntimeException(e);
