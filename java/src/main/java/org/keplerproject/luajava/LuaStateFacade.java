@@ -1,5 +1,6 @@
 package org.keplerproject.luajava;
 
+import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.util.ParamRef;
 
 import java.util.Objects;
@@ -108,6 +109,69 @@ public class LuaStateFacade implements AutoCloseable {
         }
     }
 
+    public Result<Integer, LuaException> evalString(final String str) {
+        return lock(l -> {
+            int exp = l.LdoString(str);
+            if (exp != 0) {
+                String err = getErrorMessage(exp);
+                return Result.failure(exp, new LuaException(err), err);
+            }
+            return Result.success(exp);
+        });
+    }
+
+    public Result<Integer, LuaException> evalFile(final String filename) {
+        return lock(l -> {
+            int exp = l.LdoFile(filename);
+            if (exp != 0) {
+                String err = getErrorMessage(exp);
+                return Result.failure(exp, new LuaException(err), err);
+            }
+            return Result.success(exp);
+        });
+    }
+
+    public Result<Integer, LuaException> loadString(final String str) {
+        return lock(l -> {
+            int exp = l.LloadString(str);
+            if (exp != 0) {
+                String err = getErrorMessage(exp);
+                return Result.failure(exp, new LuaException(err), err);
+            }
+            return Result.success(exp);
+        });
+    }
+
+    public Result<Integer, LuaException> loadFile(final String filename) {
+        return lock(l -> {
+            int exp = l.LloadFile(filename);
+            if (exp != 0) {
+                String err = getErrorMessage(exp);
+                return Result.failure(exp, new LuaException(err), err);
+            }
+            return Result.success(exp);
+        });
+    }
+
+    public Result<Integer, LuaException> load(byte[] buffer, String name) {
+        return lock(l -> {
+            int exp = l.LloadBuffer(buffer, name);
+            if (exp != 0) {
+                String err = getErrorMessage(exp);
+                return Result.failure(exp, new LuaException(err), err);
+            }
+            return Result.success(exp);
+        });
+    }
+
+    public Lock getLock() {
+        return lock;
+    }
+
+    public LuaState getLuaState() {
+        return luaState;
+    }
+
     public int getStateId() {
         return stateId;
     }
@@ -136,6 +200,27 @@ public class LuaStateFacade implements AutoCloseable {
     @Override
     public int hashCode() {
         return Objects.hash(stateId, luaState);
+    }
+
+    protected String getErrorMessage(int err) {
+        String ret = null;
+        switch (err) {
+            case LUA_ERRRUN:
+                ret = "Runtime error. ";
+                break;
+            case LUA_ERRMEM:
+                ret = "Memory allocation error. ";
+                break;
+            case LUA_ERRERR:
+                ret = "Error while running the error handler function.";
+                break;
+            default:
+                break;
+        }
+        if (luaState.isString(-1)) {
+            ret = ret == null ? luaState.toString(-1) : luaState.toString(-1) + ret;
+        }
+        return ret;
     }
 
     // === LUA OBJECT ===
@@ -616,10 +701,14 @@ public class LuaStateFacade implements AutoCloseable {
         });
     }
 
-    // returns 0 if ok of one of the error codes defined
-    public int pcall(int nArgs, int nResults, int errFunc) {
+    public Result<Integer, LuaException> pcall(int nArgs, int nResults, int errFunc) {
         return lock(l -> {
-            return l.pcall(nArgs, nResults, errFunc);
+            int exp = l.pcall(nArgs, nResults, errFunc);
+            if (exp != 0) {
+                String err = getErrorMessage(exp);
+                return Result.failure(exp, new LuaException(err), err);
+            }
+            return Result.success(exp);
         });
     }
 
@@ -665,20 +754,7 @@ public class LuaStateFacade implements AutoCloseable {
         });
     }
 
-    // returns 0 if ok
-    public int LdoFile(String fileName) {
-        return lock(l -> {
-            return l.LdoFile(fileName);
-        });
-    }
-
     // FUNCTION FROM lauxlib
-    // returns 0 if ok
-    public int LdoString(String str) {
-        return lock(l -> {
-            return l.LdoString(str);
-        });
-    }
 
     public int LgetMetaField(int obj, String e) {
         return lock(l -> {
@@ -785,25 +861,6 @@ public class LuaStateFacade implements AutoCloseable {
     public void LunRef(int t, int ref) {
         lock(l -> {
             l.LunRef(t, ref);
-        });
-    }
-
-    public int LloadFile(String fileName) {
-        return lock(l -> {
-            return l.LloadFile(fileName);
-        });
-    }
-
-    public int LloadString(String s) {
-        return lock(l -> {
-            return l.LloadString(s);
-        });
-    }
-
-    public int LloadBuffer(byte[] buff, String name) {
-        return lock(l -> {
-            // Special case: Assuming LloadBuffer on 'l' still needs 'buff.length'
-            return l.LloadBuffer(buff, name);
         });
     }
 
