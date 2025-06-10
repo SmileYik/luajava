@@ -186,11 +186,14 @@ public class LuaTable extends LuaObject {
 
     /**
      * foreach table entry. it will stop if throws exception.
+     *
      * @param consumer consumer
+     * @return
      * @throws Exception any exception
      */
-    public void forEach(BiConsumer<Object, Object> consumer) throws Exception {
+    public Result<Void, ? extends Exception> forEach(BiConsumer<Object, Object> consumer) throws Exception {
         forEach(Object.class, Object.class, consumer);
+        return null;
     }
 
     /**

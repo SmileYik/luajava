@@ -126,20 +126,20 @@ class LuaArrayTest {
                 System.out.println(array.asList(Object.class));
 
                 array = (LuaArray) facade.getLuaObject("strs").getOrThrow(LuaException.class);
-                assert array.asList(String.class).toString().equals("[1, 2, 3, 4, 5, 6, 7, 8, 9]");
+                assert array.asList(String.class).getOrSneakyThrow().toString().equals("[1, 2, 3, 4, 5, 6, 7, 8, 9]");
 
                 array = (LuaArray) facade.getLuaObject("nums").getOrThrow(LuaException.class);
-                assert array.asList(Number.class).toString().equals("[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]");
-                assert array.asList(Double.class).toString().equals("[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]");
+                assert array.asList(Number.class).getOrSneakyThrow().toString().equals("[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]");
+                assert array.asList(Double.class).getOrSneakyThrow().toString().equals("[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]");
 
                 array = (LuaArray) facade.getLuaObject("bools").getOrThrow(LuaException.class);
-                assert array.asList(Boolean.class).toString().equals("[true, false, true, false]");
+                assert array.asList(Boolean.class).getOrSneakyThrow().toString().equals("[true, false, true, false]");
 
                 array = (LuaArray) facade.getLuaObject("chars").getOrThrow(LuaException.class);
-                assert Objects.equals(array.asList(Character.class), Arrays.asList('a', 'b', 'c', 'd')) : "as Character List Failed";
+                assert Objects.equals(array.asList(Character.class).getOrSneakyThrow(), Arrays.asList('a', 'b', 'c', 'd')) : "as Character List Failed";
 
                 array = (LuaArray) facade.getLuaObject("d2list").getOrThrow(LuaException.class);
-                assert Objects.equals(array.asDeepList(Double.class),
+                assert Objects.equals(array.asDeepList(Double.class).getOrSneakyThrow(),
                         Arrays.asList(Arrays.asList(1d, 2d, 3d),
                                 Arrays.asList(4d, 5d, 6d),
                                 Arrays.asList(7d),
@@ -147,27 +147,27 @@ class LuaArrayTest {
                                 Arrays.asList(8d, 9d)));
 
                 array = (LuaArray) facade.getLuaObject("d2list_str").getOrThrow(LuaException.class);
-                assert Objects.equals(array.asDeepList(String.class), Arrays.asList(
+                assert Objects.equals(array.asDeepList(String.class).getOrSneakyThrow(), Arrays.asList(
                         Arrays.asList("1"), Arrays.asList("str")
                 ));
 
                 array = (LuaArray) facade.getLuaObject("funcs").getOrThrow(LuaException.class);
-                System.out.println(array.asList(LuaFunction.class));
+                System.out.println(array.asList(LuaFunction.class).getOrSneakyThrow());
 
                 array = (LuaArray) facade.getLuaObject("tables").getOrThrow(LuaException.class);
-                System.out.println(array.asList(LuaTable.class));
+                System.out.println(array.asList(LuaTable.class).getOrSneakyThrow());
 
                 createArray(L, "objs", new Object[] {new Object(), new Object()});
                 array = (LuaArray) facade.getLuaObject("objs").getOrThrow(LuaException.class);
-                System.out.println(array.asList());
+                System.out.println(array.asList().getOrSneakyThrow());
 
                 createAArray(L, "as");
                 array = (LuaArray) facade.getLuaObject("as").getOrThrow(LuaException.class);
-                System.out.println(array.asList(A.class));
+                System.out.println(array.asList(A.class).getOrSneakyThrow());
 
                 createAArrayArray(L, "ass");
                 array = (LuaArray) facade.getLuaObject("ass").getOrThrow(LuaException.class);
-                System.out.println(array.asList(A[].class));
+                System.out.println(array.asList(A[].class).getOrSneakyThrow());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -199,42 +199,42 @@ class LuaArrayTest {
                 System.out.println(array.asList(Object.class));
 
                 array = (LuaArray) facade.getLuaObject("strs").getOrThrow(LuaException.class);
-                assert Arrays.equals(array.asArray(String.class), new String[] {"1", "2", "3", "4", "5", "6", "7", "8", "9"});
+                assert Arrays.equals(array.asArray(String.class).getOrSneakyThrow(), new String[] {"1", "2", "3", "4", "5", "6", "7", "8", "9"});
 
                 array = (LuaArray) facade.getLuaObject("nums").getOrThrow(LuaException.class);
-                assert Arrays.equals(array.asArray(Number.class), new Number[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
-                assert Arrays.equals(array.asArray(Double.class), new Number[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
-                assert Arrays.equals(array.toDoubleArray(), new double[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
-                assert Arrays.equals(array.toFloatArray(), new float[] {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f});
-                assert Arrays.equals(array.toLongArray(), new long[] {1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L});
-                assert Arrays.equals(array.asPrimitiveArray(double[].class), new double[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
-                System.out.println("primitive array: " + Arrays.toString(array.asPrimitiveArray(double[].class)));
+                assert Arrays.equals(array.asArray(Number.class).getOrSneakyThrow(), new Number[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
+                assert Arrays.equals(array.asArray(Double.class).getOrSneakyThrow(), new Number[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
+                assert Arrays.equals(array.toDoubleArray().getOrSneakyThrow(), new double[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
+                assert Arrays.equals(array.toFloatArray().getOrSneakyThrow(), new float[] {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f});
+                assert Arrays.equals(array.toLongArray().getOrSneakyThrow(), new long[] {1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L});
+                assert Arrays.equals(array.asPrimitiveArray(double[].class).getOrSneakyThrow(), new double[] {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0});
+                System.out.println("primitive array: " + Arrays.toString(array.asPrimitiveArray(double[].class).getOrSneakyThrow()));
 
                 array = (LuaArray) facade.getLuaObject("bools").getOrThrow(LuaException.class);
-                assert Arrays.equals(array.asArray(Boolean.class), new Boolean[]{true, false, true, false});
-                assert Arrays.equals(array.toBooleanArray(), new boolean[]{true, false, true, false});
+                assert Arrays.equals(array.asArray(Boolean.class).getOrSneakyThrow(), new Boolean[]{true, false, true, false});
+                assert Arrays.equals(array.toBooleanArray().getOrSneakyThrow(), new boolean[]{true, false, true, false});
 
                 array = (LuaArray) facade.getLuaObject("chars").getOrThrow(LuaException.class);
-                assert Arrays.equals(array.asArray(Character.class), new Character[]{'a', 'b', 'c', 'd'}) : "as Character Array Failed";
-                assert Arrays.equals(array.toCharArray(), new char[]{'a', 'b', 'c', 'd'}) : "toCharArray Failed";
+                assert Arrays.equals(array.asArray(Character.class).getOrSneakyThrow(), new Character[]{'a', 'b', 'c', 'd'}) : "as Character Array Failed";
+                assert Arrays.equals(array.toCharArray().getOrSneakyThrow(), new char[]{'a', 'b', 'c', 'd'}) : "toCharArray Failed";
 
                 array = (LuaArray) facade.getLuaObject("funcs").getOrThrow(LuaException.class);
-                System.out.println(Arrays.toString(array.asArray(LuaFunction.class)));
+                System.out.println(Arrays.toString(array.asArray(LuaFunction.class).getOrSneakyThrow()));
 
                 array = (LuaArray) facade.getLuaObject("tables").getOrThrow(LuaException.class);
-                System.out.println(Arrays.toString(array.asArray(LuaTable.class)));
+                System.out.println(Arrays.toString(array.asArray(LuaTable.class).getOrSneakyThrow()));
 
                 createArray(L, "objs", new Object[] {new Object(), new Object()});
                 array = (LuaArray) facade.getLuaObject("objs").getOrThrow(LuaException.class);
-                System.out.println(Arrays.toString(array.asArray()));
+                System.out.println(Arrays.toString(array.asArray().getOrSneakyThrow()));
 
                 createAArray(L, "as");
                 array = (LuaArray) facade.getLuaObject("as").getOrThrow(LuaException.class);
-                System.out.println(Arrays.toString(array.asArray(A.class)));
+                System.out.println(Arrays.toString(array.asArray(A.class).getOrSneakyThrow()));
 
                 createAArrayArray(L, "ass");
                 array = (LuaArray) facade.getLuaObject("ass").getOrThrow(LuaException.class);
-                System.out.println(Arrays.deepToString(array.asArray(A[].class)));
+                System.out.println(Arrays.deepToString(array.asArray(A[].class).getOrSneakyThrow()));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

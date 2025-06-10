@@ -154,6 +154,26 @@ public class Result <T, E> {
         return (Result<RT, RE>) this;
     }
 
+    private <RT, RE> Result<RT, RE> justReplaceValue(RT newValue) {
+        if (newValue == value) return (Result<RT, RE>) this;
+        return (this == SUCCESS || newValue == null) ? success() : Result.success(newValue, message);
+    }
+
+    /**
+     * as same as mapValue method. but just replace value.
+     * @param newValue
+     * @return
+     * @param <RT>
+     * @param <RE>
+     */
+    public <RT, RE> Result<RT, RE> replaceValue(RT newValue) {
+        if (isError()) {
+            return (Result<RT, RE>) this;
+        }
+        if (newValue == value) return (Result<RT, RE>) this;
+        return Result.success(newValue, message);
+    }
+
     /**
      * transform value if success.
      * @param f function
@@ -166,8 +186,7 @@ public class Result <T, E> {
             return (Result<RT, RE>) this;
         }
         RT apply = f.apply(value);
-        if (apply == value) return (Result<RT, RE>) this;
-        return (this == SUCCESS || apply == null) ? success() : Result.success(apply, message);
+        return justReplaceValue(apply);
     }
 
     /**
@@ -185,6 +204,27 @@ public class Result <T, E> {
     }
 
     /**
+     * replace error to string. if error is throwable,
+     * then will just use Throwable.getMessage() and will not use param function.
+     * @param f covert function, will not call if error is Throwable.
+     * @return
+     * @param <RT>
+     * @param <RE>
+     */
+    public <RT, RE> Result<RT, RE> replaceErrorString(Function<E, String> f) {
+        if (isError()) {
+            String str = null;
+            if (error instanceof Throwable) {
+                str = ((Throwable) error).getMessage();
+            } else {
+                str = f.apply(error);
+            }
+            return (Result<RT, RE>) Result.failure(str);
+        }
+        return (Result<RT, RE>) this;
+    }
+
+    /**
      * transform result
      * @param rt transform result if success
      * @param re transform error if failed
@@ -197,8 +237,17 @@ public class Result <T, E> {
             return Result.failure(re.apply(error), message);
         }
         RT apply = rt.apply(value);
-        if (apply == value) return (Result<RT, RE>) this;
-        return (this == SUCCESS || apply == null) ? success() : Result.success(apply, message);
+        return justReplaceValue(apply);
+    }
+
+    /**
+     * if success then use value.toString else error.toString
+     * if you want custom message please use map method;
+     * @return
+     */
+    @Override
+    public String toString() {
+        return Objects.toString(isError() ? error : value);
     }
 
     public static <T, E> Result<T, E> of(T value, E error) {

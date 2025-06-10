@@ -13,19 +13,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class LuaArray extends LuaTable {
-    private interface ArrayTransform <T> extends Function<LuaArray, T> {
-        public static final ArrayTransform<Object> EMPTY = array -> null;
-        default T apply(LuaArray array) {
-            try {
-                return transform(array);
-            } catch (Exception t) {
-                return null;
-            }
-        }
-
-        T transform(LuaArray array) throws Exception;
-    }
-    private static final Map<Class<?>, ArrayTransform<Object>> UNBOXED_ARRAY_TRANSFORMERS;
+    Function<LuaArray, Result<?, ? extends Exception>> EMPTY =
+            array -> Result.failure(new IllegalArgumentException("Need primitive type!"));
+    private static final Map<Class<?>, Function<LuaArray, Result<?, ? extends Exception>>> UNBOXED_ARRAY_TRANSFORMERS;
 
     static {
         UNBOXED_ARRAY_TRANSFORMERS = new HashMap<>();
@@ -57,11 +47,7 @@ public class LuaArray extends LuaTable {
 
     @Override
     public String toString() {
-        try {
-            return asDeepList(Object.class).toString();
-        } catch (Exception e) {
-            return "[Lua Array]";
-        }
+        return asDeepList(Object.class).replaceErrorString(Object::toString).toString();
     }
 
     @Override
@@ -73,55 +59,55 @@ public class LuaArray extends LuaTable {
         return len;
     }
 
-    public byte[] toByteArray() throws Exception {
+    public Result<byte[], ? extends Exception> toByteArray() {
         byte[] bytes = new byte[len];
-        forEach(Double.class, (idx, num) -> bytes[idx] = num.byteValue());
-        return bytes;
+        return forEach(Double.class, (idx, num) -> bytes[idx] = num.byteValue())
+                .replaceValue(bytes);
     }
 
-    public short[] toShortArray() throws Exception {
+    public Result<short[], ? extends Exception> toShortArray() {
         short[] shorts = new short[len];
-        forEach(Double.class, (idx, num) -> shorts[idx] = num.shortValue());
-        return shorts;
+        return forEach(Double.class, (idx, num) -> shorts[idx] = num.shortValue())
+                .replaceValue(shorts);
     }
 
-    public int[] toIntArray() throws Exception {
+    public Result<int[], ? extends Exception> toIntArray() {
         int[] nums = new int[len];
-        forEach(Double.class, (idx, num) -> nums[idx] = num.intValue());
-        return nums;
+        return forEach(Double.class, (idx, num) -> nums[idx] = num.intValue())
+                .replaceValue(nums);
     }
 
-    public long[] toLongArray() throws Exception {
+    public Result<long[], ? extends Exception> toLongArray() {
         long[] longs = new long[len];
-        forEach(Double.class, (idx, num) -> longs[idx] = num.longValue());
-        return longs;
+        return forEach(Double.class, (idx, num) -> longs[idx] = num.longValue())
+                .replaceValue(longs);
     }
 
-    public float[] toFloatArray() throws Exception {
+    public Result<float[], ? extends Exception> toFloatArray() {
         float[] floats = new float[len];
-        forEach(Double.class, (idx, num) -> floats[idx] = num.floatValue());
-        return floats;
+        return forEach(Double.class, (idx, num) -> floats[idx] = num.floatValue())
+                .replaceValue(floats);
     }
 
-    public boolean[] toBooleanArray() throws Exception {
+    public Result<boolean[], ? extends Exception> toBooleanArray() {
         boolean[] bool = new boolean[len];
-        forEach(Boolean.class, (idx, b) -> bool[idx] = b);
-        return bool;
+        return forEach(Boolean.class, (idx, b) -> bool[idx] = b)
+                .replaceValue(bool);
     }
 
-    public char[] toCharArray() throws Exception {
+    public Result<char[], ? extends Exception> toCharArray() {
         char[] chars = new char[len];
-        forEach(String.class, (idx, str) -> chars[idx] = str.charAt(0));
-        return chars;
+        return forEach(String.class, (idx, str) -> chars[idx] = str.charAt(0))
+                .replaceValue(chars);
     }
 
-    public double[] toDoubleArray() throws Exception {
+    public Result<double[], ? extends Exception> toDoubleArray() {
         double[] doubles = new double[len];
-        forEach(Double.class, (idx, num) -> doubles[idx] = num);
-        return doubles;
+        return forEach(Double.class, (idx, num) -> doubles[idx] = num)
+                .replaceValue(doubles);
     }
 
-    public List<Object> asList() throws Exception {
+    public Result<List<Object>, ? extends Exception> asList() {
         return asList(Object.class);
     }
 
@@ -132,21 +118,20 @@ public class LuaArray extends LuaTable {
      * @param <T>
      * @throws Exception
      */
-    public <T> List<T> asList(Class<T> clazz) throws Exception {
+    public <T> Result<List<T>, ? extends Exception> asList(Class<T> clazz) {
         if (clazz.isPrimitive()) {
-            throw new IllegalArgumentException("Primitive type is not supported");
+            return Result.failure(new IllegalArgumentException("Primitive type is not supported"));
         } else if (clazz == Character.class) {
-            return (List<T>) asCharacterList();
+            return asCharacterList().justCast();
         }
         List<T> list = new ArrayList<>(len);
-        forEachValue(clazz, list::add);
-        return list;
+        return forEachValue(clazz, list::add).replaceValue(list);
     }
 
-    public List<Character> asCharacterList() throws Exception {
+    public Result<List<Character>, ? extends Exception> asCharacterList() {
         List<Character> list = new ArrayList<>(len);
-        forEachValue(String.class, it -> list.add(it.charAt(0)));
-        return list;
+        return forEachValue(String.class, it -> list.add(it.charAt(0)))
+                .replaceValue(list);
     }
 
     /**
@@ -156,44 +141,36 @@ public class LuaArray extends LuaTable {
      * @param <T>
      * @throws Exception
      */
-    public <T> List<T> asDeepList(Class<?> clazz) throws Exception {
+    public <T> Result<List<T>, ? extends Exception> asDeepList(Class<?> clazz) {
         if (clazz.isPrimitive()) {
-            throw new IllegalArgumentException("Primitive type is not supported");
+            return Result.failure(new IllegalArgumentException("Primitive type is not supported"));
         } else if (clazz == Character.class) {
             return asDeepCharacterList();
         }
         List<Object> list = new ArrayList<>(len);
-        forEachValue(v -> {
+        // once exception then need stop!
+        return forEachValue(v -> {
             if (v instanceof LuaArray) {
-                try {
-                    list.add(((LuaArray) v).asDeepList(clazz));
-                } catch (Exception e) {
-                    throw new IllegalArgumentException("LuaArray.asDeepList Error", e);
-                }
+                list.add(((LuaArray) v).asDeepList(clazz).getOrSneakyThrow());
             } else {
                 list.add(clazz.cast(v));
             }
-        });
-        return (List<T>) list;
+        }).replaceValue((List<T>) list);
     }
 
-    public <T> List<T> asDeepCharacterList() throws Exception {
+    public <T> Result<List<T>, ? extends Exception> asDeepCharacterList() {
         List<Object> list = new ArrayList<>(len);
-        forEachValue(v -> {
+        // once exception then need stop!
+        return forEachValue(v -> {
             if (v instanceof LuaArray) {
-                try {
-                    list.add(((LuaArray) v).asDeepCharacterList());
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+                list.add(((LuaArray) v).asDeepCharacterList().getOrSneakyThrow());
             } else {
                 list.add(String.valueOf(v).charAt(0));
             }
-        });
-        return (List<T>) list;
+        }).replaceValue((List<T>) list);
     }
 
-    public Object[] asArray() throws Exception {
+    public Result<Object[], ? extends Exception> asArray() {
         return asArray(Object.class);
     }
 
@@ -206,13 +183,11 @@ public class LuaArray extends LuaTable {
      * @throws Exception
      * @see LuaArray#asPrimitiveArray(Class)
      */
-    public <T> T[] asArray(Class<T> clazz) throws Exception {
+    public <T> Result<T[], ? extends Exception> asArray(Class<T> clazz) {
         if (clazz.isPrimitive()) {
-            throw new IllegalArgumentException("Primitive type is not supported");
+            return Result.failure(new IllegalArgumentException("Primitive type is not supported"));
         }
-        List<T> list = asList(clazz);
-        T[] t = (T[]) Array.newInstance(clazz, 0);
-        return list.toArray(t);
+        return asList(clazz).mapValue(list -> list.toArray((T[]) Array.newInstance(clazz, 0)));
     }
 
     /**
@@ -221,15 +196,15 @@ public class LuaArray extends LuaTable {
      * @return
      * @param <T>
      */
-    public <T> T asPrimitiveArray(Class<T> tClass) {
+    public <T> Result<T, ? extends Exception> asPrimitiveArray(Class<T> tClass) {
         if (!tClass.isArray() || !tClass.getComponentType().isPrimitive()) {
-            throw new IllegalArgumentException("Not a primitive array type: " + tClass);
+            return Result.failure(new IllegalArgumentException("Not a primitive array type: " + tClass));
         }
-        return tClass.cast(UNBOXED_ARRAY_TRANSFORMERS.getOrDefault(tClass, ArrayTransform.EMPTY).apply(this));
+        return UNBOXED_ARRAY_TRANSFORMERS.getOrDefault(tClass, EMPTY).apply(this).justCast();
     }
 
-    public void forEachValue(Consumer<Object> consumer) throws Exception {
-        forEachValue(Object.class, consumer);
+    public Result<Void, ? extends Exception> forEachValue(Consumer<Object> consumer) {
+        return forEachValue(Object.class, consumer);
     }
 
     /**
@@ -288,17 +263,19 @@ public class LuaArray extends LuaTable {
         });
     }
 
-    public <V> void forEach(Class<V> vClass, BiConsumer<Integer, V> consumer) throws Exception {
-        forEach(Integer.class, vClass, consumer);
+    public <V> Result<Void, ? extends Exception> forEach(Class<V> vClass, BiConsumer<Integer, V> consumer) {
+        return forEach(Integer.class, vClass, consumer);
     }
 
     /**
      * foreach table entry. it will stop if throws exception.
+     *
      * @param consumer consumer, the first type always be <code>Integer</code>
+     * @return
      * @throws Exception any exception
      */
     @Override
-    public void forEach(BiConsumer<Object, Object> consumer) throws Exception {
-        forEach(Object.class, Object.class, consumer);
+    public Result<Void, ? extends Exception> forEach(BiConsumer<Object, Object> consumer) {
+        return forEach(Object.class, Object.class, consumer);
     }
 }

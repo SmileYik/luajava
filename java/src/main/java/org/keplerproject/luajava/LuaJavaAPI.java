@@ -24,6 +24,7 @@
 
 package org.keplerproject.luajava;
 
+import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.type.LuaArray;
 import org.eu.smileyik.luajava.util.BoxedTypeHelper;
 import org.eu.smileyik.luajava.util.ParamRef;
@@ -630,11 +631,11 @@ public final class LuaJavaAPI {
             Class<?> componentType = toType.getComponentType();
 
             if (componentType.isPrimitive()) {
-                Object primitiveArray = ((LuaArray) luaObj).asPrimitiveArray(toType);
-                if (primitiveArray == null) {
+                Result<?, ? extends Exception> result = ((LuaArray) luaObj).asPrimitiveArray(toType);
+                if (result.isError()) {
                     return -1;
                 } else if (overwrite != null) {
-                    overwrite.setParam(primitiveArray);
+                    overwrite.setParam(result.getValue());
                 }
                 if (BoxedTypeHelper.isUnboxedNumberType(componentType)) {
                     return doubleToNumberPriority(componentType);
@@ -642,13 +643,12 @@ public final class LuaJavaAPI {
                     return 9;
                 }
             } else {
-                try {
-                    Object[] array = ((LuaArray) luaObj).asArray(componentType);
-                    if (overwrite != null) {
-                        overwrite.setParam(array);
-                    }
-                } catch (Exception e) {
+                Result<Object[], ? extends Exception> result = ((LuaArray) luaObj).asArray(componentType).justCast();
+                if (result.isError()) {
                     return -1;
+                }
+                if (overwrite != null) {
+                    overwrite.setParam(result.getValue());
                 }
                 if (BoxedTypeHelper.isBoxedNumberType(componentType)) {
                     return doubleToNumberPriority(componentType);
