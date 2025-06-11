@@ -1,6 +1,8 @@
 package org.keplerproject.luajava;
 
 import org.eu.smileyik.luajava.exception.Result;
+import org.eu.smileyik.luajava.type.IInnerLuaObject;
+import org.eu.smileyik.luajava.type.LuaCallable;
 import org.eu.smileyik.luajava.util.ParamRef;
 
 import java.util.Objects;
@@ -186,7 +188,7 @@ public class LuaStateFacade implements AutoCloseable {
         return lock;
     }
 
-    public LuaState getLuaState() {
+    protected LuaState getLuaState() {
         return luaState;
     }
 
@@ -322,29 +324,56 @@ public class LuaStateFacade implements AutoCloseable {
     public Result<Object, ? extends LuaException> toJavaObject(int idx) {
         lock.lock();
         try {
-            int type = luaState.type(idx);
-            switch (type) {
-                case LUA_TBOOLEAN:
-                    return Result.success(luaState.toBoolean(idx));
-                case LUA_TSTRING:
-                    return Result.success(luaState.toString(idx));
-                case LUA_TFUNCTION:
-                case LUA_TTABLE:
-                    return getLuaObject(idx).justCast();
-                case LUA_TNUMBER:
-                    return Result.success(luaState.toNumber(idx));
-                case LUA_TUSERDATA:
-                    try {
-                        if (luaState.isObject(idx)) {
-                            return Result.success(luaState.getObjectFromUserdata(idx));
-                        } else {
-                            return getLuaObject(idx).justCast();
-                        }
-                    } catch (LuaException e) {
-                        return Result.failure(e);
+            return doToJavaObject(idx);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Function that returns a Java Object equivalent to the one in the given
+     * position of the Lua Stack.
+     *
+     * @param idx Index in the Lua Stack
+     * @return Java object equivalent to the Lua one
+     */
+    protected Result<Object, ? extends LuaException> doToJavaObject(int idx) {
+        int type = luaState.type(idx);
+        switch (type) {
+            case LUA_TBOOLEAN:
+                return Result.success(luaState.toBoolean(idx));
+            case LUA_TSTRING:
+                return Result.success(luaState.toString(idx));
+            case LUA_TFUNCTION:
+            case LUA_TTABLE:
+                return getLuaObject(idx).justCast();
+            case LUA_TNUMBER:
+                return Result.success(luaState.toNumber(idx));
+            case LUA_TUSERDATA:
+                try {
+                    if (luaState.isObject(idx)) {
+                        return Result.success(luaState.getObjectFromUserdata(idx));
+                    } else {
+                        return getLuaObject(idx).justCast();
                     }
-            }
-            return Result.success(null);
+                } catch (LuaException e) {
+                    return Result.failure(e);
+                }
+        }
+        return Result.success(null);
+    }
+
+    /**
+     * Pushes into the stack any object value.<br>
+     * This function checks if the object could be pushed as a lua type, if not
+     * pushes the java object.
+     *
+     * @param obj
+     */
+    public Result<Void, ? extends LuaException> pushObjectValue(Object obj) {
+        lock.lock();
+        try {
+            return rawPushObjectValue(obj);
         } finally {
             lock.unlock();
         }
@@ -357,31 +386,35 @@ public class LuaStateFacade implements AutoCloseable {
      *
      * @param obj
      */
-    public void pushObjectValue(Object obj) throws LuaException {
-        lock.lock();
-        try {
-            if (obj == null) {
-                luaState.pushNil();
-            } else if (obj instanceof Boolean) {
-                luaState.pushBoolean((Boolean) obj);
-            } else if (obj instanceof Number) {
-                luaState.pushNumber(((Number) obj).doubleValue());
-            } else if (obj instanceof String) {
-                luaState.pushString((String) obj);
-            } else if (obj instanceof JavaFunction) {
+    protected Result<Void, ? extends LuaException> rawPushObjectValue(Object obj) {
+        if (obj == null) {
+            luaState.pushNil();
+        } else if (obj instanceof Boolean) {
+            luaState.pushBoolean((Boolean) obj);
+        } else if (obj instanceof Number) {
+            luaState.pushNumber(((Number) obj).doubleValue());
+        } else if (obj instanceof String) {
+            luaState.pushString((String) obj);
+        } else if (obj instanceof JavaFunction) {
+            try {
                 luaState.pushJavaFunction((JavaFunction) obj);
-            } else if (obj instanceof LuaObject) {
-                ((LuaObject) obj).push();
-            } else if (obj instanceof byte[]) {
-                luaState.pushString((byte[]) obj);
-            } else if (obj.getClass().isArray()) {
-                luaState.pushJavaArray(obj);
-            } else {
-                luaState.pushJavaObject(obj);
+            } catch (LuaException e) {
+                return Result.failure(e);
             }
-        } finally {
-            lock.unlock();
+        } else if (obj instanceof LuaObject) {
+            ((LuaObject) obj).push();
+        } else if (obj instanceof byte[]) {
+            luaState.pushString((byte[]) obj);
+        } else if (obj.getClass().isArray()) {
+            try {
+                luaState.pushJavaArray(obj);
+            } catch (LuaException e) {
+                return Result.failure(e);
+            }
+        } else {
+            luaState.pushJavaObject(obj);
         }
+        return Result.success();
     }
 
     // STACK MANIPULATION
@@ -722,15 +755,103 @@ public class LuaStateFacade implements AutoCloseable {
         });
     }
 
-    public Result<Integer, LuaException> pcall(int nArgs, int nResults, int errFunc) {
+    public Result<Void, LuaException> pcall(int nArgs, int nResults, int errFunc) {
         return lock(l -> {
-            int exp = l.pcall(nArgs, nResults, errFunc);
-            if (exp != 0) {
-                String err = getErrorMessage(exp);
-                return Result.failure(new LuaException(err), err);
-            }
-            return Result.success(exp);
+            return doPcall(nArgs, nResults, errFunc);
         });
+    }
+
+    private Result<Void, LuaException> doPcall(int nArgs, int nResults, int errFunc) {
+        int exp = luaState.pcall(nArgs, nResults, errFunc);
+        if (exp != 0) {
+            String err = getErrorMessage(exp);
+            return Result.failure(new LuaException(err), err);
+        }
+        return Result.success();
+    }
+
+    /**
+     * Calls the object represented by <code>callable</code> using Lua function pcall. Returns 1 object
+     *
+     * @param args -
+     *             Call arguments
+     * @return Object - Returned Object
+     * @throws LuaException
+     */
+    public Result<Object, ? extends LuaException> pcall(LuaCallable callable, Object[] args) {
+        return pcall(callable, args, 1).mapValue(it -> it[0]);
+    }
+
+    /**
+     * Calls the object represented by <code>callable</code> using Lua function pcall.
+     *
+     * @param args -
+     *             Call arguments
+     * @param nres -
+     *             Number of objects returned
+     * @return Object[] - Returned Objects
+     */
+    public Result<Object[], ? extends LuaException> pcall(LuaCallable callable, Object[] args, int nres) {
+        lock.lock();
+        try {
+            return doPcall(callable, args, nres);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
+    /**
+     * Calls the object represented by <code>callable</code> using Lua function pcall.
+     *
+     * @param args  -
+     *              Call arguments
+     * @param _nres -
+     *              Number of objects returned
+     * @return Object[] - Returned Objects
+     */
+    protected Result<Object[], ? extends LuaException> doPcall(LuaCallable callable, Object[] args, int _nres) {
+        IInnerLuaObject innerObject = (IInnerLuaObject) callable;
+        final int top = luaState.getTop();
+        int nargs = 0;
+
+        try {
+            // push function and push params.
+            innerObject.rawPush();
+            if (args != null) {
+                nargs = args.length;
+                for (Object obj : args) {
+                    Result<Void, ? extends LuaException> pushResult = rawPushObjectValue(obj);
+                    if (pushResult.isError()) {
+                        // return Result.failure(pushResult.getError(),
+                        // "Convert Java object to lua function params failed");
+                        return pushResult.justCast();
+                    }
+                }
+            }
+
+            return doPcall(nargs, _nres, 0).mapResultValue((v) -> {
+                int nres = _nres;
+                int currentTop = luaState.getTop();
+                if (nres == LuaState.LUA_MULTRET) {
+                    nres = currentTop - top;
+                }
+                if (currentTop - top < nres) {
+                    return Result.failure(new LuaException("Invalid Number of Results .")).justCast();
+                }
+
+                Object[] res = new Object[nres];
+                for (int i = nres - 1; i >= 0; i--) {
+                    Result<Object, ? extends LuaException> ret = doToJavaObject(-1);
+                    if (ret.isError()) return ret.justCast();
+                    res[i] = ret.getValue();
+                    luaState.pop(1);
+                }
+                return Result.success(res);
+            });
+        } finally {
+            luaState.setTop(top);
+        }
     }
 
     public int yield(int nResults) {
@@ -965,7 +1086,7 @@ public class LuaStateFacade implements AutoCloseable {
             return setGlobal(name, (LuaObject) obj);
         }
         return lockThrowAll(l -> {
-            pushObjectValue(obj);
+            rawPushObjectValue(obj).justThrow();
             l.setGlobal(name);
         }).justCast();
     }

@@ -23,8 +23,11 @@
 
 package org.keplerproject.luajava.test;
 
+import org.eu.smileyik.luajava.type.LuaCallable;
 import org.junit.jupiter.api.Test;
 import org.keplerproject.luajava.*;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class Main {
@@ -50,7 +53,8 @@ public class Main {
             L.LdoString(str);
 
             LuaObject func = luaState.getLuaObject("imprime").getOrThrow(LuaException.class);
-            Object[] teste = func.call(new Object[]{"TESTANDO"}, 2).getOrThrow(LuaException.class);
+            assertTrue(func.isCallable());
+            Object[] teste = ((LuaCallable) func).call(2, new Object[]{"TESTANDO"}).getOrThrow(LuaException.class);
             System.out.println(teste[0]);
             System.out.println(teste[1]);
 

@@ -98,7 +98,7 @@ public final class LuaJavaAPI {
             }
 
             // push result
-            luaStateFacade.pushObjectValue(ret);
+            luaStateFacade.rawPushObjectValue(ret).justThrow(LuaException.class);
 
             return 1;
         }).getOrThrow(LuaException.class);
@@ -124,7 +124,7 @@ public final class LuaJavaAPI {
             if (Array.getLength(obj) < index)
                 throw new LuaException("Index out of bounds.");
 
-            luaStateFacade.pushObjectValue(Array.get(obj, index - 1));
+            luaStateFacade.rawPushObjectValue(Array.get(obj, index - 1)).justThrow(LuaException.class);
 
             return 1;
         }).getOrThrow(LuaException.class);
@@ -428,7 +428,7 @@ public final class LuaJavaAPI {
                 return 0;
             }
 
-            luaStateFacade.pushObjectValue(ret);
+            luaStateFacade.rawPushObjectValue(ret).justThrow(LuaException.class);;
 
             return 1;
         }).getOrThrow(LuaException.class);

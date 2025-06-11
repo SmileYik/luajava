@@ -23,6 +23,7 @@
 
 package org.keplerproject.luajava.test;
 
+import org.keplerproject.luajava.LuaException;
 import org.keplerproject.luajava.LuaStateFacade;
 import org.keplerproject.luajava.LuaStateFactory;
 
@@ -61,7 +62,7 @@ public class TestJDBC {
             L.openLibs();
 
             //L.pushString("st");
-            facade.pushObjectValue(st);
+            facade.pushObjectValue(st).justThrow(LuaException.class);;
             //L.setTable(LuaState.LUA_GLOBALSINDEX.intValue());
             L.setGlobal("st");
 

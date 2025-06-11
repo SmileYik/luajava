@@ -204,7 +204,7 @@ class LuaMap implements Map, AutoCloseable, Closeable {
     public boolean containsKey(Object key) {
         try {
             return facade.lockThrow(L -> {
-                facade.pushObjectValue(key);
+                facade.pushObjectValue(key).justThrow(LuaException.class);
                 LuaObject obj = facade.getLuaObject(-1).getOrThrow(LuaException.class);
                 L.pop(1);
 
@@ -224,7 +224,7 @@ class LuaMap implements Map, AutoCloseable, Closeable {
     public boolean containsValue(Object value) {
         try {
             return facade.lockThrow(L -> {
-                facade.pushObjectValue(value);
+                facade.pushObjectValue(value).justThrow(LuaException.class);;
                 table.push();
                 L.pushNil();
 
@@ -287,7 +287,7 @@ class LuaMap implements Map, AutoCloseable, Closeable {
         try {
             return facade.lockThrow(L -> {
                 table.push();
-                facade.pushObjectValue(key);
+                facade.pushObjectValue(key).justThrow(LuaException.class);;
 
                 L.getTable(-2);
 
@@ -312,7 +312,7 @@ class LuaMap implements Map, AutoCloseable, Closeable {
                 Object ret = get(key);
 
                 table.push();
-                facade.pushObjectValue(key);
+                facade.pushObjectValue(key).justThrow(LuaException.class);;
                 L.pushNil();
 
                 L.setTable(-3);
@@ -336,8 +336,8 @@ class LuaMap implements Map, AutoCloseable, Closeable {
                 Object ret = get(key);
 
                 table.push();
-                facade.pushObjectValue(key);
-                facade.pushObjectValue(value);
+                facade.pushObjectValue(key).justThrow(LuaException.class);;
+                facade.pushObjectValue(value).justThrow(LuaException.class);;
 
                 L.setTable(-3);
 

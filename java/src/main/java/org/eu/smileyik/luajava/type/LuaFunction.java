@@ -3,7 +3,7 @@ package org.eu.smileyik.luajava.type;
 import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaStateFacade;
 
-public class LuaFunction extends LuaObject {
+public class LuaFunction extends LuaObject implements LuaCallable {
     public static final String TYPE_NAME = LuaType.typeName(LuaType.FUNCTION);
 
     /**

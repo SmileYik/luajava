@@ -24,6 +24,7 @@
 
 package org.keplerproject.luajava;
 
+import org.eu.smileyik.luajava.type.LuaCallable;
 import org.eu.smileyik.luajava.util.BoxedTypeHelper;
 
 import java.lang.reflect.InvocationHandler;
@@ -50,28 +51,32 @@ public class LuaInvocationHandler implements InvocationHandler {
      * Function called when a proxy object function is invoked.
      */
     public Object invoke(Object proxy, Method method, Object[] args) throws LuaException {
-        return obj.getLuaState().lockThrow(l -> {
+        final LuaStateFacade facade = obj.getLuaState();
+        return facade.lockThrow(l -> {
             String methodName = method.getName();
             LuaObject func = obj.getField(methodName).getOrThrow(LuaException.class);
-
-            if (func.isNil()) {
-                return null;
+            if (!func.isCallable()) {
+                throw new LuaException("Method " + methodName + " is not a callable");
             }
 
             Class<?> retType = method.getReturnType();
-            Object ret;
+            Object ret = null;
 
             // Checks if returned type is void. if it is returns null.
             if (retType.equals(Void.class) || retType.equals(void.class)) {
-                func.call(args, 0).justThrow(LuaException.class);
-                ret = null;
+                facade.doPcall((LuaCallable) func, args, 0)
+                        .justThrow(LuaException.class);
             } else {
-                ret = func.call(args, 1).getOrThrow(LuaException.class)[0];
-                if (ret instanceof Double) {
-                    ret = BoxedTypeHelper.covertNumberTo((Double) ret, retType);
-                }
+                ret = facade.doPcall((LuaCallable) func, args, 1)
+                        .mapValue(it -> {
+                            Object o = it[0];
+                            if (o instanceof Double) {
+                                return BoxedTypeHelper.covertNumberTo((Double) o, retType);
+                            }
+                            return o;
+                        })
+                        .getOrThrow(LuaException.class);
             }
-
             return ret;
         }).getOrThrow(LuaException.class);
     }

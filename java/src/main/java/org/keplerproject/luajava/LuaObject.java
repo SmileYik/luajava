@@ -25,7 +25,10 @@
 package org.keplerproject.luajava;
 
 import org.eu.smileyik.luajava.exception.Result;
+import org.eu.smileyik.luajava.type.IInnerLuaObject;
+import org.eu.smileyik.luajava.type.ILuaObject;
 import org.eu.smileyik.luajava.type.InnerTypeHelper;
+import org.eu.smileyik.luajava.type.LuaCallable;
 import org.eu.smileyik.luajava.util.ResourceCleaner;
 
 import java.lang.reflect.InvocationHandler;
@@ -56,7 +59,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author Rizzato
  * @author Thiago Ponte
  */
-public class LuaObject implements AutoCloseable {
+public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
     private static final class CleanTask implements Runnable {
         private final LuaStateFacade luaState;
         private final Integer ref;
@@ -217,6 +220,7 @@ public class LuaObject implements AutoCloseable {
     /**
      * Gets the Object's State
      */
+    @Override
     public LuaStateFacade getLuaState() {
         return luaState;
     }
@@ -227,12 +231,26 @@ public class LuaObject implements AutoCloseable {
     }
 
     /**
+     * check this lua object is callable or not.
+     * @return if callable then return true.
+     */
+    public boolean isCallable() {
+        return this instanceof LuaCallable;
+    }
+
+    /**
      * Pushes the object represented by <code>this</code> into L's stack
      */
+    @Override
     public void push() {
         luaState.lock(l -> {
             l.rawGetI(LuaState.LUA_REGISTRYINDEX, ref);
         });
+    }
+
+    @Override
+    public void rawPush() {
+        luaState.getLuaState().rawGetI(LuaState.LUA_REGISTRYINDEX, ref);
     }
 
     public boolean isNil() {
@@ -367,84 +385,6 @@ public class LuaObject implements AutoCloseable {
      */
     public Result<LuaObject, ? extends LuaException> getField(String field) {
         return luaState.getLuaObject(this, field);
-    }
-
-    /**
-     * Calls the object represented by <code>this</code> using Lua function pcall.
-     *
-     * @param args  -
-     *              Call arguments
-     * @param _nres -
-     *              Number of objects returned
-     * @return Object[] - Returned Objects
-     * @throws LuaException
-     */
-    public Result<Object[], ? extends LuaException> call(Object[] args, int _nres) {
-        return luaState.lockThrow(innerL -> {
-            if (!isFunction() && !isTable() && !isUserdata())
-                throw new LuaException("Invalid object. Not a function, table or userdata .");
-            int nres = _nres;
-            int top = innerL.getTop();
-            push();
-            int nargs;
-            if (args != null) {
-                nargs = args.length;
-                for (int i = 0; i < nargs; i++) {
-                    Object obj = args[i];
-                    luaState.pushObjectValue(obj);
-                }
-            } else
-                nargs = 0;
-
-            int err = innerL.pcall(nargs, nres, 0);
-
-            if (err != 0) {
-                String str;
-                if (innerL.isString(-1)) {
-                    str = innerL.toString(-1);
-                    innerL.pop(1);
-                } else
-                    str = "";
-
-                if (err == LuaState.LUA_ERRRUN) {
-                    str = "Runtime error. " + str;
-                } else if (err == LuaState.LUA_ERRMEM) {
-                    str = "Memory allocation error. " + str;
-                } else if (err == LuaState.LUA_ERRERR) {
-                    str = "Error while running the error handler function. " + str;
-                } else {
-                    str = "Lua Error code " + err + ". " + str;
-                }
-
-                throw new LuaException(str);
-            }
-
-            if (nres == LuaState.LUA_MULTRET)
-                nres = innerL.getTop() - top;
-            if (innerL.getTop() - top < nres) {
-                throw new LuaException("Invalid Number of Results .");
-            }
-
-            Object[] res = new Object[nres];
-
-            for (int i = nres; i > 0; i--) {
-                res[i - 1] = luaState.toJavaObject(-1).getOrThrow(LuaException.class);
-                innerL.pop(1);
-            }
-            return res;
-        });
-    }
-
-    /**
-     * Calls the object represented by <code>this</code> using Lua function pcall. Returns 1 object
-     *
-     * @param args -
-     *             Call arguments
-     * @return Object - Returned Object
-     * @throws LuaException
-     */
-    public Result<Object, ? extends LuaException> call(Object[] args) {
-        return call(args, 1).mapValue(it -> it[0]);
     }
 
     public String toString() {
