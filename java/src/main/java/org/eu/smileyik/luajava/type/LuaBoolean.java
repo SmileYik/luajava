@@ -3,7 +3,7 @@ package org.eu.smileyik.luajava.type;
 import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaStateFacade;
 
-public class LuaBoolean extends LuaObject implements GettableType<Boolean> {
+public class LuaBoolean extends LuaObject {
     /**
      * Creates a reference to an object in the given index of the stack
      * <strong>SHOULD NOT USE CONSTRUCTOR DIRECTLY, EXPECT YOU KNOW WHAT YOU ARE DOING</strong>
@@ -29,11 +29,6 @@ public class LuaBoolean extends LuaObject implements GettableType<Boolean> {
     @Override
     public String toString() {
         return Boolean.toString(getBoolean());
-    }
-
-    @Override
-    public Boolean get() {
-        return getBoolean();
     }
 
     @Override

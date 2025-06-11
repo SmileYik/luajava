@@ -3,7 +3,7 @@ package org.eu.smileyik.luajava.type;
 import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaStateFacade;
 
-public class LuaString extends LuaObject implements GettableType<String> {
+public class LuaString extends LuaObject {
     /**
      * Creates a reference to an object in the given index of the stack
      * <strong>SHOULD NOT USE CONSTRUCTOR DIRECTLY, EXPECT YOU KNOW WHAT YOU ARE DOING</strong>
@@ -54,10 +54,5 @@ public class LuaString extends LuaObject implements GettableType<String> {
     @Override
     public boolean isUserdata() {
         return false;
-    }
-
-    @Override
-    public String get() {
-        return getString();
     }
 }
