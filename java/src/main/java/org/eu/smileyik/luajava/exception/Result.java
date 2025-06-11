@@ -166,11 +166,11 @@ public class Result <T, E> {
      * @param <RT>
      * @param <RE>
      */
-    public <RT, RE> Result<RT, RE> replaceValue(RT newValue) {
+    public <RT, E> Result<RT, E> replaceValue(RT newValue) {
         if (isError()) {
-            return (Result<RT, RE>) this;
+            return (Result<RT, E>) this;
         }
-        if (newValue == value) return (Result<RT, RE>) this;
+        if (newValue == value || (this == SUCCESS && newValue == null)) return (Result<RT, E>) this;
         return Result.success(newValue, message);
     }
 
@@ -181,9 +181,9 @@ public class Result <T, E> {
      * @param <RT>
      * @param <RE>
      */
-    public <RT, RE> Result<RT, RE> mapValue(Function<T, RT> f) {
+    public <RT, E> Result<RT, E> mapValue(Function<T, RT> f) {
         if (isError()) {
-            return (Result<RT, RE>) this;
+            return (Result<RT, E>) this;
         }
         RT apply = f.apply(value);
         return justReplaceValue(apply);
@@ -196,11 +196,11 @@ public class Result <T, E> {
      * @param <RT>
      * @param <RE>
      */
-    public <RT, RE> Result<RT, RE> mapError(Function<E, RE> f) {
+    public <T, RE> Result<T, RE> mapError(Function<E, RE> f) {
         if (isError()) {
             return Result.failure(f.apply(error), message);
         }
-        return (Result<RT, RE>) this;
+        return (Result<T, RE>) this;
     }
 
     /**
@@ -208,10 +208,8 @@ public class Result <T, E> {
      * then will just use Throwable.getMessage() and will not use param function.
      * @param f covert function, will not call if error is Throwable.
      * @return
-     * @param <RT>
-     * @param <RE>
      */
-    public <RT, RE> Result<RT, RE> replaceErrorString(Function<E, String> f) {
+    public Result<T, String> replaceErrorString(Function<E, String> f) {
         if (isError()) {
             String str = null;
             if (error instanceof Throwable) {
@@ -219,9 +217,9 @@ public class Result <T, E> {
             } else {
                 str = f.apply(error);
             }
-            return (Result<RT, RE>) Result.failure(str);
+            return Result.failure(str);
         }
-        return (Result<RT, RE>) this;
+        return (Result<T, String>) this;
     }
 
     /**
@@ -247,7 +245,7 @@ public class Result <T, E> {
      */
     @Override
     public String toString() {
-        return Objects.toString(isError() ? error : value);
+        return isError() ? String.format("Result Error { %s }", error) : String.format("Result { %s }", value);
     }
 
     public static <T, E> Result<T, E> of(T value, E error) {

@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 public class LuaTable extends LuaObject {
-    public static final String TYPE_NAME = LuaType.typeName(LuaType.TABLE);
 
     /**
      * <strong>SHOULD NOT USE CONSTRUCTOR DIRECTLY, EXPECT YOU KNOW WHAT YOU ARE DOING</strong>
@@ -37,11 +36,7 @@ public class LuaTable extends LuaObject {
 
     @Override
     public String toString() {
-        try {
-            return asDeepMap().toString();
-        } catch (Exception e) {
-            return TYPE_NAME;
-        }
+        return asDeepMap().replaceErrorString(it -> "[Cannot Transform this LuaTable to Map]").toString();
     }
 
     @Override
@@ -83,20 +78,20 @@ public class LuaTable extends LuaObject {
         return false;
     }
 
-    public Map<String, Object> asDeepStringMap() throws Exception {
+    public Result<Map<String, Object>, ? extends Exception> asDeepStringMap() {
         return asDeepMap(String.class, Object.class);
     }
 
-    public <V> Map<String, V> asDeepStringMap(Class<V> vClass) throws Exception {
+    public <V> Result<Map<String, V>, ? extends Exception> asDeepStringMap(Class<V> vClass) {
         return asDeepMap(String.class, vClass);
     }
 
-    public Map<Object, Object> asDeepMap() throws Exception {
+    public Result<Map<Object, Object>, ? extends Exception> asDeepMap() {
         return asDeepMap(Object.class, Object.class);
     }
 
     /**
-     * Convert table to map, also try to convert key or value to map. it will stop if throws exception.
+     * Convert table to map, also try to convert key or value to map. it will stop if.
      * @param kClass map key type
      * @param vClass map value type
      * @return A map
@@ -104,9 +99,9 @@ public class LuaTable extends LuaObject {
      * @param <V> value type, Cannot be primitive type
      * @throws Exception throw any exception
      */
-    public <K, V> Map<K, V> asDeepMap(Class<K> kClass, Class<V> vClass) throws Exception {
+    public <K, V> Result<Map<K, V>, ? extends Exception> asDeepMap(Class<K> kClass, Class<V> vClass) {
         Map<K, V> map = new HashMap<>();
-        forEach(kClass, vClass, (k, v) -> {
+        return forEach(kClass, vClass, (k, v) -> {
             Object realK = k, realV = v;
             if (k instanceof LuaTable) {
                 try {
@@ -123,16 +118,15 @@ public class LuaTable extends LuaObject {
                 }
             }
             map.put((K) realK, (V) realV);
-        });
-        return map;
+        }).replaceValue(map);
     }
 
-    public Map<Object, Object> asMap() throws Exception {
+    public Result<Map<Object, Object>, ? extends Exception> asMap() {
         return asMap(Object.class, Object.class);
     }
 
     /**
-     * Convert table to map. it will stop if throws exception.
+     * Convert table to map. it will stop if.
      * @param kClass map key type
      * @param vClass map value type
      * @return A map
@@ -140,22 +134,21 @@ public class LuaTable extends LuaObject {
      * @param <V> value type, Cannot be primitive type
      * @throws Exception throw any exception
      */
-    public <K, V> Map<K, V> asMap(Class<K> kClass, Class<V> vClass) throws Exception {
+    public <K, V> Result<Map<K, V>, ? extends Exception> asMap(Class<K> kClass, Class<V> vClass) {
         Map<K, V> map = new HashMap<>();
-        forEach(kClass, vClass, map::put);
-        return map;
+        return forEach(kClass, vClass, map::put).replaceValue(map);
     }
 
-    public Map<String, Object> asStringMap() throws Exception {
+    public Result<Map<String, Object>, ? extends Exception> asStringMap() {
         return asStringMap(Object.class);
     }
 
-    public <V> Map<String, V> asStringMap(Class<V> vClass) throws Exception {
+    public <V> Result<Map<String, V>, ? extends Exception> asStringMap(Class<V> vClass) {
         return asMap(String.class, vClass);
     }
 
     /**
-     * foreach table entry. it will stop if throws exception.
+     * foreach table entry. it will stop if.
      * @param kClass   Key type
      * @param vClass   Value type
      * @param consumer consumer
@@ -163,7 +156,8 @@ public class LuaTable extends LuaObject {
      * @param <V> Value Type, Cannot be primitive type
      * @throws Exception any exception
      */
-    public <K, V> Result<Void, ? extends Exception> forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) {
+    public <K, V> Result<Void, ? extends Exception> forEach(Class<K> kClass,
+                                                            Class<V> vClass, BiConsumer<K, V> consumer) {
         return luaState.lockThrowAll(l ->  {
             int top = l.getTop();
             try {
@@ -185,15 +179,14 @@ public class LuaTable extends LuaObject {
     }
 
     /**
-     * foreach table entry. it will stop if throws exception.
+     * foreach table entry. it will stop if.
      *
      * @param consumer consumer
      * @return
      * @throws Exception any exception
      */
-    public Result<Void, ? extends Exception> forEach(BiConsumer<Object, Object> consumer) throws Exception {
-        forEach(Object.class, Object.class, consumer);
-        return null;
+    public Result<Void, ? extends Exception> forEach(BiConsumer<Object, Object> consumer) {
+        return forEach(Object.class, Object.class, consumer);
     }
 
     /**
