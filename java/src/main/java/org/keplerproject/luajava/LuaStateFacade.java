@@ -174,6 +174,14 @@ public class LuaStateFacade implements AutoCloseable {
         });
     }
 
+    public void lock() {
+        lock.lock();
+    }
+
+    public void unlock() {
+        lock.unlock();
+    }
+
     public Lock getLock() {
         return lock;
     }
@@ -336,7 +344,7 @@ public class LuaStateFacade implements AutoCloseable {
                         return Result.failure(e);
                     }
             }
-            return Result.success();
+            return Result.success(null);
         } finally {
             lock.unlock();
         }
@@ -897,16 +905,65 @@ public class LuaStateFacade implements AutoCloseable {
         });
     }
 
-    public void getGlobal(String global) {
-        lock(l -> {
-            l.getGlobal(global);
-        });
+    /**
+     * get lua global variable
+     * @param globalName variable name
+     * @return target or error
+     */
+    public Result<Object, ? extends LuaException> getGlobal(String globalName) {
+        return getGlobal(globalName, Object.class);
     }
 
-    public void setGlobal(String name) {
-        lock(l -> {
+    /**
+     * get lua global variable and cast to
+     * @param globalName variable name
+     * @param tClass expect type
+     * @return target or error (lua error or class cast error)
+     * @param <T> expect type
+     */
+    public <T> Result<T, ? extends LuaException> getGlobal(String globalName, Class<T> tClass) {
+        lock.lock();
+        try {
+            luaState.setGlobal(globalName);
+            return this.toJavaObject(-1)
+                    .mapResultValue(it -> {
+                        if (tClass.isInstance(it)) {
+                            return Result.success(tClass.cast(it));
+                        }
+                        return Result.failure(new LuaException("failed to convert " + it + " to " + tClass));
+                    });
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * set lua object to lua global variable.
+     * @param name      variable name
+     * @param luaObject obj
+     * @return result
+     */
+    public Result<Void, ? extends LuaException> setGlobal(String name, LuaObject luaObject) {
+        return lockThrowAll(l -> {
+            luaObject.push();
             l.setGlobal(name);
-        });
+        }).justCast();
+    }
+
+    /**
+     * set java object(include lua object) to lua global variable.
+     * @param name variable name
+     * @param obj  object
+     * @return result.
+     */
+    public Result<Void, ? extends LuaException> setGlobal(String name, Object obj) {
+        if (obj instanceof LuaObject) {
+            return setGlobal(name, (LuaObject) obj);
+        }
+        return lockThrowAll(l -> {
+            pushObjectValue(obj);
+            l.setGlobal(name);
+        }).justCast();
     }
 
     // Functions to open lua libraries

@@ -238,6 +238,25 @@ public class Result <T, E> {
         return justReplaceValue(apply);
     }
 
+    public <RT, RE> Result<RT, RE> mapResultValue(Function<T, Result<RT, RE>> function) {
+        if (isError()) {
+            return (Result<RT, RE>) this;
+        }
+        Result<RT, RE> ret = function.apply(value);
+        if (ret != SUCCESS && ret.value == null && message == null) {
+            return success();
+        }
+        return ret;
+    }
+
+    public <RT, RE> Result<RT, RE> mapResult(Function<Result<T, E>, Result<RT, RE>> function) {
+        Result<RT, RE> ret = function.apply(this);
+        if (ret.value == null && error == null && message == null) {
+            return success();
+        }
+        return ret;
+    }
+
     /**
      * if success then use value.toString else error.toString
      * if you want custom message please use map method;

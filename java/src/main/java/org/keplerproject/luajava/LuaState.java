@@ -772,6 +772,10 @@ public class LuaState {
         _getGlobal(luaState, global);
     }
 
+    /**
+     * Pops a value from the stack and sets it as the new value of global name.
+     * @param name
+     */
     public void setGlobal(String name) {
         //pushString(name);
         //insert(-2);
