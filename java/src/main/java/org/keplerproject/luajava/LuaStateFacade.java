@@ -925,13 +925,17 @@ public class LuaStateFacade implements AutoCloseable {
         lock.lock();
         try {
             luaState.setGlobal(globalName);
-            return this.toJavaObject(-1)
-                    .mapResultValue(it -> {
-                        if (tClass.isInstance(it)) {
-                            return Result.success(tClass.cast(it));
-                        }
-                        return Result.failure(new LuaException("failed to convert " + it + " to " + tClass));
-                    });
+            try {
+                return this.toJavaObject(-1)
+                        .mapResultValue(it -> {
+                            if (tClass.isInstance(it)) {
+                                return Result.success(tClass.cast(it));
+                            }
+                            return Result.failure(new LuaException("failed to convert " + it + " to " + tClass));
+                        });
+            } finally {
+                luaState.pop(1);
+            }
         } finally {
             lock.unlock();
         }
