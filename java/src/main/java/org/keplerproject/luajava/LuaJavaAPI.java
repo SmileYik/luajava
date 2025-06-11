@@ -653,7 +653,7 @@ public final class LuaJavaAPI {
                 if (BoxedTypeHelper.isBoxedNumberType(componentType)) {
                     return doubleToNumberPriority(componentType);
                 } else {
-                    return 9;
+                    return componentType == Object.class ? 11 : 9;
                 }
             }
         }
