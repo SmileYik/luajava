@@ -123,7 +123,7 @@ class LuaArrayTest {
             assert luaObject instanceof LuaArray;
             LuaArray array = (LuaArray) luaObject;
             try {
-                System.out.println(array.asList(Object.class));
+                System.out.println(array.asList(Object.class).getOrThrow());
 
                 array = (LuaArray) facade.getLuaObject("strs").getOrThrow(LuaException.class);
                 assert array.asList(String.class).getOrSneakyThrow().toString().equals("[1, 2, 3, 4, 5, 6, 7, 8, 9]");

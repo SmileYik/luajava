@@ -104,18 +104,10 @@ public class LuaTable extends LuaObject implements LuaCallable {
         return forEach(kClass, vClass, (k, v) -> {
             Object realK = k, realV = v;
             if (k instanceof LuaTable) {
-                try {
-                    realK = ((LuaTable) k).asDeepMap(kClass, vClass);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+                realK = ((LuaTable) k).asDeepMap(kClass, vClass).getOrSneakyThrow();
             }
             if (v instanceof LuaTable) {
-                try {
-                    realV = ((LuaTable) v).asDeepMap(kClass, vClass);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+                realV = ((LuaTable) v).asDeepMap(kClass, vClass).getOrSneakyThrow();
             }
             map.put((K) realK, (V) realV);
         }).replaceValue(map);
