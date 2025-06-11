@@ -5,7 +5,10 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class Result <T, E> {
-    private static final Result SUCCESS = new Result(null, null, null);
+    /**
+     * SUCCESS INSTANCE.
+     */
+    private static final Result<?, ?> SUCCESS = new Result<>(null, null, null);
 
     private final String message;
     private final T value;
@@ -164,9 +167,8 @@ public class Result <T, E> {
      * @param newValue
      * @return
      * @param <RT>
-     * @param <RE>
      */
-    public <RT, E> Result<RT, E> replaceValue(RT newValue) {
+    public <RT> Result<RT, E> replaceValue(RT newValue) {
         if (isError()) {
             return (Result<RT, E>) this;
         }
@@ -179,9 +181,8 @@ public class Result <T, E> {
      * @param f function
      * @return result
      * @param <RT>
-     * @param <RE>
      */
-    public <RT, E> Result<RT, E> mapValue(Function<T, RT> f) {
+    public <RT> Result<RT, E> mapValue(Function<T, RT> f) {
         if (isError()) {
             return (Result<RT, E>) this;
         }
@@ -193,10 +194,9 @@ public class Result <T, E> {
      * transform error if failed
      * @param f function
      * @return result
-     * @param <RT>
      * @param <RE>
      */
-    public <T, RE> Result<T, RE> mapError(Function<E, RE> f) {
+    public <RE> Result<T, RE> mapError(Function<E, RE> f) {
         if (isError()) {
             return Result.failure(f.apply(error), message);
         }
@@ -257,7 +257,7 @@ public class Result <T, E> {
     }
 
     public static <T, E> Result<T, E> success() {
-        return SUCCESS;
+        return (Result<T, E>) SUCCESS;
     }
 
     public static <T, E> Result<T, E> success(T value) {
