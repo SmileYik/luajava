@@ -1,5 +1,6 @@
 package org.keplerproject.luajava;
 
+import org.eu.smileyik.luajava.type.ILuaFieldGettable;
 import org.junit.jupiter.api.Test;
 
 public class LuajavaTest {
@@ -23,9 +24,12 @@ public class LuajavaTest {
             System.out.println(exp);
             for (int i = 0; i < 10; i++) {
                 LuaObject luaObject = facade.getLuaObject("map").getValue();
+                assert luaObject instanceof ILuaFieldGettable;
                 LuaObject b = null;
                 try {
-                    b = luaObject.getField("b").getOrThrow(LuaException.class);
+                    b = ((ILuaFieldGettable) luaObject)
+                            .getField("b")
+                            .getOrThrow(LuaException.class);
                 } catch (LuaException e) {
                     throw new RuntimeException(e);
                 }

@@ -25,6 +25,7 @@
 package org.keplerproject.luajava;
 
 import org.eu.smileyik.luajava.type.ILuaCallable;
+import org.eu.smileyik.luajava.type.ILuaFieldGettable;
 import org.eu.smileyik.luajava.util.BoxedTypeHelper;
 
 import java.lang.reflect.InvocationHandler;
@@ -54,7 +55,9 @@ public class LuaInvocationHandler implements InvocationHandler {
         final LuaStateFacade facade = obj.getLuaState();
         return facade.lockThrow(l -> {
             String methodName = method.getName();
-            LuaObject func = obj.getField(methodName).getOrThrow(LuaException.class);
+            LuaObject func = ((ILuaFieldGettable) obj)
+                    .getField(methodName)
+                    .getOrThrow(LuaException.class);
             if (!func.isCallable()) {
                 throw new LuaException("Method " + methodName + " is not a callable");
             }

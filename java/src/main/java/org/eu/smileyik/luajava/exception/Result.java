@@ -1,6 +1,7 @@
 package org.eu.smileyik.luajava.exception;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -58,6 +59,30 @@ public class Result <T, E> {
      */
     public boolean isSuccess() {
         return error == null;
+    }
+
+    /**
+     * accept when result is success.
+     * @param consumer consumer
+     * @return this result.
+     */
+    public Result<T, E> ifSuccessThen(Consumer<T> consumer) {
+        if (isSuccess()) {
+            consumer.accept(value);
+        }
+        return this;
+    }
+
+    /**
+     * accept when result is failed.
+     * @param consumer consumer
+     * @return this result.
+     */
+    public Result<T, E> ifFailureThen(Consumer<E> consumer) {
+        if (isError()) {
+            consumer.accept(error);
+        }
+        return this;
     }
 
     /**

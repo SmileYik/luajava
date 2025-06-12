@@ -1,6 +1,8 @@
 package org.eu.smileyik.luajava.type;
 
 import org.eu.smileyik.luajava.exception.Result;
+import org.keplerproject.luajava.LuaException;
+import org.keplerproject.luajava.LuaState;
 import org.keplerproject.luajava.LuaStateFacade;
 
 import java.lang.reflect.Array;
@@ -265,6 +267,37 @@ public class LuaArray extends LuaTable {
 
     public <V> Result<Void, ? extends Exception> forEach(Class<V> vClass, BiConsumer<Integer, V> consumer) {
         return forEach(Integer.class, vClass, consumer);
+    }
+
+    /**
+     * get the array object at target index.
+     * @param idx index
+     * @return result
+     */
+    public Result<Object, ? extends LuaException> at(int idx) {
+        return luaState.lockThrow(l -> {
+            return doAt(idx).getOrThrow(LuaException.class);
+        });
+    }
+
+    /**
+     * get the array object at target index. without lock lua state.
+     * @param idx index
+     * @return result
+     */
+    public Result<Object, ? extends LuaException> doAt(int idx) {
+        if (idx < 0 || idx >= len) {
+            return Result.failure(new LuaException("out of bounds: idx=" + idx + ", len=" + len));
+        }
+        LuaState inner = luaState.getLuaState();
+        int top = inner.getTop();
+        try {
+            rawPush();
+            inner.rawGetI(-1, idx + 1);
+            return luaState.toJavaObject(-1);
+        } finally {
+            inner.setTop(top);
+        }
     }
 
     /**

@@ -1,25 +1,28 @@
 package org.eu.smileyik.luajava.type;
 
+import org.eu.smileyik.luajava.BaseTest;
+import org.eu.smileyik.luajava.exception.Result;
 import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.*;
+import org.keplerproject.luajava.LuaException;
+import org.keplerproject.luajava.LuaObject;
+import org.keplerproject.luajava.LuaState;
+import org.keplerproject.luajava.LuaStateFacade;
 
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
-class LuaArrayTest {
+import static org.junit.jupiter.api.Assertions.*;
 
-    static {
-        LoadLibrary.load();
-    }
+class LuaArrayTest extends BaseTest {
 
     @Test
     public void createTest() throws Throwable {
         String lua = "map = {a = 1, b = 2, c = '3', d = function() print(4) end}\n" +
                 "array = {1, 'a', 2, 'b', 3, function() print('c') end}";
-        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        LuaStateFacade facade = newLuaState();
         facade.lockThrow(L -> {
-            L.openLibs();
             int exp = L.LdoString(lua);
             if (exp != 0) {
                 throw new LuaException(L.toString(-1));
@@ -47,10 +50,8 @@ class LuaArrayTest {
                 "bools = {true, false, true, false}\n" +
                 "funcs = {function() end, function() end, function() end, function() end}\n" +
                 "tables = {{i = 0}, {}, {}, {}, {}, {}, {}, {}}\n";
-        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        LuaStateFacade facade = newLuaState();
         facade.lockThrow(L -> {
-
-            L.openLibs();
             int exp = L.LdoString(lua);
             if (exp != 0) {
                 throw new LuaException(L.toString(-1));
@@ -112,9 +113,8 @@ class LuaArrayTest {
                 "chars = {'a', 'b', 'c', 'd'}\n" +
                 "d2list = {{1, 2, 3}, {4, 5, 6}, {7}, {}, {8, 9}}\n" +
                 "d2list_str = {{'1'}, {'str'}}";
-        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        LuaStateFacade facade = newLuaState();
         facade.lockThrow(L -> {
-            L.openLibs();
             int exp = L.LdoString(lua);
             if (exp != 0) {
                 throw new LuaException(L.toString(-1));
@@ -185,9 +185,8 @@ class LuaArrayTest {
                 "funcs = {function() end, function() end, function() end, function() end}\n" +
                 "tables = {{i = 0}, {}, {}, {}, {}, {}, {}, {}}\n" +
                 "chars = {'a', 'b', 'c', 'd'}";
-        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        LuaStateFacade facade = newLuaState();
         facade.lockThrow(L -> {
-            L.openLibs();
             int exp = L.LdoString(lua);
             if (exp != 0) {
                 throw new LuaException(L.toString(-1));
@@ -242,6 +241,83 @@ class LuaArrayTest {
         });
 
         facade.close();
+    }
+
+    @Test
+    public void atInBoundNumberTest() throws Exception {
+        atTestPrepare("array", array -> {
+            assertEquals(1d, array.at(0).getOrSneakyThrow(), "array[0] need equal 1.0");
+        });
+    }
+
+    @Test
+    public void atInBoundStringTest() throws Exception {
+        atTestPrepare("array", array -> {
+            assertEquals("a", array.at(1).getOrSneakyThrow(), "array[1] need equal \"a\"");
+        });
+    }
+
+    @Test
+    public void atInBoundFunctionTest() throws Exception {
+        atTestPrepare("array", array -> {
+            Object func = array.at(5).getOrSneakyThrow();
+            assertInstanceOf(LuaFunction.class, func, "array[5] need be LuaFunction");
+            ((LuaFunction) func).call().getOrSneakyThrow();
+        });
+    }
+
+    @Test
+    public void atInBoundArrayTest() throws Exception {
+        atTestPrepare("d2list", array -> {
+            Object obj = array.at(0).getOrSneakyThrow();
+            assertInstanceOf(LuaArray.class, obj, "array[5] need be LuaArray");
+            LuaArray a = (LuaArray) obj;
+            assertEquals(a.asList(Double.class).getOrSneakyThrow(), Arrays.asList(1D, 2D, 3D));
+        });
+    }
+
+    @Test
+    public void atOutBoundLeftTest() throws Exception {
+        atTestPrepare("d2list", array -> {
+            assertThrows(LuaException.class, () -> {
+                array.at(-1).justThrow();
+            });
+        });
+    }
+
+    @Test
+    public void atOutBoundRightTest() throws Exception {
+        atTestPrepare("d2list", array -> {
+            assertThrows(LuaException.class, () -> {
+                array.at(Integer.MAX_VALUE).justThrow();
+            });
+        });
+    }
+
+    private void atTestPrepare(String arrayName, Consumer<LuaArray> consumer) throws Exception {
+        String lua = "array = {1, 'a', 2, 'b', 3, function() print('c') end}\n" +
+                "strs = {'1', '2', '3', '4', '5', '6', '7', '8', '9'}\n" +
+                "nums = {1, 2, 3, 4, 5, 6, 7, 8, 9}\n" +
+                "bools = {true, false, true, false}\n" +
+                "funcs = {function() end, function() end, function() end, function() end}\n" +
+                "tables = {{i = 0}, {}, {}, {}, {}, {}, {}, {}}\n" +
+                "chars = {'a', 'b', 'c', 'd'}\n" +
+                "d2list = {{1, 2, 3}, {4, 5, 6}, {7}, {}, {8, 9}}\n" +
+                "d2list_str = {{'1'}, {'str'}}";
+        try (LuaStateFacade facade = newLuaState()) {
+            facade.evalString(lua)
+                    .mapResultValue(v -> facade.lockThrowAll(L -> {
+                        createArray(L, "objs", new Object[] {new Object(), new Object()});
+                        createAArray(L, "as");
+                        createAArrayArray(L, "ass");
+                    }))
+                    .mapResultValue(v -> {
+                        return facade.getGlobal(arrayName)
+                                .mapResultValue(array -> Result.success((LuaArray) array))
+                                .ifSuccessThen(consumer);
+                    })
+                    .justThrow();
+        }
     }
 
     private void createAArray(LuaState L, String name) {

@@ -188,7 +188,7 @@ public class LuaStateFacade implements AutoCloseable {
         return lock;
     }
 
-    protected LuaState getLuaState() {
+    public LuaState getLuaState() {
         return luaState;
     }
 
@@ -1045,9 +1045,9 @@ public class LuaStateFacade implements AutoCloseable {
     public <T> Result<T, ? extends LuaException> getGlobal(String globalName, Class<T> tClass) {
         lock.lock();
         try {
-            luaState.setGlobal(globalName);
+            luaState.getGlobal(globalName);
             try {
-                return this.toJavaObject(-1)
+                return this.doToJavaObject(-1)
                         .mapResultValue(it -> {
                             if (tClass.isInstance(it)) {
                                 return Result.success(tClass.cast(it));

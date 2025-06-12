@@ -379,14 +379,6 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
         });
     }
 
-    /**
-     * If <code>this</code> is a table or userdata tries to get
-     * a field value.
-     */
-    public Result<LuaObject, ? extends LuaException> getField(String field) {
-        return luaState.getLuaObject(this, field);
-    }
-
     public String toString() {
         return luaState.lock(luaState -> {
             try {

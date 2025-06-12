@@ -1,6 +1,7 @@
 package org.eu.smileyik.luajava.type;
 
 import org.eu.smileyik.luajava.exception.Result;
+import org.keplerproject.luajava.LuaException;
 import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaState;
 import org.keplerproject.luajava.LuaStateFacade;
@@ -10,7 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
-public class LuaTable extends LuaObject implements ILuaCallable {
+public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettable {
 
     /**
      * <strong>SHOULD NOT USE CONSTRUCTOR DIRECTLY, EXPECT YOU KNOW WHAT YOU ARE DOING</strong>
@@ -179,6 +180,40 @@ public class LuaTable extends LuaObject implements ILuaCallable {
      */
     public Result<Void, ? extends Exception> forEach(BiConsumer<Object, Object> consumer) {
         return forEach(Object.class, Object.class, consumer);
+    }
+
+    /**
+     * get field by object key.
+     * @param key key
+     * @return result.
+     */
+    public Result<Object, ? extends LuaException> get(Object key) {
+        return luaState.lockThrow(l -> {
+            return doGet(key).getOrThrow(LuaException.class);
+        });
+    }
+
+    /**
+     * get filed by object key without lock lua state.
+     * @param key key
+     * @return result.
+     */
+    public Result<Object, ? extends LuaException> doGet(Object key) {
+        LuaState inner = luaState.getLuaState();
+        int top = inner.getTop();
+        try {
+            rawPush();
+            if (key instanceof LuaObject) {
+                ((LuaObject) key).rawPush();
+            } else {
+                Result<Void, ? extends LuaException> result = luaState.pushObjectValue(key);
+                if (result.isError()) return result.justCast();
+            }
+            inner.getTable(-2);
+            return luaState.toJavaObject(-1);
+        } finally {
+            inner.setTop(top);
+        }
     }
 
     /**
