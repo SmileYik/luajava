@@ -378,6 +378,32 @@ class LuaArrayTest extends BaseTest {
         }
     }
 
+    @Test
+    public void arrayAddTest() throws Exception {
+        String lua = "array = {1, 2, 3, 4, 5, 6, 7, 8, 9} \n" +
+                "function print_array() \n" +
+                "  for i, v in pairs(array) do \n" +
+                "    print(i, v) \n" +
+                "  end\n" +
+                "  print('-------------')\n" +
+                "end";
+        try (LuaStateFacade facade = newLuaState()) {
+            facade.evalString(lua).justThrow();
+            LuaFunction printArray = facade.getGlobal("print_array", LuaFunction.class).getOrThrow();
+            LuaArray array = facade.getGlobal("array", LuaArray.class).getOrThrow();
+            printArray.call().getOrThrow();
+            assert array.length() == 9;
+            array.add(10);
+            assert array.length() == 10;
+            printArray.call().getOrThrow();
+            array.add(11);
+            array.add(12);
+            array.add(13);
+            assert array.length() == 13;
+            printArray.call().getOrThrow();
+        }
+    }
+
     private void createAArray(LuaState L, String name) {
         A[] as = new A[] {new A(), new A(), new A(), new A(), new A()};
         createArray(L, name, as);

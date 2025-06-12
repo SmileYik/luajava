@@ -29,7 +29,7 @@ public class LuaArray extends LuaTable {
         UNBOXED_ARRAY_TRANSFORMERS.put(double[].class, LuaArray::toDoubleArray);
     }
 
-    protected final int len;
+    protected int len;
 
     /**
      * create lua array. and make sure the object at this index is exactly array style table.
@@ -57,6 +57,10 @@ public class LuaArray extends LuaTable {
 
     public int length() {
         return len;
+    }
+
+    public boolean isEmpty() {
+        return len == 0;
     }
 
     public Result<byte[], ? extends Exception> toByteArray() {
@@ -342,6 +346,16 @@ public class LuaArray extends LuaTable {
         } finally {
             inner.setTop(top);
         }
+    }
+
+    public Result<Void, ? extends LuaException> add(Object obj) {
+        return luaState.lock(it -> {
+            return rawAdd(obj);
+        });
+    }
+
+    public synchronized Result<Void, ? extends LuaException> rawAdd(Object obj) {
+        return rawSet(len++, obj).ifFailureThen(it -> len -= 1);
     }
 
     /**
