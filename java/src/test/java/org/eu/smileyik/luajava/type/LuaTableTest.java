@@ -1,5 +1,6 @@
 package org.eu.smileyik.luajava.type;
 
+import org.eu.smileyik.luajava.exception.Result;
 import org.junit.jupiter.api.Test;
 import org.keplerproject.luajava.*;
 
@@ -13,6 +14,62 @@ class LuaTableTest {
         LoadLibrary.load();
     }
 
+    private void doForEachCheck(LuaTable table) {
+        AtomicInteger count = new AtomicInteger(0);
+        table.forEach((key, value) -> {
+            try {
+                assertInstanceOf(String.class, key);
+                switch ((String) key) {
+                    case "b":
+                        count.incrementAndGet();
+                        assertInstanceOf(Double.class, value, "map.b should be Double");
+                        assertEquals(value, 2d, "map.b should be 2");
+                        break;
+                    case "a":
+                        count.incrementAndGet();
+                        assertInstanceOf(Double.class, value, "map.a should be Double");
+                        assertEquals(value, 1d, "map.a should be 1");
+                        break;
+                    case "c":
+                        count.incrementAndGet();
+                        assertInstanceOf(String.class, value, "map.c should be String");
+                        assertEquals(value, "3", "map.c should be '3'");
+                        break;
+                    case "d":
+                        count.incrementAndGet();
+                        assertInstanceOf(LuaFunction.class, value, "map.d should be LuaFunction");
+                        break;
+                    default:
+                        throw new AssertionError("Unknown key: " + key);
+                }
+            } finally {
+                if (value instanceof LuaObject) {
+                    ((LuaObject) value).close();
+                }
+            }
+        });
+        assertEquals(count.get(), 4, "map entry count should be 4");
+    }
+
+    @Test
+    public void forEachWithChainTest() throws Exception {
+        String lua = "map = {a = 1, b = 2, c = '3', d = function() print(4) end}";
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.openLibs();
+        facade.evalString(lua)
+                .mapResultValue(v -> facade.getLuaObject("map"))
+                .mapResultValue(luaObject -> {
+                    assertInstanceOf(LuaTable.class, luaObject, "map must be LuaTable");
+                    return Result.success((LuaTable) luaObject);
+                })
+                .mapResultValue(table -> {
+                    doForEachCheck(table);
+                    return Result.success();
+                })
+                .justThrow();
+        facade.close();
+    }
+
     @Test
     public void forEachTest() throws Throwable {
         String lua = "map = {a = 1, b = 2, c = '3', d = function() print(4) end}";
@@ -22,34 +79,7 @@ class LuaTableTest {
         LuaObject luaObject = facade.getLuaObject("map").getOrThrow();
         assert luaObject instanceof LuaTable;
         LuaTable table = (LuaTable) luaObject;
-        AtomicInteger count = new AtomicInteger(0);
-        table.forEach((key, value) -> {
-            assertInstanceOf(String.class, key);
-            switch ((String) key) {
-                case "b":
-                    count.incrementAndGet();
-                    assertInstanceOf(Double.class, value, "map.b should be Double");
-                    assertEquals(value, 2d, "map.b should be 2");
-                    break;
-                case "a":
-                    count.incrementAndGet();
-                    assertInstanceOf(Double.class, value, "map.a should be Double");
-                    assertEquals(value, 1d, "map.a should be 1");
-                    break;
-                case "c":
-                    count.incrementAndGet();
-                    assertInstanceOf(String.class, value, "map.c should be String");
-                    assertEquals(value, "3", "map.c should be '3'");
-                    break;
-                case "d":
-                    count.incrementAndGet();
-                    assertInstanceOf(LuaFunction.class, value, "map.d should be LuaFunction");
-                    break;
-                default:
-                    throw new AssertionError("Unknown key: " + key);
-            }
-        });
-        assertEquals(count.get(), 4, "map entry count should be 4");
+        doForEachCheck(table);
         facade.close();
     }
 
