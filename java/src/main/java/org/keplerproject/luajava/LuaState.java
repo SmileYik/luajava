@@ -474,8 +474,8 @@ public class LuaState {
         return _equal(luaState, idx1, idx2);
     }
 
-    public int rawequal(int idx1, int idx2) {
-        return _rawequal(luaState, idx1, idx2);
+    public boolean rawequal(int idx1, int idx2) {
+        return _rawequal(luaState, idx1, idx2) == 1;
     }
 
     public int lessthan(int idx1, int idx2) {

@@ -373,6 +373,7 @@ class LuaArrayTest extends BaseTest {
             System.out.println(array);
 
             LuaArray innerArray = (LuaArray) array.at(8).getOrThrow();
+            System.out.println(innerArray.equals(array));
             System.out.println();
         }
     }

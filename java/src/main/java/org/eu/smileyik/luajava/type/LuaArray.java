@@ -2,14 +2,12 @@ package org.eu.smileyik.luajava.type;
 
 import org.eu.smileyik.luajava.exception.Result;
 import org.keplerproject.luajava.LuaException;
+import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaState;
 import org.keplerproject.luajava.LuaStateFacade;
 
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -138,6 +136,7 @@ public class LuaArray extends LuaTable {
 
     /**
      * for example: <code>{{1, 2, 3}, {}}</code> -> <code>[[1.0, 2.0, 3.0], []]</code>
+     *
      * @param clazz
      * @return
      * @param <T>
@@ -153,6 +152,10 @@ public class LuaArray extends LuaTable {
         // once exception then need stop!
         return forEachValue(v -> {
             if (v instanceof LuaArray) {
+                // endless loop...
+                if (Objects.equals(this, v)) {
+                    throw new RuntimeException("Cannot asDeepList, because same array as element. ");
+                }
                 list.add(((LuaArray) v).asDeepList(clazz).getOrSneakyThrow());
             } else {
                 list.add(clazz.cast(v));
@@ -165,6 +168,9 @@ public class LuaArray extends LuaTable {
         // once exception then need stop!
         return forEachValue(v -> {
             if (v instanceof LuaArray) {
+                if (Objects.equals(this, v)) {
+                    throw new RuntimeException("Cannot asDeepList, because same array as element. ");
+                }
                 list.add(((LuaArray) v).asDeepCharacterList().getOrSneakyThrow());
             } else {
                 list.add(String.valueOf(v).charAt(0));
@@ -319,7 +325,11 @@ public class LuaArray extends LuaTable {
      * @return result
      */
     public Result<Void, ? extends LuaException> rawSet(int idx, Object obj) {
-        if (idx < 0 || idx >= len) return Result.failure(new LuaException("out of bounds: idx=" + idx + ", len=" + len));
+        if (idx < 0 || idx >= len) {
+            return Result.failure(new LuaException("out of bounds: idx=" + idx + ", len=" + len));
+        } else if (obj instanceof LuaObject && !Objects.equals(luaState, ((LuaObject) obj).getLuaState())) {
+            return Result.failure(new LuaException("Lua objects are in different lua states!"));
+        }
         LuaState inner = luaState.getLuaState();
         int top = inner.getTop();
         try {

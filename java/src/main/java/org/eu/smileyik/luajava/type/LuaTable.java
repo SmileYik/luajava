@@ -105,9 +105,15 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
         return forEach(kClass, vClass, (k, v) -> {
             Object realK = k, realV = v;
             if (k instanceof LuaTable) {
+                if (equals(k)) {
+                    throw new RuntimeException("Cannot call asDeepMap because this map also as key element in this map");
+                }
                 realK = ((LuaTable) k).asDeepMap(kClass, vClass).getOrSneakyThrow();
             }
             if (v instanceof LuaTable) {
+                if (equals(v)) {
+                    throw new RuntimeException("Cannot call asDeepMap because this map also as value element in this map");
+                }
                 realV = ((LuaTable) v).asDeepMap(kClass, vClass).getOrSneakyThrow();
             }
             map.put((K) realK, (V) realV);

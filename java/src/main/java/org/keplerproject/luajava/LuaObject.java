@@ -414,12 +414,21 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
         if (this == object) return true;
         if (object == null || getClass() != object.getClass()) return false;
         LuaObject luaObject = (LuaObject) object;
-        return Objects.equals(ref, luaObject.ref) && Objects.equals(luaState, luaObject.luaState);
+        return Objects.equals(luaState, luaObject.luaState) &&
+                (Objects.equals(ref, luaObject.ref) || isRawEqualInLua((LuaObject) object));
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(ref, luaState);
+    }
+
+    private boolean isRawEqualInLua(LuaObject other) {
+        return luaState.lock(l -> {
+            rawPush();
+            other.rawPush();
+            return l.rawequal(-1, -2);
+        });
     }
 
     /**

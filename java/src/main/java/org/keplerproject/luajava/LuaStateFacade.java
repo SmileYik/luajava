@@ -563,7 +563,7 @@ public class LuaStateFacade implements AutoCloseable {
         });
     }
 
-    public int rawequal(int idx1, int idx2) {
+    public boolean rawequal(int idx1, int idx2) {
         return lock(l -> {
             return l.rawequal(idx1, idx2);
         });
