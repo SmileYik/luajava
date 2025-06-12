@@ -238,7 +238,7 @@ public class LuaStateFacade implements AutoCloseable {
                 break;
         }
         if (luaState.isString(-1)) {
-            ret = ret == null ? luaState.toString(-1) : luaState.toString(-1) + ret;
+            ret = ret == null ? luaState.toString(-1) : (ret + luaState.toString(-1));
         }
         return ret;
     }
@@ -402,7 +402,7 @@ public class LuaStateFacade implements AutoCloseable {
                 return Result.failure(e);
             }
         } else if (obj instanceof LuaObject) {
-            ((LuaObject) obj).push();
+            ((LuaObject) obj).rawPush();
         } else if (obj instanceof byte[]) {
             luaState.pushString((byte[]) obj);
         } else if (obj.getClass().isArray()) {
@@ -1048,12 +1048,9 @@ public class LuaStateFacade implements AutoCloseable {
             luaState.getGlobal(globalName);
             try {
                 return this.doToJavaObject(-1)
-                        .mapResultValue(it -> {
-                            if (tClass.isInstance(it)) {
-                                return Result.success(tClass.cast(it));
-                            }
-                            return Result.failure(new LuaException("failed to convert " + it + " to " + tClass));
-                        });
+                        .mapResultValue(it -> tClass.isInstance(it) ?
+                                Result.success(tClass.cast(it)) :
+                                Result.failure(new LuaException("failed to convert " + it + " to " + tClass)));
             } finally {
                 luaState.pop(1);
             }
@@ -1070,7 +1067,7 @@ public class LuaStateFacade implements AutoCloseable {
      */
     public Result<Void, ? extends LuaException> setGlobal(String name, LuaObject luaObject) {
         return lockThrowAll(l -> {
-            luaObject.push();
+            luaObject.rawPush();
             l.setGlobal(name);
         }).justCast();
     }
