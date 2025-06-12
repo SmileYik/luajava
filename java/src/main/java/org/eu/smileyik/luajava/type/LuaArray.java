@@ -294,7 +294,41 @@ public class LuaArray extends LuaTable {
         try {
             rawPush();
             inner.rawGetI(-1, idx + 1);
-            return luaState.toJavaObject(-1);
+            return luaState.rawToJavaObject(-1);
+        } finally {
+            inner.setTop(top);
+        }
+    }
+
+    /**
+     * set object to target index
+     * @param idx idx
+     * @param obj obj
+     * @return result.
+     */
+    public Result<Void, ? extends Exception> set(int idx, Object obj) {
+        return luaState.lock(l -> {
+            return rawSet(idx, obj);
+        });
+    }
+
+    /**
+     * set object to target index without lock lua state.
+     * @param idx idx
+     * @param obj obj
+     * @return result
+     */
+    public Result<Void, ? extends LuaException> rawSet(int idx, Object obj) {
+        if (idx < 0 || idx >= len) return Result.failure(new LuaException("out of bounds: idx=" + idx + ", len=" + len));
+        LuaState inner = luaState.getLuaState();
+        int top = inner.getTop();
+        try {
+            rawPush();
+            return luaState.rawPushObjectValue(obj)
+                            .mapValue(it -> {
+                                inner.rawSetI(-2, idx + 1);
+                                return null;
+                            });
         } finally {
             inner.setTop(top);
         }

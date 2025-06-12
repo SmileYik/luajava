@@ -188,8 +188,8 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
      * @return result.
      */
     public Result<Object, ? extends LuaException> get(Object key) {
-        return luaState.lockThrow(l -> {
-            return doGet(key).getOrThrow(LuaException.class);
+        return luaState.lock(l -> {
+            return doGet(key);
         });
     }
 

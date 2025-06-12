@@ -324,7 +324,7 @@ public class LuaStateFacade implements AutoCloseable {
     public Result<Object, ? extends LuaException> toJavaObject(int idx) {
         lock.lock();
         try {
-            return doToJavaObject(idx);
+            return rawToJavaObject(idx);
         } finally {
             lock.unlock();
         }
@@ -337,7 +337,7 @@ public class LuaStateFacade implements AutoCloseable {
      * @param idx Index in the Lua Stack
      * @return Java object equivalent to the Lua one
      */
-    protected Result<Object, ? extends LuaException> doToJavaObject(int idx) {
+    public Result<Object, ? extends LuaException> rawToJavaObject(int idx) {
         int type = luaState.type(idx);
         switch (type) {
             case LUA_TBOOLEAN:
@@ -386,7 +386,7 @@ public class LuaStateFacade implements AutoCloseable {
      *
      * @param obj
      */
-    protected Result<Void, ? extends LuaException> rawPushObjectValue(Object obj) {
+    public Result<Void, ? extends LuaException> rawPushObjectValue(Object obj) {
         if (obj == null) {
             luaState.pushNil();
         } else if (obj instanceof Boolean) {
@@ -842,7 +842,7 @@ public class LuaStateFacade implements AutoCloseable {
 
                 Object[] res = new Object[nres];
                 for (int i = nres - 1; i >= 0; i--) {
-                    Result<Object, ? extends LuaException> ret = doToJavaObject(-1);
+                    Result<Object, ? extends LuaException> ret = rawToJavaObject(-1);
                     if (ret.isError()) return ret.justCast();
                     res[i] = ret.getValue();
                     luaState.pop(1);
@@ -1047,7 +1047,7 @@ public class LuaStateFacade implements AutoCloseable {
         try {
             luaState.getGlobal(globalName);
             try {
-                return this.doToJavaObject(-1)
+                return this.rawToJavaObject(-1)
                         .mapResultValue(it -> tClass.isInstance(it) ?
                                 Result.success(tClass.cast(it)) :
                                 Result.failure(new LuaException("failed to convert " + it + " to " + tClass)));

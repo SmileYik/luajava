@@ -331,6 +331,52 @@ class LuaArrayTest extends BaseTest {
         }
     }
 
+    @Test
+    public void arraySetTest() throws Exception {
+        String lua = "array = {1, 2, 3, 4, 5, 6, 7, 8, 9} \n" +
+                "function print_array() \n" +
+                "  for i, v in pairs(array) do \n" +
+                "    print(i, v) \n" +
+                "  end\n" +
+                "  print('-------------')\n" +
+                "end";
+        try (LuaStateFacade facade = newLuaState()) {
+            facade.evalString(lua).justThrow();
+            LuaFunction printArray = facade.getGlobal("print_array", LuaFunction.class).getOrThrow();
+            LuaArray array = facade.getGlobal("array", LuaArray.class).getOrThrow();
+            printArray.call().getOrThrow();
+            assertEquals(2.0, array.at(1).getOrSneakyThrow());
+            assertEquals(3.0, array.at(2).getOrSneakyThrow());
+            array.set(1, 1);
+            array.set(2, 2);
+            assertEquals(1.0, array.at(1).getOrSneakyThrow());
+            assertEquals(2.0, array.at(2).getOrSneakyThrow());
+            printArray.call().getOrThrow();
+            // out bound
+            assertThrows(LuaException.class, () -> {array.set(-1, 1).getOrThrow();});
+            printArray.call().getOrThrow();
+            // out bound
+            array.set(9, 1);
+            assertThrows(LuaException.class, () -> {array.set(9, 1).getOrThrow();});
+            printArray.call().getOrThrow();
+            // set nil
+            assertThrows(LuaException.class, () -> {array.set(9, null).getOrThrow();});
+            array.set(8, null).getOrThrow();
+            printArray.call().getOrThrow();
+
+            // set self
+            array.set(8, array).getOrThrow();
+            printArray.call().getOrThrow();
+            array.set(7, array).getOrThrow();
+            printArray.call().getOrThrow();
+
+            System.out.println(array);
+
+            LuaArray innerArray = (LuaArray) array.at(8).getOrThrow();
+            System.out.println();
+        }
+    }
+
     private void createAArray(LuaState L, String name) {
         A[] as = new A[] {new A(), new A(), new A(), new A(), new A()};
         createArray(L, name, as);
