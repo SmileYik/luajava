@@ -33,6 +33,7 @@ import org.eu.smileyik.luajava.util.ResourceCleaner;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
+import java.util.Objects;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -406,6 +407,19 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
                 return null;
             }
         });
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) return true;
+        if (object == null || getClass() != object.getClass()) return false;
+        LuaObject luaObject = (LuaObject) object;
+        return Objects.equals(ref, luaObject.ref) && Objects.equals(luaState, luaObject.luaState);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(ref, luaState);
     }
 
     /**
