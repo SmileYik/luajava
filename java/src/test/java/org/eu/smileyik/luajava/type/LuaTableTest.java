@@ -1,18 +1,18 @@
 package org.eu.smileyik.luajava.type;
 
+import org.eu.smileyik.luajava.BaseTest;
 import org.eu.smileyik.luajava.exception.Result;
 import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.*;
+import org.keplerproject.luajava.LuaException;
+import org.keplerproject.luajava.LuaObject;
+import org.keplerproject.luajava.LuaStateFacade;
+import org.keplerproject.luajava.LuaStateFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LuaTableTest {
-
-    static {
-        LoadLibrary.load();
-    }
+class LuaTableTest extends BaseTest {
 
     private void doForEachCheck(LuaTable table) {
         AtomicInteger count = new AtomicInteger(0);
@@ -112,6 +112,27 @@ class LuaTableTest {
         }).getOrThrow();
 
         facade.close();
+    }
+
+    @Test
+    public void tableGetFieldTest() throws Throwable {
+        String lua = "map = {a = 1, b = 2, c = '3', d = function() print(4) end, e = {f = 5, g = 6}}\n" +
+                "map2 = {a2 = 4}; map2[2] = 4; map2[map] = 3; map2[map.d] = 4";
+        try (LuaStateFacade f = newLuaState()) {
+            f.evalString(lua)
+                    .mapResultValue(v -> f.getGlobal("map2", LuaTable.class)
+                            .justCast(LuaTable.class, LuaException.class))
+                    .ifSuccessThen(table -> {
+                        LuaTable map = f.getGlobal("map", LuaTable.class).getOrSneakyThrow();
+                        LuaFunction func = (LuaFunction) map.get("d").getOrSneakyThrow();
+
+                        assertEquals(4.0, table.get(2).getOrSneakyThrow());
+                        assertEquals(4.0, table.get("a2").getOrSneakyThrow());
+                        assertEquals(3.0, table.get(map).getOrSneakyThrow());
+                        assertEquals(4.0, table.get(func).getOrSneakyThrow());
+                        func.call();
+                    }).justThrow();
+        }
     }
 
 }
