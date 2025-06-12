@@ -1,7 +1,6 @@
 package org.eu.smileyik.luajava.type;
 
 import org.eu.smileyik.luajava.BaseTest;
-import org.eu.smileyik.luajava.exception.Result;
 import org.junit.jupiter.api.Test;
 import org.keplerproject.luajava.LuaException;
 import org.keplerproject.luajava.LuaObject;
@@ -247,6 +246,8 @@ class LuaArrayTest extends BaseTest {
     public void atInBoundNumberTest() throws Exception {
         atTestPrepare("array", array -> {
             assertEquals(1d, array.at(0).getOrSneakyThrow(), "array[0] need equal 1.0");
+            assertEquals(2d, array.at(2).getOrSneakyThrow(), "array[2] need equal 2.0");
+            assertEquals(3d, array.at(4).getOrSneakyThrow(), "array[4] need equal 2.0");
         });
     }
 
@@ -282,6 +283,12 @@ class LuaArrayTest extends BaseTest {
             assertThrows(LuaException.class, () -> {
                 array.at(-1).justThrow();
             });
+            assertThrows(LuaException.class, () -> {
+                array.at(-10).justThrow();
+            });
+            assertThrows(LuaException.class, () -> {
+                array.at(-100).justThrow();
+            });
         });
     }
 
@@ -290,6 +297,12 @@ class LuaArrayTest extends BaseTest {
         atTestPrepare("d2list", array -> {
             assertThrows(LuaException.class, () -> {
                 array.at(Integer.MAX_VALUE).justThrow();
+            });
+            assertThrows(LuaException.class, () -> {
+                array.at(Short.MAX_VALUE).justThrow();
+            });
+            assertThrows(LuaException.class, () -> {
+                array.at(999).justThrow();
             });
         });
     }
@@ -306,17 +319,15 @@ class LuaArrayTest extends BaseTest {
                 "d2list_str = {{'1'}, {'str'}}";
         try (LuaStateFacade facade = newLuaState()) {
             facade.evalString(lua)
-                    .mapResultValue(v -> facade.lockThrowAll(L -> {
+                    .mapResultValue(v -> facade.lockThrow(L -> {
                         createArray(L, "objs", new Object[] {new Object(), new Object()});
                         createAArray(L, "as");
                         createAArrayArray(L, "ass");
                     }))
-                    .mapResultValue(v -> {
-                        return facade.getGlobal(arrayName)
-                                .mapResultValue(array -> Result.success((LuaArray) array))
-                                .ifSuccessThen(consumer);
-                    })
-                    .justThrow();
+                    .mapResultValue(v -> facade.getGlobal(arrayName, LuaArray.class)
+                            .justCast(LuaArray.class, LuaException.class))
+                    .ifSuccessThen(consumer)
+                    .justThrow(LuaException.class);
         }
     }
 

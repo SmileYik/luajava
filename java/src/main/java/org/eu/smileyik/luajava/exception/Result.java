@@ -182,6 +182,11 @@ public class Result <T, E> {
         return (Result<RT, RE>) this;
     }
 
+    public <RT, RE> Result<RT, RE> justCast(Class<RT> rtClass, Class<RE> reClass) {
+        if (isError()) return failure(reClass.cast(error), message);
+        return success(rtClass.cast(value), message);
+    }
+
     private <RT, RE> Result<RT, RE> justReplaceValue(RT newValue) {
         if (newValue == value) return (Result<RT, RE>) this;
         return (this == SUCCESS || newValue == null) ? success() : Result.success(newValue, message);
