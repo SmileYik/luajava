@@ -23,7 +23,7 @@
 
 package org.keplerproject.luajava.test;
 
-import org.eu.smileyik.luajava.type.LuaCallable;
+import org.eu.smileyik.luajava.type.ILuaCallable;
 import org.junit.jupiter.api.Test;
 import org.keplerproject.luajava.*;
 
@@ -54,7 +54,7 @@ public class Main {
 
             LuaObject func = luaState.getLuaObject("imprime").getOrThrow(LuaException.class);
             assertTrue(func.isCallable());
-            Object[] teste = ((LuaCallable) func).call(2, new Object[]{"TESTANDO"}).getOrThrow(LuaException.class);
+            Object[] teste = ((ILuaCallable) func).call(2, new Object[]{"TESTANDO"}).getOrThrow(LuaException.class);
             System.out.println(teste[0]);
             System.out.println(teste[1]);
 

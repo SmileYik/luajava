@@ -26,9 +26,9 @@ package org.keplerproject.luajava;
 
 import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.type.IInnerLuaObject;
+import org.eu.smileyik.luajava.type.ILuaCallable;
 import org.eu.smileyik.luajava.type.ILuaObject;
 import org.eu.smileyik.luajava.type.InnerTypeHelper;
-import org.eu.smileyik.luajava.type.LuaCallable;
 import org.eu.smileyik.luajava.util.ResourceCleaner;
 
 import java.lang.reflect.InvocationHandler;
@@ -235,7 +235,7 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
      * @return if callable then return true.
      */
     public boolean isCallable() {
-        return this instanceof LuaCallable;
+        return this instanceof ILuaCallable;
     }
 
     /**

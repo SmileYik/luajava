@@ -24,7 +24,7 @@
 
 package org.keplerproject.luajava;
 
-import org.eu.smileyik.luajava.type.LuaCallable;
+import org.eu.smileyik.luajava.type.ILuaCallable;
 import org.eu.smileyik.luajava.util.BoxedTypeHelper;
 
 import java.lang.reflect.InvocationHandler;
@@ -64,10 +64,10 @@ public class LuaInvocationHandler implements InvocationHandler {
 
             // Checks if returned type is void. if it is returns null.
             if (retType.equals(Void.class) || retType.equals(void.class)) {
-                facade.doPcall((LuaCallable) func, args, 0)
+                facade.doPcall((ILuaCallable) func, args, 0)
                         .justThrow(LuaException.class);
             } else {
-                ret = facade.doPcall((LuaCallable) func, args, 1)
+                ret = facade.doPcall((ILuaCallable) func, args, 1)
                         .mapValue(it -> {
                             Object o = it[0];
                             if (o instanceof Double) {

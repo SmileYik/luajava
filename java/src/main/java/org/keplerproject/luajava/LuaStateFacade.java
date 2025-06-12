@@ -2,7 +2,7 @@ package org.keplerproject.luajava;
 
 import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.type.IInnerLuaObject;
-import org.eu.smileyik.luajava.type.LuaCallable;
+import org.eu.smileyik.luajava.type.ILuaCallable;
 import org.eu.smileyik.luajava.util.ParamRef;
 
 import java.util.Objects;
@@ -778,7 +778,7 @@ public class LuaStateFacade implements AutoCloseable {
      * @return Object - Returned Object
      * @throws LuaException
      */
-    public Result<Object, ? extends LuaException> pcall(LuaCallable callable, Object[] args) {
+    public Result<Object, ? extends LuaException> pcall(ILuaCallable callable, Object[] args) {
         return pcall(callable, args, 1).mapValue(it -> it[0]);
     }
 
@@ -791,7 +791,7 @@ public class LuaStateFacade implements AutoCloseable {
      *             Number of objects returned
      * @return Object[] - Returned Objects
      */
-    public Result<Object[], ? extends LuaException> pcall(LuaCallable callable, Object[] args, int nres) {
+    public Result<Object[], ? extends LuaException> pcall(ILuaCallable callable, Object[] args, int nres) {
         lock.lock();
         try {
             return doPcall(callable, args, nres);
@@ -810,7 +810,7 @@ public class LuaStateFacade implements AutoCloseable {
      *              Number of objects returned
      * @return Object[] - Returned Objects
      */
-    protected Result<Object[], ? extends LuaException> doPcall(LuaCallable callable, Object[] args, int _nres) {
+    protected Result<Object[], ? extends LuaException> doPcall(ILuaCallable callable, Object[] args, int _nres) {
         IInnerLuaObject innerObject = (IInnerLuaObject) callable;
         final int top = luaState.getTop();
         int nargs = 0;

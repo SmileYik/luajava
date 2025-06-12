@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
-public class LuaTable extends LuaObject implements LuaCallable {
+public class LuaTable extends LuaObject implements ILuaCallable {
 
     /**
      * <strong>SHOULD NOT USE CONSTRUCTOR DIRECTLY, EXPECT YOU KNOW WHAT YOU ARE DOING</strong>
