@@ -3,13 +3,8 @@ package org.eu.smileyik.luajava.reflect;
 import org.eu.smileyik.luajava.type.LuaArray;
 import org.eu.smileyik.luajava.util.ParamRef;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.lang.reflect.*;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -21,6 +16,8 @@ public class ReflectUtil {
     private static final Object EMPTY = new Object();
 
     private static final ConcurrentMap<ReflectExecutableCacheKey, Set<Method>> CACHED_METHODS = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<ReflectExecutableCacheKey, Optional<Constructor<?>>> CACHED_CONSTRUCTOR = new ConcurrentHashMap<>();
+
     private static final ConcurrentMap<ReflectFieldCacheKey, Field> CACHED_FIELDS = new ConcurrentHashMap<>();
     private static final ConcurrentMap<ReflectExecutableCacheKey, Boolean> CACHED_EXISTS_METHOD = new ConcurrentHashMap<>();
 
@@ -83,6 +80,75 @@ public class ReflectUtil {
     }
 
     /**
+     * find constructor by params.
+     * @param clazz             target class
+     * @param params            params
+     * @param ignoreNotPublic   ignore not public constructor
+     * @param ignoreStatic      ..
+     * @param ignoreNotStatic   ..
+     * @return result. my be null
+     */
+    public static LuaInvokedMethod<Constructor<?>> findConstructorByParams(
+            Class<?> clazz, Object[] params, boolean ignoreNotPublic,
+            boolean ignoreStatic, boolean ignoreNotStatic
+    ) {
+        boolean allowCache = true;
+        int paramsCount = params == null ? 0 : params.length;
+        Class<?>[] paramTypes = new Class<?>[paramsCount];
+        for (int i = 0; i < paramsCount; i++) {
+            paramTypes[i] = params[i].getClass();
+            allowCache &= isAllowCache.apply(paramTypes[i]);
+        }
+        ReflectExecutableCacheKey cacheKey = null;
+        if (allowCache) {
+            cacheKey = new ReflectExecutableCacheKey(clazz, null,
+                    paramTypes, ignoreNotPublic, ignoreStatic, ignoreNotStatic);
+            Optional<Constructor<?>> result = CACHED_CONSTRUCTOR.get(cacheKey);
+            if (result != null) {
+                if (result.isPresent()) {
+                    LuaInvokedMethod<Constructor<?>> currentConst = new LuaInvokedMethod<>();
+                    currentConst.reset(result.get());
+                    Class<?>[] parameterTypes = currentConst.getExecutable().getParameterTypes();
+                    ParamRef<Object> overwrite = ParamRef.wrapper();
+                    for (int i = 0; i < paramsCount; i++) {
+                        isConvertableType(Integer.MAX_VALUE, params[i], parameterTypes[i], overwrite);
+                        if (!overwrite.isEmpty()) {
+                            currentConst.overwriteParam(i, overwrite.getParamAndClear());
+                        }
+                    }
+                    return currentConst;
+                }
+                return null;
+            }
+        }
+
+        int priority = Integer.MAX_VALUE;
+        ParamRef<Object> overwrite = ParamRef.wrapper();
+        LuaInvokedMethod<Constructor<?>> currentConst = new LuaInvokedMethod<>();
+        LinkedList<LuaInvokedMethod<Constructor<?>>> matchedList = new LinkedList<>();
+        for (Constructor<?> constructor : clazz.getDeclaredConstructors()) {
+            if (constructor.getParameterCount() != paramsCount) continue;
+            if (checkExecutableModifiers(constructor, ignoreNotPublic, ignoreStatic, ignoreNotStatic)) continue;
+
+            int p = checkMethodPriority(constructor,
+                    currentConst, matchedList, paramsCount, params, priority, overwrite);
+            if (p != NOT_MATCH) {
+                priority = p;
+                if (p == FULL_MATCH) break;
+            }
+        }
+
+        LuaInvokedMethod<Constructor<?>> target = null;
+        if (!matchedList.isEmpty()) {
+            target = matchedList.getFirst();
+        }
+        if (allowCache) {
+            CACHED_CONSTRUCTOR.put(cacheKey, Optional.ofNullable(target == null ? null : target.getExecutable()));
+        }
+        return target;
+    }
+
+    /**
      * find method(s) by gave params (cacheable version).
      * @param clazz      target class
      * @param methodName method name
@@ -123,7 +189,7 @@ public class ReflectUtil {
             LuaInvokedMethod<Method> currentMethod = new LuaInvokedMethod<>();
 
             for (Method method : cachedMethods) {
-                if (checkMethodModifiers(method,
+                if (checkExecutableModifiers(method,
                         ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
                     continue;
                 }
@@ -172,7 +238,7 @@ public class ReflectUtil {
         while (clazz != null) {
             for (Method method : clazz.getDeclaredMethods()) {
                 if (method.getName().equals(name)) {
-                    if (!checkMethodModifiers(method, ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
+                    if (!checkExecutableModifiers(method, ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
                         CACHED_EXISTS_METHOD.putIfAbsent(cacheKey, true);
                         return true;
                     }
@@ -214,6 +280,7 @@ public class ReflectUtil {
         // temp variables.
         ParamRef<Object> overwrite = ParamRef.wrapper();
         LuaInvokedMethod<Method> currentMethod = new LuaInvokedMethod<>();
+        Set<String> checkedMethods = new HashSet<>();
 
         // find methods
         Class<?> c = clazz;
@@ -224,8 +291,11 @@ public class ReflectUtil {
                 if (!method.getName().equals(methodName) ||
                         method.getParameterCount() != paramsCount) {
                     continue;
-                } else if (checkMethodModifiers(method,
+                } else if (checkExecutableModifiers(method,
                         ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
+                    continue;
+                }
+                if (!checkedMethods.add(method.getName())) {
                     continue;
                 }
                 int currentPriority = checkMethodPriority(
@@ -253,7 +323,7 @@ public class ReflectUtil {
     /**
      * return true means need skip check this method.
      */
-    private static boolean checkMethodModifiers(Method method, boolean ignoreNotPublic,
+    private static boolean checkExecutableModifiers(Executable method, boolean ignoreNotPublic,
                                                 boolean ignoreStatic, boolean ignoreNotStatic) {
         int modifiers = method.getModifiers();
         boolean isStatic = Modifier.isStatic(modifiers);
@@ -267,9 +337,9 @@ public class ReflectUtil {
      * check method and return new priority.
      * if returned is NOT_MATCH then means priority is not changed.
      */
-    private static int checkMethodPriority(
-            Method method, LuaInvokedMethod<Method> currentMethod,
-            List<LuaInvokedMethod<Method>> matchedList,
+    private static <T extends Executable> int checkMethodPriority(
+            T method, LuaInvokedMethod<T> currentMethod,
+            List<LuaInvokedMethod<T>> matchedList,
             int paramsCount, Object[] params,
             int priority, ParamRef<Object> overwrite
 
