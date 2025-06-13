@@ -2,7 +2,9 @@ package org.keplerproject.luajava;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class FindMethodTest {
     static {
@@ -15,6 +17,20 @@ public class FindMethodTest {
         facade.openLibs();
         facade.setGlobal("a", A.class).justThrow();
         facade.evalFile("test/findMethodTest.lua").justThrow();
+        facade.close();
+    }
+
+    @Test
+    public void nestTest() throws Exception {
+        List<String> self = new ArrayList<>();
+        for (int i = 0; i < 100; ++i) {
+            self.add("self()");
+        }
+        String lua = String.format("print(nest:%s:deep())", String.join(":", self));
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.openLibs();
+        facade.setGlobal("nest", new Nest()).justThrow();
+        facade.evalString(lua).justThrow();
         facade.close();
     }
 }
@@ -132,5 +148,17 @@ class A {
 
     public static void b(Double a, Double b, Double c, Double d, Double e, Double f, Double g, Double h, Double i, float j) {
         System.out.println("9Double + 1float: " + a + " " + b + " " + c + " " + d + " " + e + " " + f);
+    }
+}
+
+class Nest {
+    private int i = 0;
+    public Nest self() {
+        i += 1;
+        return this;
+    }
+
+    public int deep() {
+        return i;
     }
 }
