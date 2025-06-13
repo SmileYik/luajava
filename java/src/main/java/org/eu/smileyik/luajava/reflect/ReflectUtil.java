@@ -24,6 +24,19 @@ public class ReflectUtil {
     // 筛选掉带 LuaArray 的, LuaArray 都不给带缓存查询.
     private static final Function<Class<?>, Boolean> isAllowCache = clazz -> clazz != LuaArray.class;
 
+    private static final Map<Class<?>, Function<Object, String>> ARRAY_TO_STRING = new HashMap<>();
+
+    static {
+        ARRAY_TO_STRING.put(int.class, obj -> Arrays.toString((int[]) obj));
+        ARRAY_TO_STRING.put(long.class, obj -> Arrays.toString((long[]) obj));
+        ARRAY_TO_STRING.put(double.class, obj -> Arrays.toString((double[]) obj));
+        ARRAY_TO_STRING.put(boolean.class, obj -> Arrays.toString((boolean[]) obj));
+        ARRAY_TO_STRING.put(byte.class, obj -> Arrays.toString((byte[]) obj));
+        ARRAY_TO_STRING.put(char.class, obj -> Arrays.toString((char[]) obj));
+        ARRAY_TO_STRING.put(short.class, obj -> Arrays.toString((short[]) obj));
+        ARRAY_TO_STRING.put(float.class, obj -> Arrays.toString((float[]) obj));
+    }
+
     /**
      * find class defined field by field name.
      * @param clazz             target class
@@ -386,5 +399,28 @@ public class ReflectUtil {
         }
 
         return NOT_MATCH;
+    }
+
+    public static String toString(Object obj) {
+        if (obj == null) return null;
+        Class<?> aClass = obj.getClass();
+        if (aClass.isArray()) {
+            Class<?> componentType = aClass.getComponentType();
+            boolean flag = true;
+            while (componentType.isArray()) {
+                flag = false;
+                componentType = componentType.getComponentType();
+            }
+            if (componentType.isPrimitive() && flag) {
+                Function<Object, String> func = ARRAY_TO_STRING.get(componentType);
+                if (func != null) {
+                    return func.apply(obj);
+                }
+            }
+            if (!componentType.isPrimitive()) {
+                return Arrays.deepToString((Object[]) obj);
+            }
+        }
+        return Objects.toString(obj);
     }
 }

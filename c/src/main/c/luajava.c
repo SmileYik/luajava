@@ -201,11 +201,47 @@ static jclass    java_lang_class      = NULL;
 *    $P L - lua State
 * 
 * $FV Returned Value
-*    int - Number of java array length
+*    int - Number of values to be returned by the function
 * 
 *$. **********************************************************************/
 
    static int arrayLength( lua_State * L );
+
+
+/***************************************************************************
+*
+* $FC Function javaObjectEquals
+* 
+* $ED Description
+*    Function to be called by the metamethod __eq of java object.
+* 
+* $EP Function Parameters
+*    $P L - lua State
+* 
+* $FV Returned Value
+*    int - Number of values to be returned by the function
+* 
+*$. **********************************************************************/
+
+static int javaObjectEquals( lua_State * L );
+
+
+/***************************************************************************
+*
+* $FC Function javaStringConcat
+* 
+* $ED Description
+*    Concat String with other object.
+* 
+* $EP Function Parameters
+*    $P L - lua State
+* 
+* $FV Returned Value
+*    int - Number of values to be returned by the function
+* 
+*$. **********************************************************************/
+
+static int javaStringConcat( lua_State * L );
 
 
 /***************************************************************************
@@ -1211,6 +1247,128 @@ int arrayLength( lua_State * L )
 
 /***************************************************************************
 *
+*  Function: javaObjectEquals
+*  ****/
+
+int javaObjectEquals( lua_State * L )
+{
+   jobject * objA;
+   jobject * objB;
+   JNIEnv * javaEnv;
+   jboolean ret;
+
+   if ( !isJavaObject( L, 1 ) || !isJavaObject( L, 2 ) )
+   {
+      lua_pushboolean( L, 0 );
+      return 1;
+   }
+
+   javaEnv = getEnvFromState( L );
+   if ( javaEnv == NULL )
+   {
+      lua_pushstring( L , "Invalid JNI Environment." );
+      lua_error( L );
+   }
+
+   objA = ( jobject * ) lua_touserdata( L , 1 );
+   objB = ( jobject * ) lua_touserdata( L , 2 );
+   
+   if ( objA == objB )
+   {
+      lua_pushboolean( L, 1 );
+      return 1;
+   }
+   ret = ( *javaEnv )->IsSameObject( javaEnv, *objA, *objB );
+   lua_pushboolean( L, ret );
+   return 1;
+}
+
+
+/***************************************************************************
+*
+*  Function: javaStringConcat
+*  ****/
+
+int javaStringConcat( lua_State * L )
+{
+   jmethodID method;
+   JNIEnv * javaEnv;
+   lua_Number stateIndex;
+   jthrowable exp;
+   jint ret;
+
+   if ( !isJavaObject( L, 1 ) && !isJavaObject( L, 2 ) )
+   {
+      lua_pushstring( L , "In the concat operation, at least one java object is required." );
+      lua_error( L );
+   }
+
+   /* Gets the luaState index */
+   lua_pushstring( L , LUAJAVASTATEINDEX );
+   lua_rawget( L , LUA_REGISTRYINDEX );
+   if ( !lua_isnumber( L , -1 ) )
+   {
+      lua_pushstring( L , "Impossible to identify luaState id." );
+      lua_error( L );
+   }
+   stateIndex = lua_tonumber( L , -1 );
+   lua_pop( L , 1 );
+
+   // java env
+   javaEnv = getEnvFromState( L );
+   if ( javaEnv == NULL )
+   {
+      lua_pushstring( L , "Invalid JNI Environment." );
+      lua_error( L );
+   }
+
+   method = ( *javaEnv )->GetStaticMethodID( javaEnv , luajava_api_class , 
+      "objectConcat" , "(I)I" );
+   
+   if ( method == NULL )
+   {
+      lua_pushstring( L , "Invalid method org.keplerproject.luajava.LuaJavaAPI.objectConcat." );
+      lua_error( L );
+   }
+
+   ret = ( *javaEnv )->CallStaticIntMethod( javaEnv , luajava_api_class ,
+                                            method , (jint)stateIndex );
+   exp = ( *javaEnv )->ExceptionOccurred( javaEnv );
+
+   /* Handles exception */
+   if ( exp != NULL )
+   {
+      jobject jstr;
+      const char * str;
+      
+      ( *javaEnv )->ExceptionClear( javaEnv );
+      jstr = ( *javaEnv )->CallObjectMethod( javaEnv , exp , get_message_method );
+
+      if ( jstr == NULL )
+      {
+         jmethodID methodId;
+
+         methodId = ( *javaEnv )->GetMethodID( javaEnv , throwable_class , "toString" , "()Ljava/lang/String;" );
+         jstr = ( *javaEnv )->CallObjectMethod( javaEnv , exp , methodId );
+      }
+
+      str = ( *javaEnv )->GetStringUTFChars( javaEnv , jstr , NULL );
+
+      char errorStack[1<<10] = "";
+      sprintf(errorStack, "%s", str);
+      generateLuaStateStack( L, errorStack);
+      lua_pushstring( L , errorStack );
+
+      ( *javaEnv )->ReleaseStringUTFChars( javaEnv , jstr, str );
+
+      lua_error( L );
+   }
+   return ret;
+}
+
+
+/***************************************************************************
+*
 *  Function: gc
 *  ****/
 
@@ -1763,6 +1921,16 @@ int pushJavaClass( lua_State * L , jobject javaObject )
    lua_pushcfunction( L , &objectNewIndex );
    lua_rawset( L , -3 );
 
+   /* pushes the __eq metamethod */
+   lua_pushstring( L , LUA_EQ_METAMETHOD_TAG );
+   lua_pushcfunction( L , &javaObjectEquals );
+   lua_rawset( L , -3 );
+
+   /* pushes the __concat metamethod */
+   lua_pushstring( L , LUA_CONCAT_METAMETHOD_TAG );
+   lua_pushcfunction( L , &javaStringConcat );
+   lua_rawset( L , -3 );
+
    /* pushes the __gc metamethod */
    lua_pushstring( L , LUAGCMETAMETHODTAG );
    lua_pushcfunction( L , &gc );
@@ -1819,6 +1987,16 @@ int pushJavaObject( lua_State * L , jobject javaObject )
    lua_pushcfunction( L , &objectNewIndex );
    lua_rawset( L , -3 );
 
+   /* pushes the __eq metamethod */
+   lua_pushstring( L , LUA_EQ_METAMETHOD_TAG );
+   lua_pushcfunction( L , &javaObjectEquals );
+   lua_rawset( L , -3 );
+
+   /* pushes the __concat metamethod */
+   lua_pushstring( L , LUA_CONCAT_METAMETHOD_TAG );
+   lua_pushcfunction( L , &javaStringConcat );
+   lua_rawset( L , -3 );
+
    /* pushes the __gc metamethod */
    lua_pushstring( L , LUAGCMETAMETHODTAG );
    lua_pushcfunction( L , &gc );
@@ -1873,6 +2051,16 @@ int pushJavaArray( lua_State * L , jobject javaObject )
    /* pushes the __newindex metamethod */
    lua_pushstring( L , LUANEWINDEXMETAMETHODTAG );
    lua_pushcfunction( L , &arrayNewIndex );
+   lua_rawset( L , -3 );
+
+   /* pushes the __eq metamethod */
+   lua_pushstring( L , LUA_EQ_METAMETHOD_TAG );
+   lua_pushcfunction( L , &javaObjectEquals );
+   lua_rawset( L , -3 );
+
+   /* pushes the __concat metamethod */
+   lua_pushstring( L , LUA_CONCAT_METAMETHOD_TAG );
+   lua_pushcfunction( L , &javaStringConcat );
    lua_rawset( L , -3 );
 
    /* pushes the __len metamethod */

@@ -23,7 +23,18 @@ public class LuaJavaApiTest {
         facade.openLibs();
         String[] strings = new String[] {"hello", ", ", "world", "!"};
         facade.setGlobal("strings", strings).justThrow();
-        facade.evalString("print(#strings)").justThrow();
+        facade.setGlobal("strs", strings).justThrow();
+        facade.evalString("print(strs == strings, strs == strs, strings.__len, getmetatable(strs).__eq(strs, strings))").justThrow();
+        facade.evalString("print(('123'..strings)..'456')").justThrow();
+    }
+
+    public static void main(String[] args) throws Exception {
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.openLibs();
+        String[] strings = new String[] {"hello", ", ", "world", "!"};
+        facade.setGlobal("strings", strings).justThrow();
+        facade.setGlobal("strs", strings).justThrow();
+        facade.evalString("print(strs == strings, strs, strings)").justThrow();
     }
 
     @Test

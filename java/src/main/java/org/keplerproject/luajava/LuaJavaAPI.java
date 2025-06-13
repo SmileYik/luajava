@@ -46,6 +46,30 @@ public final class LuaJavaAPI {
     }
 
     /**
+     * concat object to string, at lease one string type.
+     * @param luaState lua state
+     * @return number of returned objects.
+     * @throws LuaException
+     */
+    public static int objectConcat(int luaState) throws LuaException {
+        LuaStateFacade facade = LuaStateFactory.getExistingState(luaState);
+        facade.lockThrow(l -> {
+            Object a = facade.rawToJavaObject(1).getOrThrow(LuaException.class);
+            Object b = facade.rawToJavaObject(2).getOrThrow(LuaException.class);
+            String ret = null;
+            if (a instanceof String) {
+                ret = (String) a + ReflectUtil.toString(b);
+            } else if (b instanceof String) {
+                ret = ReflectUtil.toString(a) + (String) b;
+            } else {
+                throw new LuaException("In the concat operation, at least one string type is required. left: " + a + ", right: " + b);
+            }
+            facade.rawPushObjectValue(ret).justThrow(LuaException.class);
+        }).justThrow(LuaException.class);
+        return 1;
+    }
+
+    /**
      * Java implementation of the metamethod __index for normal objects
      *
      * @param luaState   int that indicates the state used
