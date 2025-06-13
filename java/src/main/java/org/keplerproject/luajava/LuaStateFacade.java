@@ -695,9 +695,9 @@ public class LuaStateFacade implements AutoCloseable {
     /**
      *
      * @param idx
-     * @return if returns 0, there is no metatable
+     * @return if returns false, there is no metatable
      */
-    public int getMetaTable(int idx) {
+    public boolean getMetaTable(int idx) {
         return lock(l -> {
             return l.getMetaTable(idx);
         });

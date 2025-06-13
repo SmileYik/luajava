@@ -28,7 +28,7 @@ import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.reflect.ConvertablePriority;
 import org.eu.smileyik.luajava.reflect.LuaInvokedMethod;
 import org.eu.smileyik.luajava.reflect.ReflectUtil;
-import org.eu.smileyik.luajava.util.ParamRef;
+import org.eu.smileyik.luajava.util.*;
 
 import java.lang.reflect.*;
 import java.util.LinkedList;
@@ -41,8 +41,50 @@ import static org.eu.smileyik.luajava.reflect.ReflectUtil.existsMethodByName;
  * @author Thiago Ponte
  */
 public final class LuaJavaAPI {
-
+    private static final String METATABLE_KEY_ITERATOR = "__JavaIterator";
     private LuaJavaAPI() {
+    }
+
+    public static int objectIter(int luaState) throws LuaException {
+        LuaStateFacade facade = LuaStateFactory.getExistingState(luaState);
+        return facade.lockThrow(l -> {
+            if (!l.getMetaTable(1) || !l.isTable(-1)) {
+                throw new LuaException("This object has no meta table");
+            }
+            l.pushString(METATABLE_KEY_ITERATOR);
+            l.rawGet(-2);
+            IndexableIterator<?> iterator = null;
+            if (l.isObject(-1)) {
+                iterator = (IndexableIterator<?>) facade.rawToJavaObject(-1).getOrThrow(LuaException.class);
+            } else {
+                Object obj = facade.rawToJavaObject(1).getOrThrow(LuaException.class);
+                if (obj instanceof Iterable<?>) {
+                    iterator = new IteratorWrapper(((Iterable<?>) obj).iterator());
+                } else if (obj.getClass().isArray()) {
+                    iterator = new ArrayIterator(obj);
+                } else {
+                    throw new LuaException("Cannot use pairs to " + obj.getClass());
+                }
+                l.getMetaTable(1);
+                l.pushString(METATABLE_KEY_ITERATOR);
+                facade.rawPushObjectValue(iterator).getOrThrow(LuaException.class);
+                l.rawSet(-3);
+            }
+            l.pop(1);
+            if (iterator.hasNext()) {
+                Object next = iterator.next();
+                l.pushInteger(iterator.getIndex());
+                facade.rawPushObjectValue(next).getOrThrow(LuaException.class);
+                return 2;
+            } else {
+                l.getMetaTable(1);
+                l.pushString(METATABLE_KEY_ITERATOR);
+                l.pushNil();
+                l.rawSet(-3);
+                l.pop(1);
+                return 0;
+            }
+        }).getOrThrow(LuaException.class);
     }
 
     /**
@@ -58,9 +100,9 @@ public final class LuaJavaAPI {
             Object b = facade.rawToJavaObject(2).getOrThrow(LuaException.class);
             String ret = null;
             if (a instanceof String) {
-                ret = (String) a + ReflectUtil.toString(b);
+                ret = (String) a + BoxedTypeHelper.toString(b);
             } else if (b instanceof String) {
-                ret = ReflectUtil.toString(a) + (String) b;
+                ret = BoxedTypeHelper.toString(a) + (String) b;
             } else {
                 throw new LuaException("In the concat operation, at least one string type is required. left: " + a + ", right: " + b);
             }

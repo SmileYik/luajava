@@ -568,9 +568,9 @@ public class LuaState {
         _newTable(luaState);
     }
 
-    // if returns 0, there is no metatable
-    public int getMetaTable(int idx) {
-        return _getMetaTable(luaState, idx);
+    // if returns false, there is no metatable
+    public boolean getMetaTable(int idx) {
+        return _getMetaTable(luaState, idx) != 0;
     }
 
     // SET FUNCTIONS

@@ -9,6 +9,8 @@ public class BoxedTypeHelper {
     private static final Map<Class<?>, Class<?>> BOXED_2_UNBOXED_TYPES;
     private static final Map<Class<?>, Class<?>> UNBOXED_2_BOXED_TYPES;
     private static final Map<Class<?>, Function<Double, Number>> NUMBER_TRANSFORM;
+    
+    private static final Map<Class<?>, Function<Object, String>> ARRAY_TO_STRING = new HashMap<>();
 
     static {
         HashMap<Class<?>, Class<?>> boxed2UnboxedType = new HashMap<>();
@@ -49,6 +51,15 @@ public class BoxedTypeHelper {
         numberTransform.put(short.class, numberTransform.get(Short.class));
         numberTransform.put(byte.class, numberTransform.get(Byte.class));
         NUMBER_TRANSFORM = Collections.unmodifiableMap(numberTransform);
+
+        ARRAY_TO_STRING.put(int.class, obj -> Arrays.toString((int[]) obj));
+        ARRAY_TO_STRING.put(long.class, obj -> Arrays.toString((long[]) obj));
+        ARRAY_TO_STRING.put(double.class, obj -> Arrays.toString((double[]) obj));
+        ARRAY_TO_STRING.put(boolean.class, obj -> Arrays.toString((boolean[]) obj));
+        ARRAY_TO_STRING.put(byte.class, obj -> Arrays.toString((byte[]) obj));
+        ARRAY_TO_STRING.put(char.class, obj -> Arrays.toString((char[]) obj));
+        ARRAY_TO_STRING.put(short.class, obj -> Arrays.toString((short[]) obj));
+        ARRAY_TO_STRING.put(float.class, obj -> Arrays.toString((float[]) obj));
     }
 
     public static boolean isBoxedType(Class<?> type) {
@@ -89,5 +100,28 @@ public class BoxedTypeHelper {
     public static Number covertNumberTo(Double db, Class<?> target) {
         Function<Double, Number> function = NUMBER_TRANSFORM.get(target);
         return function == null ? null : function.apply(db);
+    }
+
+    public static String toString(Object obj) {
+        if (obj == null) return null;
+        Class<?> aClass = obj.getClass();
+        if (aClass.isArray()) {
+            Class<?> componentType = aClass.getComponentType();
+            boolean flag = true;
+            while (componentType.isArray()) {
+                flag = false;
+                componentType = componentType.getComponentType();
+            }
+            if (componentType.isPrimitive() && flag) {
+                Function<Object, String> func = ARRAY_TO_STRING.get(componentType);
+                if (func != null) {
+                    return func.apply(obj);
+                }
+            }
+            if (!componentType.isPrimitive()) {
+                return Arrays.deepToString((Object[]) obj);
+            }
+        }
+        return Objects.toString(obj);
     }
 }
