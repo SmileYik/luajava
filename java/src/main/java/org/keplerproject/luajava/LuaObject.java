@@ -120,6 +120,9 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
      */
     protected static Result<LuaObject, ? extends LuaException> create(LuaStateFacade luaState, int index) {
         return Result.success(luaState.lock((L) -> {
+            if (L.isNil(index)) {
+                return null;
+            }
             return InnerTypeHelper.createLuaObject(luaState, index)
                     .orElseGet(() -> new LuaObject(luaState, index));
         }));
@@ -254,50 +257,50 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
         luaState.getLuaState().rawGetI(LuaState.LUA_REGISTRYINDEX, ref);
     }
 
-    public boolean isNil() {
-        return luaState.lock(luaState -> {
-            push();
-            boolean bool = luaState.isNil(-1);
-            luaState.pop(1);
-            return bool;
-        });
-    }
-
-    public boolean isBoolean() {
-        return luaState.lock(luaState -> {
-            push();
-            boolean bool = luaState.isBoolean(-1);
-            luaState.pop(1);
-            return bool;
-        });
-    }
-
-    public boolean isNumber() {
-        return luaState.lock(luaState -> {
-            push();
-            boolean bool = luaState.isNumber(-1);
-            luaState.pop(1);
-            return bool;
-        });
-    }
-
-    public boolean isString() {
-        return luaState.lock(luaState -> {
-            push();
-            boolean bool = luaState.isString(-1);
-            luaState.pop(1);
-            return bool;
-        });
-    }
-
-    public boolean isFunction() {
-        return luaState.lock(luaState -> {
-            push();
-            boolean bool = luaState.isFunction(-1);
-            luaState.pop(1);
-            return bool;
-        });
-    }
+//    public boolean isNil() {
+//        return luaState.lock(luaState -> {
+//            push();
+//            boolean bool = luaState.isNil(-1);
+//            luaState.pop(1);
+//            return bool;
+//        });
+//    }
+//
+//    public boolean isBoolean() {
+//        return luaState.lock(luaState -> {
+//            push();
+//            boolean bool = luaState.isBoolean(-1);
+//            luaState.pop(1);
+//            return bool;
+//        });
+//    }
+//
+//    public boolean isNumber() {
+//        return luaState.lock(luaState -> {
+//            push();
+//            boolean bool = luaState.isNumber(-1);
+//            luaState.pop(1);
+//            return bool;
+//        });
+//    }
+//
+//    public boolean isString() {
+//        return luaState.lock(luaState -> {
+//            push();
+//            boolean bool = luaState.isString(-1);
+//            luaState.pop(1);
+//            return bool;
+//        });
+//    }
+//
+//    public boolean isFunction() {
+//        return luaState.lock(luaState -> {
+//            push();
+//            boolean bool = luaState.isFunction(-1);
+//            luaState.pop(1);
+//            return bool;
+//        });
+//    }
 
     public boolean isJavaObject() {
         return luaState.lock(luaState -> {
@@ -317,23 +320,23 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
         });
     }
 
-    public boolean isTable() {
-        return luaState.lock(luaState -> {
-            push();
-            boolean bool = luaState.isTable(-1);
-            luaState.pop(1);
-            return bool;
-        });
-    }
-
-    public boolean isUserdata() {
-        return luaState.lock(luaState -> {
-            push();
-            boolean bool = luaState.isUserdata(-1);
-            luaState.pop(1);
-            return bool;
-        });
-    }
+//    public boolean isTable() {
+//        return luaState.lock(luaState -> {
+//            push();
+//            boolean bool = luaState.isTable(-1);
+//            luaState.pop(1);
+//            return bool;
+//        });
+//    }
+//
+//    public boolean isUserdata() {
+//        return luaState.lock(luaState -> {
+//            push();
+//            boolean bool = luaState.isUserdata(-1);
+//            luaState.pop(1);
+//            return bool;
+//        });
+//    }
 
     public int type() {
         return luaState.lock(luaState -> {
@@ -441,10 +444,9 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
      * @param implem Interfaces that are implemented, separated by <code>,</code>
      */
     public Result<Object, ? extends Exception> createProxy(String implem) throws ClassNotFoundException, LuaException {
+        if (!isTable())
+            throw new LuaException("Invalid Object. Must be Table.");
         return luaState.lockThrowAll(L -> {
-            if (!isTable())
-                throw new LuaException("Invalid Object. Must be Table.");
-
             StringTokenizer st = new StringTokenizer(implem, ",");
             Class<?>[] interfaces = new Class[st.countTokens()];
             for (int i = 0; st.hasMoreTokens(); i++)

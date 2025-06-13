@@ -9,7 +9,7 @@ public class BaseTest {
         LoadLibrary.load();
     }
 
-    protected LuaStateFacade newLuaState() {
+    protected static LuaStateFacade newLuaState() {
         LuaStateFacade luaStateFacade = LuaStateFactory.newLuaState();
         luaStateFacade.openLibs();
         return luaStateFacade;

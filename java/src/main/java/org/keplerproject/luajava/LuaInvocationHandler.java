@@ -58,6 +58,7 @@ public class LuaInvocationHandler implements InvocationHandler {
             LuaObject func = ((ILuaFieldGettable) obj)
                     .getField(methodName)
                     .getOrThrow(LuaException.class);
+            if (func == null || func.isNil()) return null;
             if (!func.isCallable()) {
                 throw new LuaException("Method " + methodName + " is not a callable");
             }
