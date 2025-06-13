@@ -1,14 +1,62 @@
-package org.keplerproject.luajava;
+package org.eu.smileyik.luajava.javaapi;
 
 import org.junit.jupiter.api.Test;
+import org.keplerproject.luajava.LoadLibrary;
+import org.keplerproject.luajava.LuaStateFacade;
+import org.keplerproject.luajava.LuaStateFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class FindMethodTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+public class LuaJavaApiTest {
     static {
         LoadLibrary.load();
+    }
+
+    @Test
+    public void arrayIndexTest() throws Exception {
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.openLibs();
+        String[] strings = new String[] {"hello", ", ", "world", "!"};
+        facade.setGlobal("strings", strings).justThrow();
+        facade.evalString("len = strings.length; print(len)").justThrow();
+    }
+
+    @Test
+    public void fieldTest() throws Exception {
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.openLibs();
+        FieldEntity fieldEntity = new FieldEntity();
+        FieldEntity.AField newField = new FieldEntity.AField() {
+            public String b = "bbbbbb";
+            @Override
+            public String toString() {
+                return (b);
+            }
+        };
+        facade.setGlobal("f", fieldEntity).justThrow();
+        facade.setGlobal("cf", FieldEntity.class);
+        facade.setGlobal("field", newField);
+        facade.evalFile("test/fieldEntityTest.lua").justThrow();
+        facade.evalString("f.pf = 1000; f.psf = 2000").justThrow();
+        assertEquals(1000d, fieldEntity.pf);
+        assertEquals(2000d, FieldEntity.psf);
+        facade.evalString("print(cf.f)").justThrow();
+        System.out.println(fieldEntity);
+        FieldEntity.AField pj = fieldEntity.pj;
+        facade.evalString("f.pj=nil").justThrow();
+        FieldEntity.AField pj2 = fieldEntity.pj;
+        assertNull(pj2);
+        facade.evalString("f.pj=field").justThrow();
+        assertEquals(newField, fieldEntity.pj);
+        facade.evalString("print(f.pj:toString())").justThrow();
+        facade.evalString("f.j=field").justThrow();
+        facade.evalString("print(f.j:toString())").justThrow();
+        facade.close();
     }
 
     @Test

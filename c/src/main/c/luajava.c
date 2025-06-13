@@ -54,6 +54,12 @@
 #define LUANEWINDEXMETAMETHODTAG "__newindex"
 /* Garbage collector metamethod name */
 #define LUAGCMETAMETHODTAG    "__gc"
+/* __len */
+#define LUA_LEN_META_METHOD_TAG    "__len"
+/* __eq */
+#define LUA_EQ_META_METHOD_TAG     "__eq"
+/* __concat */
+#define LUA_CONCAT_META_METHOD_TAG "__concat"
 /* Call metamethod name */
 #define LUACALLMETAMETHODTAG  "__call"
 /* Constant that defines where in the metatable should I place the function name */

@@ -24,13 +24,14 @@
 
 package org.keplerproject.luajava;
 
+import org.eu.smileyik.luajava.exception.Result;
+import org.eu.smileyik.luajava.reflect.ConvertablePriority;
 import org.eu.smileyik.luajava.reflect.LuaInvokedMethod;
 import org.eu.smileyik.luajava.reflect.ReflectUtil;
-import org.eu.smileyik.luajava.util.BoxedTypeHelper;
+import org.eu.smileyik.luajava.util.ParamRef;
 
 import java.lang.reflect.*;
 import java.util.LinkedList;
-import java.util.Optional;
 
 import static org.eu.smileyik.luajava.reflect.ReflectUtil.existsMethodByName;
 
@@ -62,13 +63,7 @@ public final class LuaJavaAPI {
             Object[] objs = new Object[top - 1];
             Method method = null;
 
-            Class<?> clazz;
-
-            if (obj instanceof Class) {
-                clazz = (Class<?>) obj;
-            } else {
-                clazz = obj.getClass();
-            }
+            Class<?> clazz = obj instanceof Class ? (Class<?>) obj : obj.getClass();
             method = findMethod(luaStateFacade, L, clazz, methodName, objs, top);
 
             // If method is null means there isn't one receiving the given arguments
@@ -169,42 +164,29 @@ public final class LuaJavaAPI {
      */
     public static int objectNewIndex(int luaState, Object obj, String fieldName)
             throws LuaException {
+        // like a.b = 1
+        Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
+        Field field = ReflectUtil.findFieldByName(targetClass, fieldName,
+                false, false, obj == targetClass, false);
+        if (field == null) {
+            throw new LuaException("Error accessing field " + fieldName);
+        }
+        if (!field.isAccessible()) field.setAccessible(true);
+
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
-
         luaStateFacade.lockThrow(L -> {
-            Field field = null;
-            Class<?> objClass;
-
-            if (obj instanceof Class) {
-                objClass = (Class<?>) obj;
-            } else {
-                objClass = obj.getClass();
-            }
-
-            try {
-                field = objClass.getField(fieldName);
-            } catch (Exception e) {
-                throw new LuaException("Error accessing field.", e);
-            }
-
             Class<?> type = field.getType();
-            Optional<Object> setObjRet = compareTypes(luaStateFacade, L, type, 3);
-            if (setObjRet.isEmpty()) {
+            Result<Object, Object> setObjRet = compareTypes(luaStateFacade, L, type, 3);
+            if (setObjRet.isError()) {
                 throw new LuaException("Invalid type.");
             }
-            Object setObj = setObjRet.get();
-
-            if (field.isAccessible())
-                field.setAccessible(true);
-
             try {
-                field.set(obj, setObj);
+                field.set(obj, setObjRet.getValue());
             } catch (IllegalArgumentException e) {
                 throw new LuaException("Ilegal argument to set field.", e);
             } catch (IllegalAccessException e) {
                 throw new LuaException("Field not accessible.", e);
             }
-
         }).justThrow(LuaException.class);
         return 0;
     }
@@ -222,22 +204,20 @@ public final class LuaJavaAPI {
      */
     public static int arrayNewIndex(int luaState, Object obj, int index)
             throws LuaException {
+        if (!obj.getClass().isArray())
+            throw new LuaException("Object indexed is not an array.");
+        if (Array.getLength(obj) < index)
+            throw new LuaException("Index out of bounds.");
+        Class<?> type = obj.getClass().getComponentType();
+
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
 
         luaStateFacade.lockThrow(L -> {
-            if (!obj.getClass().isArray())
-                throw new LuaException("Object indexed is not an array.");
-
-            if (Array.getLength(obj) < index)
-                throw new LuaException("Index out of bounds.");
-
-            Class<?> type = obj.getClass().getComponentType();
-            Optional<Object> setObjRet = compareTypes(luaStateFacade, L, type, 3);
-            if (!setObjRet.isPresent()) {
+            Result<Object, Object> result = compareTypes(luaStateFacade, L, type, 3);
+            if (result.isError()) {
                 throw new LuaException("Invalid type.");
             }
-            Object setObj = setObjRet.get();
-
+            Object setObj = result.getValue();
             Array.set(obj, index - 1, setObj);
         }).justThrow(LuaException.class);
 
@@ -255,21 +235,14 @@ public final class LuaJavaAPI {
      */
     public static int javaNewInstance(int luaState, String className)
             throws LuaException {
-        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
+        Class<?> clazz;
+        try {
+            clazz = Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new LuaException(e);
+        }
 
-        luaStateFacade.lockThrow(L -> {
-            Class<?> clazz;
-            try {
-                clazz = Class.forName(className);
-            } catch (ClassNotFoundException e) {
-                throw new LuaException(e);
-            }
-            Object ret = getObjInstance(luaStateFacade, L, clazz);
-
-            L.pushJavaObject(ret);
-        }).justThrow(LuaException.class);
-
-        return 1;
+        return javaNew(luaState, clazz);
     }
 
     /**
@@ -285,7 +258,7 @@ public final class LuaJavaAPI {
 
         luaStateFacade.lockThrow(L -> {
             Object ret = getObjInstance(luaStateFacade, L, clazz);
-            L.pushJavaObject(ret);
+            luaStateFacade.rawPushObjectValue(ret);
         }).justThrow(LuaException.class);
         return 1;
     }
@@ -302,16 +275,15 @@ public final class LuaJavaAPI {
      */
     public static int javaLoadLib(int luaState, String className, String methodName)
             throws LuaException {
+        Class<?> clazz;
+        try {
+            clazz = Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new LuaException(e);
+        }
+
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
-
         return luaStateFacade.lockThrow(L -> {
-            Class<?> clazz;
-            try {
-                clazz = Class.forName(className);
-            } catch (ClassNotFoundException e) {
-                throw new LuaException(e);
-            }
-
             try {
                 Method mt = clazz.getMethod(methodName, LuaState.class);
                 Object obj = mt.invoke(null, L);
@@ -330,52 +302,25 @@ public final class LuaJavaAPI {
             throws LuaException {
         int top = L.getTop();
 
-        Object[] objs = new Object[top - 1];
-
-        Constructor<?>[] constructors = clazz.getConstructors();
-        Constructor<?> constructor = null;
-
-        // gets method and arguments
-        for (int i = 0; i < constructors.length; i++) {
-            Class<?>[] parameters = constructors[i].getParameterTypes();
-            if (parameters.length != top - 1)
-                continue;
-
-            boolean okConstruc = true;
-
-            for (int j = 0; j < parameters.length; j++) {
-                Optional<Object> ret = compareTypes(luaStateFacade, L, parameters[j], j + 2);
-                if (ret.isPresent()) {
-                    objs[j] = ret.get();
-                } else {
-                    okConstruc = false;
-                    break;
-                }
-            }
-
-            if (okConstruc) {
-                constructor = constructors[i];
-                break;
-            }
-
+        int paramsCount = top - 1;
+        Object[] objs = new Object[paramsCount];
+        for (int i = 0; i < paramsCount; i++) {
+            objs[i] = luaStateFacade.rawToJavaObject(i + 2).getOrThrow(LuaException.class);
         }
 
-        // If method is null means there isn't one receiving the given arguments
-        if (constructor == null) {
-            throw new LuaException("Invalid method call. No such method.");
-        }
+        LuaInvokedMethod<Constructor<?>> result = ReflectUtil.findConstructorByParams(
+                clazz, objs, false, false, false);
 
+        if (result == null) {
+            throw new LuaException("Couldn't instantiate java Object");
+        }
+        result.getOverwriteParams().forEach((idx, obj) -> objs[idx] = obj);
         Object ret;
         try {
-            ret = constructor.newInstance(objs);
+            ret = result.getExecutable().newInstance(objs);
         } catch (Exception e) {
             throw new LuaException(e);
         }
-
-        if (ret == null) {
-            throw new LuaException("Couldn't instantiate java Object");
-        }
-
         return ret;
     }
 
@@ -447,72 +392,19 @@ public final class LuaJavaAPI {
         return 1;
     }
 
-    private static Optional<Object> compareTypes(LuaStateFacade luaStateFacade,
-                                                 LuaState L, Class<?> parameter, int idx)
+    private static Result<Object, Object> compareTypes(LuaStateFacade luaStateFacade,
+                                                       LuaState L, Class<?> parameter, int idx)
             throws LuaException {
-        boolean okType = true;
-        Object obj = null;
-
-        // if parameter type is Object then just cast lua type to java type.
-        if (parameter == Object.class) {
-            return Optional.of(luaStateFacade.toJavaObject(idx).getOrThrow(LuaException.class));
+        ParamRef<Object> paramRef = ParamRef.wrapper();
+        Object luaObj = luaStateFacade.rawToJavaObject(idx).getOrThrow(LuaException.class);
+        byte ret = ConvertablePriority.isConvertableType(Integer.MAX_VALUE, luaObj, parameter, paramRef);
+        if (ret == ConvertablePriority.NOT_MATCH) {
+            return Result.failure("");
         }
-
-        int luaType = L.type(idx);
-        if (luaType == LuaState.LUA_TBOOLEAN) {
-            if (
-                    parameter.isPrimitive() && parameter == Boolean.TYPE ||
-                            Boolean.class.isAssignableFrom(parameter)
-            ) {
-                obj = L.toBoolean(idx);
-            } else {
-                okType = false;
-            }
-        } else if (luaType == LuaState.LUA_TSTRING) {
-            if (String.class.isAssignableFrom(parameter)) {
-                obj = L.toString(idx);
-            } else {
-                okType = false;
-            }
-        } else if (luaType == LuaState.LUA_TFUNCTION) {
-            if (LuaObject.class.isAssignableFrom(parameter)) {
-                obj = luaStateFacade.getLuaObject(idx).getOrThrow(LuaException.class);
-            } else {
-                okType = false;
-            }
-        } else if (luaType == LuaState.LUA_TTABLE) {
-            if (!LuaObject.class.isAssignableFrom(parameter)) {
-                okType = false;
-            } else {
-                obj = luaStateFacade.getLuaObject(idx).getOrThrow(LuaException.class);
-            }
-        } else if (luaType == LuaState.LUA_TNUMBER) {
-            Double db = L.toNumber(idx);
-
-            obj = BoxedTypeHelper.covertNumberTo(db, parameter);
-            if (obj == null) {
-                okType = false;
-            }
-        } else if (luaType == LuaState.LUA_TUSERDATA) {
-            if (L.isObject(idx)) {
-                Object userObj = L.getObjectFromUserdata(idx);
-                if (userObj.getClass().isAssignableFrom(parameter)) {
-                    obj = userObj;
-                } else {
-                    okType = false;
-                }
-            } else {
-                if (LuaObject.class.isAssignableFrom(parameter)) {
-                    obj = luaStateFacade.getLuaObject(idx).getOrThrow(LuaException.class);
-                } else {
-                    okType = false;
-                }
-            }
-        } else if (luaType != LuaState.LUA_TNIL) {
-            okType = false;
+        if (paramRef.isEmpty()) {
+            return Result.success(luaObj);
         }
-
-        return okType ? Optional.ofNullable(obj) : Optional.empty();
+        return Result.success(paramRef.getParam());
     }
 
     private static Method findMethod(LuaStateFacade luaStateFacade,
