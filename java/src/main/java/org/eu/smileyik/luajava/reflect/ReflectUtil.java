@@ -18,8 +18,11 @@ import java.util.stream.Collectors;
 import static org.eu.smileyik.luajava.reflect.ConvertablePriority.*;
 
 public class ReflectUtil {
+    private static final Object EMPTY = new Object();
+
     private static final ConcurrentMap<ReflectExecutableCacheKey, Set<Method>> CACHED_METHODS = new ConcurrentHashMap<>();
     private static final ConcurrentMap<ReflectFieldCacheKey, Field> CACHED_FIELDS = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<ReflectExecutableCacheKey, Boolean> CACHED_EXISTS_METHOD = new ConcurrentHashMap<>();
 
     // 筛选掉带 LuaArray 的, LuaArray 都不给带缓存查询.
     private static final Function<Class<?>, Boolean> isAllowCache = clazz -> clazz != LuaArray.class;
@@ -35,10 +38,10 @@ public class ReflectUtil {
      * @return the target filed
      */
     public static Field findFieldByName(Class<?> clazz, String name,
-                                                  boolean ignoreFinal,
-                                                  boolean ignoreStatic,
-                                                  boolean ignoreNotStatic,
-                                                  boolean ignoreNotPublic) {
+                                        boolean ignoreFinal,
+                                        boolean ignoreStatic,
+                                        boolean ignoreNotStatic,
+                                        boolean ignoreNotPublic) {
         ReflectFieldCacheKey cacheKey = new ReflectFieldCacheKey(
                 clazz, name, ignoreFinal, ignoreStatic, ignoreNotStatic, ignoreNotPublic);
         Field f = null;
@@ -85,7 +88,7 @@ public class ReflectUtil {
      * @param methodName method name
      * @param params     target params instance
      * @param justFirst  just find the first at target class or find all fit methods.
-     * @param ignoreNotPublit skip the method which is not public
+     * @param ignoreNotPublic skip the method which is not public
      * @param ignoreStatic    skip the method witch is static
      * @param ignoreNotStatic skip the method witch is not static
      * @return list of suitable methods.
@@ -93,7 +96,7 @@ public class ReflectUtil {
     public static LinkedList<LuaInvokedMethod<Method>> findMethodByParams(
             Class<?> clazz, String methodName,
             Object[] params, boolean justFirst,
-            boolean ignoreNotPublit,
+            boolean ignoreNotPublic,
             boolean ignoreStatic,
             boolean ignoreNotStatic
     ) {
@@ -112,7 +115,7 @@ public class ReflectUtil {
             Set<Method> cachedMethods = CACHED_METHODS.get(cacheKey);
             if (cachedMethods == null) {
                 return findMethodByParams(cacheKey, clazz, methodName, params,
-                        justFirst, ignoreNotPublit, ignoreStatic, ignoreNotStatic);
+                        justFirst, ignoreNotPublic, ignoreStatic, ignoreNotStatic);
             }
 
             int priority = Integer.MAX_VALUE;
@@ -121,7 +124,7 @@ public class ReflectUtil {
 
             for (Method method : cachedMethods) {
                 if (checkMethodModifiers(method,
-                        ignoreNotPublit, ignoreStatic, ignoreNotStatic)) {
+                        ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
                     continue;
                 }
                 int currentPriority = checkMethodPriority(
@@ -137,11 +140,48 @@ public class ReflectUtil {
         // 如果缓存没有就重新查找.
         if (matchedList.isEmpty()) {
             return findMethodByParams(cacheKey, clazz, methodName, params,
-                    justFirst, ignoreNotPublit, ignoreStatic, ignoreNotStatic);
+                    justFirst, ignoreNotPublic, ignoreStatic, ignoreNotStatic);
         } else if (justFirst && matchedList.size() > 1) {
             matchedList.subList(1, matchedList.size()).clear();
         }
         return matchedList;
+    }
+
+    /**
+     * find exists method by name.
+     * @param clazz             target class
+     * @param name              method name
+     * @param ignoreNotPublic   ignore not public method
+     * @param ignoreStatic      ignore static method
+     * @param ignoreNotStatic   ignore not static method
+     * @return true or false.
+     */
+    public static boolean existsMethodByName(
+            Class<?> clazz, String name,
+            boolean ignoreNotPublic,
+            boolean ignoreStatic,
+            boolean ignoreNotStatic
+    ) {
+        ReflectExecutableCacheKey cacheKey = new ReflectExecutableCacheKey(
+                clazz, name, null, ignoreNotPublic, ignoreStatic, ignoreNotStatic);
+        Boolean result = CACHED_EXISTS_METHOD.getOrDefault(cacheKey, null);
+        if (result != null) {
+            return result;
+        }
+
+        while (clazz != null) {
+            for (Method method : clazz.getDeclaredMethods()) {
+                if (method.getName().equals(name)) {
+                    if (!checkMethodModifiers(method, ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
+                        CACHED_EXISTS_METHOD.putIfAbsent(cacheKey, true);
+                        return true;
+                    }
+                }
+            }
+            clazz = clazz.getSuperclass();
+        }
+        CACHED_EXISTS_METHOD.putIfAbsent(cacheKey, false);
+        return false;
     }
 
     /**
@@ -151,7 +191,7 @@ public class ReflectUtil {
      * @param methodName method name
      * @param params     target params instance
      * @param justFirst  just find the first at target class or find all fit methods.
-     * @param ignoreNotPublit skip the method which is not public
+     * @param ignoreNotPublic skip the method which is not public
      * @param ignoreStatic    skip the method witch is static
      * @param ignoreNotStatic skip the method witch is not static
      * @return list of suitable methods.
@@ -160,7 +200,7 @@ public class ReflectUtil {
             ReflectExecutableCacheKey cacheKey,
             Class<?> clazz, String methodName,
             Object[] params, boolean justFirst,
-            boolean ignoreNotPublit,
+            boolean ignoreNotPublic,
             boolean ignoreStatic,
             boolean ignoreNotStatic
     ) {
@@ -185,7 +225,7 @@ public class ReflectUtil {
                         method.getParameterCount() != paramsCount) {
                     continue;
                 } else if (checkMethodModifiers(method,
-                        ignoreNotPublit, ignoreStatic, ignoreNotStatic)) {
+                        ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
                     continue;
                 }
                 int currentPriority = checkMethodPriority(
@@ -213,14 +253,14 @@ public class ReflectUtil {
     /**
      * return true means need skip check this method.
      */
-    private static boolean checkMethodModifiers(Method method, boolean ignoreNotPublit,
+    private static boolean checkMethodModifiers(Method method, boolean ignoreNotPublic,
                                                 boolean ignoreStatic, boolean ignoreNotStatic) {
         int modifiers = method.getModifiers();
         boolean isStatic = Modifier.isStatic(modifiers);
         if (ignoreStatic && isStatic) return true;
         if (ignoreNotStatic && !isStatic) return true;
         boolean isPublic = Modifier.isPublic(modifiers);
-        return ignoreNotPublit && !isPublic;
+        return ignoreNotPublic && !isPublic;
     }
 
     /**

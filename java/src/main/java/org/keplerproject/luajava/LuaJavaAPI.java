@@ -32,6 +32,8 @@ import java.lang.reflect.*;
 import java.util.LinkedList;
 import java.util.Optional;
 
+import static org.eu.smileyik.luajava.reflect.ReflectUtil.existsMethodByName;
+
 /**
  * Class that contains functions accessed by lua.
  *
@@ -408,26 +410,11 @@ public final class LuaJavaAPI {
      * @return number of returned objects
      */
     private static int checkMethod(int luaState, Object obj, String methodName) {
-        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
-
-        return luaStateFacade.lock(L -> {
-            Class<?> clazz;
-
-            if (obj instanceof Class) {
-                clazz = (Class<?>) obj;
-            } else {
-                clazz = obj.getClass();
-            }
-
-            Method[] methods = clazz.getMethods();
-
-            for (int i = 0; i < methods.length; i++) {
-                if (methods[i].getName().equals(methodName))
-                    return 1;
-            }
-
-            return 0;
-        });
+        if (obj == null) return 0;
+        Class<?> clazz = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
+        boolean isStatic = clazz == obj;
+        boolean result = existsMethodByName(clazz, methodName, false, !isStatic, isStatic);
+        return result ? 1 : 0;
     }
 
     /**
