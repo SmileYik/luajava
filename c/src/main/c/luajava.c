@@ -77,6 +77,24 @@ static jclass    java_lang_class      = NULL;
 
 /***************************************************************************
 *
+* $FC Function getLuaStateIndex
+* 
+* $ED Description
+*    Gets the luaState index
+* 
+* $EP Function Parameters
+*    $P L - lua State
+* 
+* $FV Returned Value
+*    luaState index
+* 
+*$. **********************************************************************/
+
+   inline static lua_Number getLuaStateIndex( lua_State * L );
+
+
+/***************************************************************************
+*
 * $FC Function throwLuaError
 * 
 * $ED Description
@@ -91,7 +109,7 @@ static jclass    java_lang_class      = NULL;
 * 
 *$. **********************************************************************/
 
-static void throwLuaError( lua_State * L , const char* msg );
+   inline static void throwLuaError( lua_State * L , const char* msg );
 
 /***************************************************************************
 *
@@ -259,7 +277,7 @@ static void throwLuaError( lua_State * L , const char* msg );
 * 
 *$. **********************************************************************/
 
-static int javaObjectEquals( lua_State * L );
+   static int javaObjectEquals( lua_State * L );
 
 
 /***************************************************************************
@@ -277,7 +295,7 @@ static int javaObjectEquals( lua_State * L );
 * 
 *$. **********************************************************************/
 
-static int javaStringConcat( lua_State * L );
+   static int javaStringConcat( lua_State * L );
 
 
 /***************************************************************************
@@ -567,6 +585,28 @@ static int javaStringConcat( lua_State * L );
 
 /***************************************************************************
 *
+*  Function: getLuaStateIndex
+*  ****/
+
+static lua_Number getLuaStateIndex( lua_State * L )
+{
+   lua_Number stateIndex;
+   /* Gets the luaState index */
+   lua_pushstring( L , LUAJAVASTATEINDEX );
+   lua_rawget( L , LUA_REGISTRYINDEX );
+
+   if ( !lua_isnumber( L , -1 ) )
+   {
+      throwLuaError( L , "Impossible to identify luaState id.");
+   }
+
+   stateIndex = lua_tonumber( L , -1 );
+   lua_pop( L , 1 );
+   return stateIndex;
+}
+
+/***************************************************************************
+*
 *  Function: generateLuaStateStack
 *  ****/
 
@@ -619,17 +659,7 @@ int objectIndex( lua_State * L )
    jthrowable exp;
    JNIEnv * javaEnv;
 
-   /* Gets the luaState index */
-   lua_pushstring( L , LUAJAVASTATEINDEX );
-   lua_rawget( L , LUA_REGISTRYINDEX );
-
-   if ( !lua_isnumber( L , -1 ) )
-   {
-      throwLuaError( L , "Impossible to identify luaState id." );
-   }
-
-   stateIndex = lua_tonumber( L , -1 );
-   lua_pop( L , 1 );
+   stateIndex = getLuaStateIndex( L );
 
    if ( !lua_isstring( L , -1 ) )
    {
@@ -734,17 +764,7 @@ int objectIndexReturn( lua_State * L )
    jstring str;
    JNIEnv * javaEnv;
 
-   /* Gets the luaState index */
-   lua_pushstring( L , LUAJAVASTATEINDEX );
-   lua_rawget( L , LUA_REGISTRYINDEX );
-
-   if ( !lua_isnumber( L , -1 ) )
-   {
-      throwLuaError( L , "Impossible to identify luaState id.");
-   }
-
-   stateIndex = lua_tonumber( L , -1 );
-   lua_pop( L , 1 );
+   stateIndex = getLuaStateIndex( L );
 
    /* Checks if is a valid java object */
    if ( !isJavaObject( L , 1 ) )
@@ -844,17 +864,7 @@ int objectNewIndex( lua_State * L  )
    jthrowable exp;
    JNIEnv * javaEnv;
 
-   /* Gets the luaState index */
-   lua_pushstring( L , LUAJAVASTATEINDEX );
-   lua_rawget( L , LUA_REGISTRYINDEX );
-
-   if ( !lua_isnumber( L , -1 ) )
-   {
-      throwLuaError( L , "Impossible to identify luaState id.");
-   }
-
-   stateIndex = lua_tonumber( L , -1 );
-   lua_pop( L , 1 );
+   stateIndex = getLuaStateIndex( L );
 
    if ( !isJavaObject( L , 1 ) )
    {
@@ -944,17 +954,7 @@ int classIndex( lua_State * L )
    jthrowable exp;
    JNIEnv * javaEnv;
 
-   /* Gets the luaState index */
-   lua_pushstring( L , LUAJAVASTATEINDEX );
-   lua_rawget( L , LUA_REGISTRYINDEX );
-
-   if ( !lua_isnumber( L , -1 ) )
-   {
-      throwLuaError( L , "Impossible to identify luaState id.");
-   }
-
-   stateIndex = lua_tonumber( L , -1 );
-   lua_pop( L , 1 );
+   stateIndex = getLuaStateIndex( L );
 
    if ( !isJavaObject( L , 1 ) )
    {
@@ -1076,17 +1076,7 @@ int arrayIndex( lua_State * L )
 
 	/* Index is number */
 
-   /* Gets the luaState index */
-   lua_pushstring( L , LUAJAVASTATEINDEX );
-   lua_rawget( L , LUA_REGISTRYINDEX );
-
-   if ( !lua_isnumber( L , -1 ) )
-   {
-      throwLuaError( L , "Impossible to identify luaState id.");
-   }
-
-   stateIndex = lua_tonumber( L , -1 );
-   lua_pop( L , 1 );
+   stateIndex = getLuaStateIndex( L );
 
 	// Array index
    key = lua_tointeger( L , -1 );
@@ -1160,17 +1150,7 @@ int arrayNewIndex( lua_State * L )
    jthrowable exp;
    JNIEnv * javaEnv;
 
-   /* Gets the luaState index */
-   lua_pushstring( L , LUAJAVASTATEINDEX );
-   lua_rawget( L , LUA_REGISTRYINDEX );
-
-   if ( !lua_isnumber( L , -1 ) )
-   {
-      throwLuaError( L , "Impossible to identify luaState id.");
-   }
-
-   stateIndex = lua_tonumber( L , -1 );
-   lua_pop( L , 1 );
+   stateIndex = getLuaStateIndex( L );
 
    if ( !isJavaObject( L , 1 ) )
    {
@@ -1407,15 +1387,7 @@ int javaStringConcat( lua_State * L )
       throwLuaError( L , "In the concat operation, at least one java object is required.");
    }
 
-   /* Gets the luaState index */
-   lua_pushstring( L , LUAJAVASTATEINDEX );
-   lua_rawget( L , LUA_REGISTRYINDEX );
-   if ( !lua_isnumber( L , -1 ) )
-   {
-      throwLuaError( L , "Impossible to identify luaState id.");
-   }
-   stateIndex = lua_tonumber( L , -1 );
-   lua_pop( L , 1 );
+   stateIndex = getLuaStateIndex( L );
 
    // java env
    javaEnv = getEnvFromState( L );
@@ -1596,22 +1568,12 @@ int createProxy( lua_State * L )
   jstring str;
   JNIEnv * javaEnv;
 
-  if ( lua_gettop( L ) != 2 )
-  {
-    throwLuaError( L , "Error. Function createProxy expects 2 arguments.");
-  }
-
-  /* Gets the luaState index */
-   lua_pushstring( L , LUAJAVASTATEINDEX );
-   lua_rawget( L , LUA_REGISTRYINDEX );
-
-   if ( !lua_isnumber( L , -1 ) )
+   if ( lua_gettop( L ) != 2 )
    {
-      throwLuaError( L , "Impossible to identify luaState id.");
+      throwLuaError( L , "Error. Function createProxy expects 2 arguments.");
    }
 
-   stateIndex = lua_tonumber( L , -1 );
-   lua_pop( L , 1 );
+   stateIndex = getLuaStateIndex( L );
 
    if ( !lua_isstring( L , 1 ) || !lua_istable( L , 2 ) )
    {
@@ -1696,17 +1658,7 @@ int javaNew( lua_State * L )
       throwLuaError( L , "Error. Invalid number of parameters.");
    }
 
-   /* Gets the luaState index */
-   lua_pushstring( L , LUAJAVASTATEINDEX );
-   lua_rawget( L , LUA_REGISTRYINDEX );
-
-   if ( !lua_isnumber( L , -1 ) )
-   {
-      throwLuaError( L , "Impossible to identify luaState id.");
-   }
-
-   stateIndex = lua_tonumber( L , -1 );
-   lua_pop( L , 1 );
+   stateIndex = getLuaStateIndex( L );
 
    /* Gets the java Class reference */
    if ( !isJavaObject( L , 1 ) )
@@ -1791,17 +1743,7 @@ int javaNewInstance( lua_State * L )
    lua_Number stateIndex;
    JNIEnv * javaEnv;
 
-   /* Gets the luaState index */
-   lua_pushstring( L , LUAJAVASTATEINDEX );
-   lua_rawget( L , LUA_REGISTRYINDEX );
-
-   if ( !lua_isnumber( L , -1 ) )
-   {
-      throwLuaError( L , "Impossible to identify luaState id.");
-   }
-
-   stateIndex = lua_tonumber( L , -1 );
-   lua_pop( L , 1 );
+   stateIndex = getLuaStateIndex( L );
 
    /* get the string parameter */
    if ( !lua_isstring( L , 1 ) )
@@ -1888,18 +1830,7 @@ int javaLoadLib( lua_State * L )
       throwLuaError( L , "Error. Invalid number of parameters.");
    }
 
-   /* Gets the luaState index */
-   lua_pushstring( L , LUAJAVASTATEINDEX );
-   lua_rawget( L , LUA_REGISTRYINDEX );
-
-   if ( !lua_isnumber( L , -1 ) )
-   {
-      throwLuaError( L , "Impossible to identify luaState id.");
-   }
-
-   stateIndex = lua_tonumber( L , -1 );
-   lua_pop( L , 1 );
-
+   stateIndex = getLuaStateIndex( L );
 
    if ( !lua_isstring( L , 1 ) || !lua_isstring( L , 2 ) )
    {
