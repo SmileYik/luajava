@@ -10,20 +10,11 @@ public class FindMethodTest {
     }
 
     @Test
-    public void aTest() {
+    public void aTest() throws Exception {
         LuaStateFacade facade = LuaStateFactory.newLuaState();
-        facade.lock(L -> {
-            L.openLibs();
-
-            L.pushJavaObject(A.class);
-            L.setGlobal("a");
-
-            int exp = L.LdoFile("test/findMethodTest.lua");
-            if (exp != 0) {
-                System.out.println(L.toString(-1));
-            }
-        });
-
+        facade.openLibs();
+        facade.setGlobal("a", A.class).justThrow();
+        facade.evalFile("test/findMethodTest.lua").justThrow();
         facade.close();
     }
 }
@@ -96,6 +87,10 @@ class A {
     public static void a(double[] array) {
         System.out.println("A double[]: " + Arrays.toString(array));
     }
+
+//    public static void a(Double[] array) {
+//        System.out.println("A Double[]: " + Arrays.toString(array));
+//    }
 
     public static void a(float[] array) {
         System.out.println("A float[]: " + Arrays.toString(array));

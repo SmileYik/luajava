@@ -29,7 +29,7 @@ import org.eu.smileyik.luajava.reflect.ReflectUtil;
 import org.eu.smileyik.luajava.util.BoxedTypeHelper;
 
 import java.lang.reflect.*;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.Optional;
 
 /**
@@ -113,19 +113,13 @@ public final class LuaJavaAPI {
      */
     public static int arrayIndex(int luaState, Object obj, int index) throws LuaException {
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
+        if (!obj.getClass().isArray())
+            throw new LuaException("Object indexed is not an array.");
+        if (Array.getLength(obj) < index)
+            throw new LuaException("Index out of bounds.");
 
-        return luaStateFacade.lockThrow(L -> {
-
-            if (!obj.getClass().isArray())
-                throw new LuaException("Object indexed is not an array.");
-
-            if (Array.getLength(obj) < index)
-                throw new LuaException("Index out of bounds.");
-
-            luaStateFacade.rawPushObjectValue(Array.get(obj, index - 1)).justThrow(LuaException.class);
-
-            return 1;
-        }).getOrThrow(LuaException.class);
+        luaStateFacade.pushObjectValue(Array.get(obj, index - 1)).justThrow(LuaException.class);
+        return 1;
     }
 
     /**
@@ -571,7 +565,7 @@ public final class LuaJavaAPI {
             objs[i] = luaStateFacade.rawToJavaObject(i + 2).getOrThrow(LuaException.class);
         }
 
-        List<LuaInvokedMethod<Method>> list = ReflectUtil.findMethodByParams(
+        LinkedList<LuaInvokedMethod<Method>> list = ReflectUtil.findMethodByParams(
                 clazz, methodName, objs, false, false, false, false);
         if (list.isEmpty()) {
             return null;

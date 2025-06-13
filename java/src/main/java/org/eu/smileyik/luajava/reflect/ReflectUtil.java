@@ -1,5 +1,6 @@
 package org.eu.smileyik.luajava.reflect;
 
+import org.eu.smileyik.luajava.type.LuaArray;
 import org.eu.smileyik.luajava.util.ParamRef;
 
 import java.lang.reflect.Method;
@@ -10,12 +11,16 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.eu.smileyik.luajava.reflect.ConvertablePriority.*;
 
 public class ReflectUtil {
     private static final ConcurrentMap<ReflectExecutableCacheKey, Set<Method>> CACHED_METHODS = new ConcurrentHashMap<>();
+
+    // 筛选掉带 LuaArray 的, LuaArray 都不给带缓存查询.
+    private static final Function<Class<?>, Boolean> isAllowCache = clazz -> clazz != LuaArray.class;
 
     /**
      * find method(s) by gave params (cacheable version).
@@ -28,42 +33,47 @@ public class ReflectUtil {
      * @param skipNotStatic skip the method witch is not static
      * @return list of suitable methods.
      */
-    public static List<LuaInvokedMethod<Method>> findMethodByParams(
+    public static LinkedList<LuaInvokedMethod<Method>> findMethodByParams(
             Class<?> clazz, String methodName,
             Object[] params, boolean justFirst,
             boolean skipNotPublic,
             boolean skipStatic,
             boolean skipNotStatic
     ) {
+        boolean allowCache = true;
         int paramsCount = params.length;
         Class<?>[] paramTypes = new Class<?>[paramsCount];
         for (int i = 0; i < paramsCount; i++) {
             paramTypes[i] = params[i].getClass();
-        }
-        ReflectExecutableCacheKey cacheKey = new ReflectExecutableCacheKey(clazz, methodName, paramTypes);
-        Set<Method> cachedMethods = CACHED_METHODS.get(cacheKey);
-        if (cachedMethods == null) {
-            return findMethodByParams(cacheKey, clazz, methodName, params,
-                    justFirst, skipNotPublic, skipStatic, skipNotStatic);
+            allowCache &= isAllowCache.apply(paramTypes[i]);
         }
 
-        List<LuaInvokedMethod<Method>> matchedList = new LinkedList<>();
-        int priority = Integer.MAX_VALUE;
-
-        ParamRef<Object> overwrite = ParamRef.wrapper();
-        LuaInvokedMethod<Method> currentMethod = new LuaInvokedMethod<>();
-
-        for (Method method : cachedMethods) {
-            if (checkMethodModifiers(method,
-                    skipNotPublic, skipStatic, skipNotStatic)) {
-                continue;
+        ReflectExecutableCacheKey cacheKey = null;
+        LinkedList<LuaInvokedMethod<Method>> matchedList = new LinkedList<>();
+        if (allowCache) {
+            cacheKey = new ReflectExecutableCacheKey(clazz, methodName, paramTypes);
+            Set<Method> cachedMethods = CACHED_METHODS.get(cacheKey);
+            if (cachedMethods == null) {
+                return findMethodByParams(cacheKey, clazz, methodName, params,
+                        justFirst, skipNotPublic, skipStatic, skipNotStatic);
             }
-            int currentPriority = checkMethodPriority(
-                    method, currentMethod, matchedList,
-                    paramsCount, params, priority, overwrite);
-            if (currentPriority != NOT_MATCH) {
-                priority = currentPriority;
-                if (currentPriority == FULL_MATCH) break;
+
+            int priority = Integer.MAX_VALUE;
+            ParamRef<Object> overwrite = ParamRef.wrapper();
+            LuaInvokedMethod<Method> currentMethod = new LuaInvokedMethod<>();
+
+            for (Method method : cachedMethods) {
+                if (checkMethodModifiers(method,
+                        skipNotPublic, skipStatic, skipNotStatic)) {
+                    continue;
+                }
+                int currentPriority = checkMethodPriority(
+                        method, currentMethod, matchedList,
+                        paramsCount, params, priority, overwrite);
+                if (currentPriority != NOT_MATCH) {
+                    priority = currentPriority;
+                    if (currentPriority == FULL_MATCH) break;
+                }
             }
         }
 
@@ -89,7 +99,7 @@ public class ReflectUtil {
      * @param skipNotStatic skip the method witch is not static
      * @return list of suitable methods.
      */
-    public static List<LuaInvokedMethod<Method>> findMethodByParams(
+    public static LinkedList<LuaInvokedMethod<Method>> findMethodByParams(
             ReflectExecutableCacheKey cacheKey,
             Class<?> clazz, String methodName,
             Object[] params, boolean justFirst,
@@ -102,7 +112,7 @@ public class ReflectUtil {
         }
 
         // results.
-        List<LuaInvokedMethod<Method>> matchedList = new LinkedList<>();
+        LinkedList<LuaInvokedMethod<Method>> matchedList = new LinkedList<>();
         int priority = Integer.MAX_VALUE;
         // temp variables.
         ParamRef<Object> overwrite = ParamRef.wrapper();

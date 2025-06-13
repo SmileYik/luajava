@@ -37,7 +37,7 @@ public class ConvertablePriority {
     // array to other
     public static final byte ARRAY_TO_PRIMITIVE_ARRAY       = 60;
     public static final byte ARRAY_TO_SPECIFIC_OBJECT_ARRAY = 61;
-    public static final byte ARRAY_TO_OBJECT_ARRAY          = 62;
+    public static final byte ARRAY_TO_OBJECT_ARRAY          = 64;
     public static final byte ARRAY_TO_OBJECT                = 65;
 
     public static final byte ANY_TO_OBJECT = 70;
