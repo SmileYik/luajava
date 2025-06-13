@@ -32,7 +32,7 @@ actionPerformed = function(ev)
 end
 }
 
-jproxy = luajava.createProxy("java.awt.event.ActionListener",execute_cb)
+jproxy = luajava.createProxy("java.awt.event.ActionListener",execute_cb):getOrThrow()
 
 execute_bt:addActionListener(jproxy)
 
@@ -42,7 +42,7 @@ clear_cb = {actionPerformed= function (ev)
 end
  }
 
-jproxy = luajava.createProxy("java.awt.event.ActionListener" ,clear_cb)
+jproxy = luajava.createProxy("java.awt.event.ActionListener" ,clear_cb):getOrThrow()
 clear_bt:addActionListener(jproxy) 
 
 exit_cb = { actionPerformed=function (ev)
@@ -53,7 +53,7 @@ end
 }
 
 
-jproxyb = luajava.createProxy("java.awt.event.ActionListener" ,exit_cb)
+jproxyb = luajava.createProxy("java.awt.event.ActionListener" ,exit_cb):getOrThrow()
 
 exit_bt:addActionListener(jproxyb)
 

@@ -66,13 +66,20 @@ public class ReflectUtil {
 
         try {
             f = clazz.getDeclaredField(name);
+
+        } catch (NoSuchFieldException ignore) {
+            try {
+                f = clazz.getField(name);
+            } catch (NoSuchFieldException ignored) {
+
+            }
+        }
+        if (f != null) {
             int modifiers = f.getModifiers();
             if (ignoreFinal && Modifier.isFinal(modifiers)) f = null;
             else if (ignoreStatic && Modifier.isStatic(modifiers)) f = null;
             else if (ignoreNotStatic && !Modifier.isStatic(modifiers)) f = null;
             else if (ignoreNotPublic && !Modifier.isPublic(modifiers)) f = null;
-        } catch (NoSuchFieldException ignore) {
-
         }
 
         if (f != null) CACHED_FIELDS.putIfAbsent(cacheKey, f);

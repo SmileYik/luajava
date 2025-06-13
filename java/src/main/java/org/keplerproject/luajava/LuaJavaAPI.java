@@ -391,7 +391,7 @@ public final class LuaJavaAPI {
         if (obj == null) return 0;
         Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
         Field field = ReflectUtil.findFieldByName(targetClass, fieldName,
-                false, obj != targetClass, obj == targetClass, false);
+                false, false, obj == targetClass, false);
         if (field == null) return 0;
         try {
             Object o = field.get(obj);
@@ -413,7 +413,7 @@ public final class LuaJavaAPI {
         if (obj == null) return 0;
         Class<?> clazz = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
         boolean isStatic = clazz == obj;
-        boolean result = existsMethodByName(clazz, methodName, false, !isStatic, isStatic);
+        boolean result = existsMethodByName(clazz, methodName, false, false, isStatic);
         return result ? 1 : 0;
     }
 
