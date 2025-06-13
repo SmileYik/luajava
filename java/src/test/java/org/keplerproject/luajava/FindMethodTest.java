@@ -20,6 +20,16 @@ public class FindMethodTest {
 }
 
 class A {
+    public static byte aa = 1;
+    private static short bb = 2;
+    protected static int cc = 3;
+    public static double dd = 4;
+    public static float ee = 5;
+    public static final long ff = 6;
+    public static char gg = 'a';
+    public String hh = "8";
+
+
     public static void a(String s) {
         System.out.println("A String: " + s);
     }

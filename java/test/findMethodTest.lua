@@ -17,8 +17,20 @@ function run1()
     a:b(2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
 end
 
+function staticFieldFind()
+    print(a.aa)
+    print(a.bb)
+    print(a.cc)
+    print(a.dd)
+    print(a.ee)
+    print(a.ff)
+    print(a.gg)
+    print(a.hh)
+end
+
 function run2()
     run1()
+    staticFieldFind()
 end
 
 function run3()

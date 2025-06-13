@@ -385,45 +385,18 @@ public final class LuaJavaAPI {
      * @param fieldName name of the field to be inpected
      * @return number of returned objects
      */
-    public static int checkField(int luaState, Object obj, String fieldName)
-            throws LuaException {
-        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
-
-        return luaStateFacade.lockThrow(L -> {
-            Field field = null;
-            Class<?> objClass;
-
-            if (obj instanceof Class) {
-                objClass = (Class<?>) obj;
-            } else {
-                objClass = obj.getClass();
-            }
-
-            try {
-                field = objClass.getField(fieldName);
-            } catch (Exception e) {
-                return 0;
-            }
-
-            if (field == null) {
-                return 0;
-            }
-
-            Object ret = null;
-            try {
-                ret = field.get(obj);
-            } catch (Exception e1) {
-                return 0;
-            }
-
-            if (obj == null) {
-                return 0;
-            }
-
-            luaStateFacade.rawPushObjectValue(ret).justThrow(LuaException.class);;
-
-            return 1;
-        }).getOrThrow(LuaException.class);
+    public static int checkField(int luaState, Object obj, String fieldName) throws LuaException {
+        if (obj == null) return 0;
+        Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
+        Field field = ReflectUtil.findFieldByName(targetClass, fieldName,
+                false, obj != targetClass, obj == targetClass, false);
+        if (field == null) return 0;
+        try {
+            Object o = field.get(obj);
+            LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
+            return luaStateFacade.pushObjectValue(o).isSuccess() ? 1 : 0;
+        } catch (IllegalAccessException ignore) { }
+        return 0;
     }
 
     /**
