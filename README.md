@@ -5,18 +5,24 @@ This is a clone of the luajava repository.
 
 ## Changes to the original
 
-* Add some subclasses for LuaObject, like LuaTable, LuaArray.
-* Rewrite some LuaJavaAPI to support automatic boxing and unboxing, 
+* 🐭 Add some subclasses for LuaObject, like LuaTable, LuaArray.
+* 🐸 Rewrite some LuaJavaAPI to support automatic boxing and unboxing, 
 method overloading, number conversion priority and allow array style lua table 
-covert to java array.
-* Implementing finalize method by PhantomReference
-* Remove the synchronized keyword and use ReentrantLock for synchronization
+covert to java array. cached reflect result.
+* 🦝 Implementing finalize method by PhantomReference
+* 🕊️ Remove the synchronized keyword and use ReentrantLock for synchronization
+* 🐹 Enhanced LuaJavaAPI: You can use "#objectName" to get java array length or
+size of Collection/Map instance; you also can use `..` to concat string with
+java object. details example can be find in LuaJavaApiTest class.
+* 🐼 Will print lua stack when lua error
 
 ## How to build it
 
 I still try to write script to let build it be easier. 
-At first, ensure your system installed **JDK**, **GNU C** OR **Clang** OR **Visual Studio**.
+At first, ensure your system installed **JDK 11+?**, **GNU C** OR **Clang** OR **Visual Studio**.
 If you are using Linux, please install **make**.
+
+**Note**: Gradle script using **javac** command to generate C header(luajava.h). If you are using **JDK1.8** you need change to **javap**, 
 
 if you are Linux or Windows, just run command at terminal
 ```
@@ -26,7 +32,7 @@ if you are Linux or Windows, just run command at terminal
 ./gradlew :java:build
 ```
 
-if building succeed, all staff will be in `luajava/build/outputs` directory. 
+if build succeed, all staff will be in `luajava/build/outputs` directory. 
 
 ## How to use it
 
