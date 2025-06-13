@@ -425,9 +425,13 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
 
     private boolean isRawEqualInLua(LuaObject other) {
         return luaState.lock(l -> {
-            rawPush();
-            other.rawPush();
-            return l.rawequal(-1, -2);
+            try {
+                rawPush();
+                other.rawPush();
+                return l.rawequal(-1, -2);
+            } finally {
+                l.pop(2);
+            }
         });
     }
 
