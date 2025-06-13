@@ -280,7 +280,7 @@ public class ReflectUtil {
         // temp variables.
         ParamRef<Object> overwrite = ParamRef.wrapper();
         LuaInvokedMethod<Method> currentMethod = new LuaInvokedMethod<>();
-        Set<String> checkedMethods = new HashSet<>();
+        Set<ReflectExecutableCacheKey> checkedMethods = new HashSet<>();
 
         // find methods
         Class<?> c = clazz;
@@ -295,14 +295,14 @@ public class ReflectUtil {
                         ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
                     continue;
                 }
-                if (!checkedMethods.add(method.getName())) {
-                    continue;
-                }
+                ReflectExecutableCacheKey check = new ReflectExecutableCacheKey(null, methodName, method.getParameterTypes());
+                if (checkedMethods.contains(check)) continue;
                 int currentPriority = checkMethodPriority(
                         method, currentMethod, matchedList,
                         paramsCount, params, priority, overwrite);
                 if (currentPriority != NOT_MATCH) {
                     priority = currentPriority;
+                    checkedMethods.add(check);
                     if (currentPriority == FULL_MATCH) break;
                 }
             }
@@ -374,6 +374,7 @@ public class ReflectUtil {
                 return currentPriority;
             } else if (currentPriority == priority) {
                 matchedList.add(currentMethod.done());
+                return currentPriority;
             }
         }
 
