@@ -55,11 +55,11 @@
 /* Garbage collector metamethod name */
 #define LUAGCMETAMETHODTAG    "__gc"
 /* __len */
-#define LUA_LEN_META_METHOD_TAG    "__len"
+#define LUA_LEN_METAMETHOD_TAG    "__len"
 /* __eq */
-#define LUA_EQ_META_METHOD_TAG     "__eq"
+#define LUA_EQ_METAMETHOD_TAG     "__eq"
 /* __concat */
-#define LUA_CONCAT_META_METHOD_TAG "__concat"
+#define LUA_CONCAT_METAMETHOD_TAG "__concat"
 /* Call metamethod name */
 #define LUACALLMETAMETHODTAG  "__call"
 /* Constant that defines where in the metatable should I place the function name */
@@ -188,6 +188,24 @@ static jclass    java_lang_class      = NULL;
 *$. **********************************************************************/
 
    static int arrayNewIndex( lua_State * L );
+
+
+/***************************************************************************
+*
+* $FC Function arrayLength
+* 
+* $ED Description
+*    Function to be called by the metamethod __len of a java array
+* 
+* $EP Function Parameters
+*    $P L - lua State
+* 
+* $FV Returned Value
+*    int - Number of java array length
+* 
+*$. **********************************************************************/
+
+   static int arrayLength( lua_State * L );
 
 
 /***************************************************************************
@@ -452,7 +470,7 @@ static jclass    java_lang_class      = NULL;
 *$. **********************************************************************/
 
    static JNIEnv * getEnvFromState( lua_State * L );
-
+   
 
    /***************************************************************************
 *
@@ -1162,6 +1180,37 @@ int arrayNewIndex( lua_State * L )
 
 /***************************************************************************
 *
+*  Function: arrayLength
+*  ****/
+
+int arrayLength( lua_State * L )
+{
+   jobject * obj;
+   JNIEnv * javaEnv;
+   jsize len;
+
+   if ( !isJavaObject( L, 1 ) )
+   {
+      lua_pushstring( L , "Not a valid Java Object!" );
+      lua_error( L );
+   }
+
+   javaEnv = getEnvFromState( L );
+   if ( javaEnv == NULL )
+   {
+      lua_pushstring( L , "Invalid JNI Environment." );
+      lua_error( L );
+   }
+
+   obj = ( jobject * ) lua_touserdata( L , 1 );
+   len = ( *javaEnv )->GetArrayLength( javaEnv, *obj );
+   lua_pushinteger( L, len );
+   return 1;
+}
+
+
+/***************************************************************************
+*
 *  Function: gc
 *  ****/
 
@@ -1824,6 +1873,11 @@ int pushJavaArray( lua_State * L , jobject javaObject )
    /* pushes the __newindex metamethod */
    lua_pushstring( L , LUANEWINDEXMETAMETHODTAG );
    lua_pushcfunction( L , &arrayNewIndex );
+   lua_rawset( L , -3 );
+
+   /* pushes the __len metamethod */
+   lua_pushstring( L , LUA_LEN_METAMETHOD_TAG );
+   lua_pushcfunction( L , &arrayLength );
    lua_rawset( L , -3 );
 
    /* pushes the __gc metamethod */

@@ -23,7 +23,7 @@ public class LuaJavaApiTest {
         facade.openLibs();
         String[] strings = new String[] {"hello", ", ", "world", "!"};
         facade.setGlobal("strings", strings).justThrow();
-        facade.evalString("len = strings.length; print(len)").justThrow();
+        facade.evalString("print(#strings)").justThrow();
     }
 
     @Test
