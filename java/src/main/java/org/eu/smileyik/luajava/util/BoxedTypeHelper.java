@@ -9,7 +9,7 @@ public class BoxedTypeHelper {
     private static final Map<Class<?>, Class<?>> BOXED_2_UNBOXED_TYPES;
     private static final Map<Class<?>, Class<?>> UNBOXED_2_BOXED_TYPES;
     private static final Map<Class<?>, Function<Double, Number>> NUMBER_TRANSFORM;
-    
+
     private static final Map<Class<?>, Function<Object, String>> ARRAY_TO_STRING = new HashMap<>();
 
     static {

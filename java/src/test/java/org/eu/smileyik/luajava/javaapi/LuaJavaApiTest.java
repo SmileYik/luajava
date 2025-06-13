@@ -5,9 +5,7 @@ import org.keplerproject.luajava.LoadLibrary;
 import org.keplerproject.luajava.LuaStateFacade;
 import org.keplerproject.luajava.LuaStateFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -24,6 +22,18 @@ public class LuaJavaApiTest {
         String[] strings = new String[] {"hello", ", ", "world", "!"};
         facade.setGlobal("strings", strings).justThrow();
         facade.setGlobal("strs", strings).justThrow();
+        List<String> list = Arrays.asList(strings);
+        facade.setGlobal("list", list).justThrow();
+        Map<String, String> map = new HashMap<>();
+        map.put("hello", "world");
+        map.put("world", "!");
+        facade.setGlobal("map", map).justThrow();
+        facade.setGlobal("obj", new Object()).justThrow();
+
+        facade.evalString("print('#strs = ', #strs)").justThrow();
+        facade.evalString("print('#list = ', #list)").justThrow();
+        facade.evalString("print('#map = ', #map)").justThrow();
+//        facade.evalString("print('#obj = ', #obj)").justThrow();
         facade.evalString("print(strs == strings, strs == strs, strings.__len, getmetatable(strs).__eq(strs, strings))").justThrow();
         facade.evalString("print(('123'..strings)..'456')").justThrow();
     }

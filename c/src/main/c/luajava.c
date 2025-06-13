@@ -77,6 +77,24 @@ static jclass    java_lang_class      = NULL;
 
 /***************************************************************************
 *
+* $FC Function throwLuaError
+* 
+* $ED Description
+*    Throw error with stack.
+* 
+* $EP Function Parameters
+*    $P L - lua State
+*    $P msg - error message
+* 
+* $FV Returned Value
+*    None
+* 
+*$. **********************************************************************/
+
+static void throwLuaError( lua_State * L , const char* msg );
+
+/***************************************************************************
+*
 * $FC Function objectIndex
 * 
 * $ED Description
@@ -206,6 +224,24 @@ static jclass    java_lang_class      = NULL;
 *$. **********************************************************************/
 
    static int arrayLength( lua_State * L );
+
+
+/***************************************************************************
+*
+* $FC Function objectContainerSize
+* 
+* $ED Description
+*    Function to be called by the metamethod __len of a java collection or map.
+* 
+* $EP Function Parameters
+*    $P L - lua State
+* 
+* $FV Returned Value
+*    int - Number of values to be returned by the function
+* 
+*$. **********************************************************************/
+
+   static int objectContainerSize( lua_State * L );
 
 
 /***************************************************************************
@@ -540,7 +576,7 @@ void generateLuaStateStack( lua_State * L , char * stack_str )
    int level = 0;
    while (lua_getstack(L, level++, &ar)) {
       lua_getinfo( L, "nSl", &ar );
-      sprintf(stack_str, "%s\n[Stack %d] [%s] %s: %s (%s#%d)", 
+      sprintf(stack_str, "%s\n\t[Stack %d] [%s] %s: %s (%s#%d)", 
          stack_str, level - 1,
          ar.what ? ar.what : "(unknown what)",
          ar.namewhat ? ar.namewhat : "(unknown namewhat)",
@@ -549,6 +585,21 @@ void generateLuaStateStack( lua_State * L , char * stack_str )
          ar.currentline
       );
    }
+}
+
+
+/***************************************************************************
+*
+*  Function: throwLuaError
+*  ****/
+
+void throwLuaError( lua_State * L , const char* msg )
+{
+   char errorStack[1<<10] = "";
+   sprintf(errorStack, "%s", msg);
+   generateLuaStateStack( L, errorStack);
+   lua_pushstring( L , errorStack );
+   lua_error( L );
 }
 
 
@@ -574,8 +625,7 @@ int objectIndex( lua_State * L )
 
    if ( !lua_isnumber( L , -1 ) )
    {
-      lua_pushstring( L , "Impossible to identify luaState id." );
-      lua_error( L );
+      throwLuaError( L , "Impossible to identify luaState id." );
    }
 
    stateIndex = lua_tonumber( L , -1 );
@@ -583,23 +633,20 @@ int objectIndex( lua_State * L )
 
    if ( !lua_isstring( L , -1 ) )
    {
-      lua_pushstring( L , "Invalid object index. Must be string." );
-      lua_error( L );
+      throwLuaError( L , "Invalid object index. Must be string.");
    }
 
    key = lua_tostring( L , -1 );
 
    if ( !isJavaObject( L , 1 ) )
    {
-      lua_pushstring( L , "Not a valid Java Object." );
-      lua_error( L );
+      throwLuaError( L , "Not a valid Java Object.");
    }
 
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    obj = ( jobject * ) lua_touserdata( L , 1 );
@@ -656,8 +703,7 @@ int objectIndex( lua_State * L )
 
    if ( !lua_istable( L , -1 ) )
    {
-      lua_pushstring( L , "Invalid MetaTable." );
-      lua_error( L );
+      throwLuaError( L , "Invalid MetaTable.");
    }
 
    lua_pushstring( L , LUAJAVAOBJFUNCCALLED );
@@ -694,8 +740,7 @@ int objectIndexReturn( lua_State * L )
 
    if ( !lua_isnumber( L , -1 ) )
    {
-      lua_pushstring( L , "Impossible to identify luaState id." );
-      lua_error( L );
+      throwLuaError( L , "Impossible to identify luaState id.");
    }
 
    stateIndex = lua_tonumber( L , -1 );
@@ -704,15 +749,13 @@ int objectIndexReturn( lua_State * L )
    /* Checks if is a valid java object */
    if ( !isJavaObject( L , 1 ) )
    {
-      lua_pushstring( L , "Not a valid OO function call." );
-      lua_error( L );
+      throwLuaError( L , "Not a valid OO function call.");
    }
 
    lua_getmetatable( L , 1 );
    if ( lua_type( L , -1 ) == LUA_TNIL )
    {
-      lua_pushstring( L , "Not a valid java Object." );
-      lua_error( L );
+      throwLuaError( L , "Not a valid java Object.");
    }
 
    /* Gets the method Name */
@@ -720,8 +763,7 @@ int objectIndexReturn( lua_State * L )
    lua_rawget( L , -2 );
    if ( lua_type( L , -1 ) == LUA_TNIL )
    {
-      lua_pushstring( L , "Not a OO function call." );
-      lua_error( L );
+      throwLuaError( L , "Not a OO function call.");
    }
    methodName = lua_tostring( L , -1 );
 
@@ -734,8 +776,7 @@ int objectIndexReturn( lua_State * L )
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    /* Gets method */
@@ -809,8 +850,7 @@ int objectNewIndex( lua_State * L  )
 
    if ( !lua_isnumber( L , -1 ) )
    {
-      lua_pushstring( L , "Impossible to identify luaState id." );
-      lua_error( L );
+      throwLuaError( L , "Impossible to identify luaState id.");
    }
 
    stateIndex = lua_tonumber( L , -1 );
@@ -818,16 +858,14 @@ int objectNewIndex( lua_State * L  )
 
    if ( !isJavaObject( L , 1 ) )
    {
-      lua_pushstring( L , "Not a valid java class." );
-      lua_error( L );
+      throwLuaError( L , "Not a valid java class.");
    }
 
    /* Gets the field Name */
 
    if ( !lua_isstring( L , 2 ) )
    {
-      lua_pushstring( L , "Not a valid field call." );
-      lua_error( L );
+      throwLuaError( L , "Not a valid field call.");
    }
 
    fieldName = lua_tostring( L , 2 );
@@ -839,8 +877,7 @@ int objectNewIndex( lua_State * L  )
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    method = ( *javaEnv )->GetStaticMethodID( javaEnv , luajava_api_class , "objectNewIndex" ,
@@ -913,8 +950,7 @@ int classIndex( lua_State * L )
 
    if ( !lua_isnumber( L , -1 ) )
    {
-      lua_pushstring( L , "Impossible to identify luaState id." );
-      lua_error( L );
+      throwLuaError( L , "Impossible to identify luaState id.");
    }
 
    stateIndex = lua_tonumber( L , -1 );
@@ -922,16 +958,14 @@ int classIndex( lua_State * L )
 
    if ( !isJavaObject( L , 1 ) )
    {
-      lua_pushstring( L , "Not a valid java class." );
-      lua_error( L );
+      throwLuaError( L , "Not a valid java class.");
    }
 
    /* Gets the field Name */
 
    if ( !lua_isstring( L , 2 ) )
    {
-      lua_pushstring( L , "Not a valid field call." );
-      lua_error( L );
+      throwLuaError( L , "Not a valid field call.");
    }
 
    fieldName = lua_tostring( L , 2 );
@@ -943,8 +977,7 @@ int classIndex( lua_State * L )
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    method = ( *javaEnv )->GetStaticMethodID( javaEnv , luajava_api_class , "classIndex" ,
@@ -993,8 +1026,7 @@ int classIndex( lua_State * L )
 
    if ( ret == 0 )
    {
-      lua_pushstring( L , "Name is not a static field or function." );
-      lua_error( L );
+      throwLuaError( L , "Name is not a static field or function.");
    }
 
    if ( ret == 2 )
@@ -1033,8 +1065,7 @@ int arrayIndex( lua_State * L )
 	/* Can index as number or string */
    if ( !lua_isnumber( L , -1 ) && !lua_isstring( L , -1 ) )
    {
-      lua_pushstring( L , "Invalid object index. Must be integer or string." );
-      lua_error( L );
+      throwLuaError( L , "Invalid object index. Must be integer or string.");
    }
 
 	/* Important! If the index is not a number, behave as normal Java object */
@@ -1051,8 +1082,7 @@ int arrayIndex( lua_State * L )
 
    if ( !lua_isnumber( L , -1 ) )
    {
-      lua_pushstring( L , "Impossible to identify luaState id." );
-      lua_error( L );
+      throwLuaError( L , "Impossible to identify luaState id.");
    }
 
    stateIndex = lua_tonumber( L , -1 );
@@ -1063,15 +1093,13 @@ int arrayIndex( lua_State * L )
 
    if ( !isJavaObject( L , 1 ) )
    {
-      lua_pushstring( L , "Not a valid Java Object." );
-      lua_error( L );
+      throwLuaError( L , "Not a valid Java Object.");
    }
 
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    obj = ( jobject * ) lua_touserdata( L , 1 );
@@ -1138,8 +1166,7 @@ int arrayNewIndex( lua_State * L )
 
    if ( !lua_isnumber( L , -1 ) )
    {
-      lua_pushstring( L , "Impossible to identify luaState id." );
-      lua_error( L );
+      throwLuaError( L , "Impossible to identify luaState id.");
    }
 
    stateIndex = lua_tonumber( L , -1 );
@@ -1147,16 +1174,14 @@ int arrayNewIndex( lua_State * L )
 
    if ( !isJavaObject( L , 1 ) )
    {
-      lua_pushstring( L , "Not a valid java class." );
-      lua_error( L );
+      throwLuaError( L , "Not a valid java class.");
    }
 
    /* Gets the field Name */
 
    if ( !lua_isnumber( L , 2 ) )
    {
-      lua_pushstring( L , "Not a valid array index." );
-      lua_error( L );
+      throwLuaError( L , "Not a valid array index.");
    }
 
    key = lua_tointeger( L , 2 );
@@ -1168,8 +1193,7 @@ int arrayNewIndex( lua_State * L )
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    method = ( *javaEnv )->GetStaticMethodID( javaEnv , luajava_api_class , "arrayNewIndex" ,
@@ -1227,20 +1251,102 @@ int arrayLength( lua_State * L )
 
    if ( !isJavaObject( L, 1 ) )
    {
-      lua_pushstring( L , "Not a valid Java Object!" );
-      lua_error( L );
+      throwLuaError( L , "Not a valid Java Object!");
    }
 
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    obj = ( jobject * ) lua_touserdata( L , 1 );
    len = ( *javaEnv )->GetArrayLength( javaEnv, *obj );
    lua_pushinteger( L, len );
+   return 1;
+}
+
+/***************************************************************************
+*
+*  Function: objectContainerSize
+*  ****/
+
+int objectContainerSize( lua_State * L )
+{
+   jmethodID method;
+   jobject * obj;
+   JNIEnv * javaEnv;
+   jthrowable exp;
+   jint ret;
+   jclass clazz;
+   jboolean flag;
+
+   if ( !isJavaObject( L, 1 ) )
+   {
+      throwLuaError( L , "Not a valid Java Object!");
+   }
+
+   javaEnv = getEnvFromState( L );
+   if ( javaEnv == NULL )
+   {
+      throwLuaError( L , "Invalid JNI Environment.");
+   }
+
+   obj = ( jobject * ) lua_touserdata( L , 1 );
+   clazz = ( *javaEnv )->FindClass( javaEnv , "java/util/Collection" );
+   if ( clazz != NULL )
+   {
+      flag  = ( *javaEnv )->IsInstanceOf( javaEnv , *obj , clazz );
+   }
+   if (!flag) 
+   {
+      clazz = ( *javaEnv )->FindClass( javaEnv , "java/util/Map" );
+      if (clazz != NULL)
+      {
+         flag  = ( *javaEnv )->IsInstanceOf( javaEnv , *obj , clazz );
+      }
+   }
+   if (!flag)
+   {
+      throwLuaError( L , "This object is not a instance of Map or Collection.");
+   }
+
+   method = ( *javaEnv )->GetMethodID( javaEnv , clazz , "size" , "()I" );
+   if ( method == NULL )
+   {
+      throwLuaError( L , "Cannot get the object's size, because not found size method.");
+   }
+   ret = ( *javaEnv )->CallIntMethod( javaEnv , *obj , method );
+   exp = ( *javaEnv )->ExceptionOccurred( javaEnv );
+   /* Handles exception */
+   if ( exp != NULL )
+   {
+      jobject jstr;
+      const char * str;
+      
+      ( *javaEnv )->ExceptionClear( javaEnv );
+      jstr = ( *javaEnv )->CallObjectMethod( javaEnv , exp , get_message_method );
+
+      if ( jstr == NULL )
+      {
+         jmethodID methodId;
+
+         methodId = ( *javaEnv )->GetMethodID( javaEnv , throwable_class , "toString" , "()Ljava/lang/String;" );
+         jstr = ( *javaEnv )->CallObjectMethod( javaEnv , exp , methodId );
+      }
+
+      str = ( *javaEnv )->GetStringUTFChars( javaEnv , jstr , NULL );
+
+      char errorStack[1<<10] = "";
+      sprintf(errorStack, "%s", str);
+      generateLuaStateStack( L, errorStack);
+      lua_pushstring( L , errorStack );
+
+      ( *javaEnv )->ReleaseStringUTFChars( javaEnv , jstr, str );
+
+      lua_error( L );
+   }
+   lua_pushinteger( L, ret );
    return 1;
 }
 
@@ -1266,8 +1372,7 @@ int javaObjectEquals( lua_State * L )
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    objA = ( jobject * ) lua_touserdata( L , 1 );
@@ -1299,8 +1404,7 @@ int javaStringConcat( lua_State * L )
 
    if ( !isJavaObject( L, 1 ) && !isJavaObject( L, 2 ) )
    {
-      lua_pushstring( L , "In the concat operation, at least one java object is required." );
-      lua_error( L );
+      throwLuaError( L , "In the concat operation, at least one java object is required.");
    }
 
    /* Gets the luaState index */
@@ -1308,8 +1412,7 @@ int javaStringConcat( lua_State * L )
    lua_rawget( L , LUA_REGISTRYINDEX );
    if ( !lua_isnumber( L , -1 ) )
    {
-      lua_pushstring( L , "Impossible to identify luaState id." );
-      lua_error( L );
+      throwLuaError( L , "Impossible to identify luaState id.");
    }
    stateIndex = lua_tonumber( L , -1 );
    lua_pop( L , 1 );
@@ -1318,17 +1421,14 @@ int javaStringConcat( lua_State * L )
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
-   method = ( *javaEnv )->GetStaticMethodID( javaEnv , luajava_api_class , 
-      "objectConcat" , "(I)I" );
+   method = ( *javaEnv )->GetStaticMethodID( javaEnv , luajava_api_class , "objectConcat" , "(I)I" );
    
    if ( method == NULL )
    {
-      lua_pushstring( L , "Invalid method org.keplerproject.luajava.LuaJavaAPI.objectConcat." );
-      lua_error( L );
+      throwLuaError( L , "Invalid method org.keplerproject.luajava.LuaJavaAPI.objectConcat.");
    }
 
    ret = ( *javaEnv )->CallStaticIntMethod( javaEnv , luajava_api_class ,
@@ -1388,8 +1488,7 @@ int gc( lua_State * L )
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    ( *javaEnv )->DeleteGlobalRef( javaEnv , *pObj );
@@ -1424,15 +1523,13 @@ int javaBindClass( lua_State * L )
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    /* get the string parameter */
    if ( !lua_isstring( L , 1 ) )
    {
-      lua_pushstring( L , "Invalid parameter type. String expected." );
-      lua_error( L );
+      throwLuaError( L , "Invalid parameter type. String expected.");
    }
    className = lua_tostring( L , 1 );
 
@@ -1501,8 +1598,7 @@ int createProxy( lua_State * L )
 
   if ( lua_gettop( L ) != 2 )
   {
-    lua_pushstring( L , "Error. Function createProxy expects 2 arguments." );
-    lua_error( L );
+    throwLuaError( L , "Error. Function createProxy expects 2 arguments.");
   }
 
   /* Gets the luaState index */
@@ -1511,8 +1607,7 @@ int createProxy( lua_State * L )
 
    if ( !lua_isnumber( L , -1 ) )
    {
-      lua_pushstring( L , "Impossible to identify luaState id." );
-      lua_error( L );
+      throwLuaError( L , "Impossible to identify luaState id.");
    }
 
    stateIndex = lua_tonumber( L , -1 );
@@ -1520,16 +1615,14 @@ int createProxy( lua_State * L )
 
    if ( !lua_isstring( L , 1 ) || !lua_istable( L , 2 ) )
    {
-      lua_pushstring( L , "Invalid Argument types. Expected (string, table)." );
-      lua_error( L );
+      throwLuaError( L , "Invalid Argument types. Expected (string, table).");
    }
 
    /* Gets the JNI Environment */
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    method = ( *javaEnv )->GetStaticMethodID( javaEnv , luajava_api_class , "createProxyObject" ,
@@ -1600,8 +1693,7 @@ int javaNew( lua_State * L )
 
    if ( top == 0 )
    {
-      lua_pushstring( L , "Error. Invalid number of parameters." );
-      lua_error( L );
+      throwLuaError( L , "Error. Invalid number of parameters.");
    }
 
    /* Gets the luaState index */
@@ -1610,8 +1702,7 @@ int javaNew( lua_State * L )
 
    if ( !lua_isnumber( L , -1 ) )
    {
-      lua_pushstring( L , "Impossible to identify luaState id." );
-      lua_error( L );
+      throwLuaError( L , "Impossible to identify luaState id.");
    }
 
    stateIndex = lua_tonumber( L , -1 );
@@ -1620,16 +1711,14 @@ int javaNew( lua_State * L )
    /* Gets the java Class reference */
    if ( !isJavaObject( L , 1 ) )
    {
-      lua_pushstring( L , "Argument not a valid Java Class." );
-      lua_error( L );
+      throwLuaError( L , "Argument not a valid Java Class.");
    }
 
    /* Gets the JNI Environment */
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    clazz = ( *javaEnv )->FindClass( javaEnv , "java/lang/Class" );
@@ -1640,8 +1729,7 @@ int javaNew( lua_State * L )
 
    if ( ( *javaEnv )->IsInstanceOf( javaEnv , classInstance , clazz ) == JNI_FALSE )
    {
-      lua_pushstring( L , "Argument not a valid Java Class." );
-      lua_error( L );
+      throwLuaError( L , "Argument not a valid Java Class.");
    }
 
    method = ( *javaEnv )->GetStaticMethodID( javaEnv , luajava_api_class , "javaNew" , 
@@ -1649,8 +1737,7 @@ int javaNew( lua_State * L )
 
    if ( clazz == NULL || method == NULL )
    {
-      lua_pushstring( L , "Invalid method org.keplerproject.luajava.LuaJavaAPI.javaNew." );
-      lua_error( L );
+      throwLuaError( L , "Invalid method org.keplerproject.luajava.LuaJavaAPI.javaNew.");
    }
 
    ret = ( *javaEnv )->CallStaticIntMethod( javaEnv , clazz , method , (jint)stateIndex , classInstance );
@@ -1710,8 +1797,7 @@ int javaNewInstance( lua_State * L )
 
    if ( !lua_isnumber( L , -1 ) )
    {
-      lua_pushstring( L , "Impossible to identify luaState id." );
-      lua_error( L );
+      throwLuaError( L , "Impossible to identify luaState id.");
    }
 
    stateIndex = lua_tonumber( L , -1 );
@@ -1720,8 +1806,7 @@ int javaNewInstance( lua_State * L )
    /* get the string parameter */
    if ( !lua_isstring( L , 1 ) )
    {
-      lua_pushstring( L , "Invalid parameter type. String expected as first parameter." );
-      lua_error( L );
+      throwLuaError( L , "Invalid parameter type. String expected as first parameter.");
    }
 
    className = lua_tostring( L , 1 );
@@ -1730,8 +1815,7 @@ int javaNewInstance( lua_State * L )
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    method = ( *javaEnv )->GetStaticMethodID( javaEnv , luajava_api_class , "javaNewInstance" ,
@@ -1801,8 +1885,7 @@ int javaLoadLib( lua_State * L )
 
    if ( top != 2 )
    {
-      lua_pushstring( L , "Error. Invalid number of parameters." );
-      lua_error( L );
+      throwLuaError( L , "Error. Invalid number of parameters.");
    }
 
    /* Gets the luaState index */
@@ -1811,8 +1894,7 @@ int javaLoadLib( lua_State * L )
 
    if ( !lua_isnumber( L , -1 ) )
    {
-      lua_pushstring( L , "Impossible to identify luaState id." );
-      lua_error( L );
+      throwLuaError( L , "Impossible to identify luaState id.");
    }
 
    stateIndex = lua_tonumber( L , -1 );
@@ -1821,8 +1903,7 @@ int javaLoadLib( lua_State * L )
 
    if ( !lua_isstring( L , 1 ) || !lua_isstring( L , 2 ) )
    {
-      lua_pushstring( L , "Invalid parameter. Strings expected." );
-      lua_error( L );
+      throwLuaError( L , "Invalid parameter. Strings expected.");
    }
 
    className  = lua_tostring( L , 1 );
@@ -1832,8 +1913,7 @@ int javaLoadLib( lua_State * L )
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    method = ( *javaEnv )->GetStaticMethodID( javaEnv , luajava_api_class , "javaLoadLib" ,
@@ -1899,8 +1979,7 @@ int pushJavaClass( lua_State * L , jobject javaObject )
    JNIEnv * javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    globalRef = ( *javaEnv )->NewGlobalRef( javaEnv , javaObject );
@@ -1944,8 +2023,7 @@ int pushJavaClass( lua_State * L , jobject javaObject )
    if ( lua_setmetatable( L , -2 ) == 0 )
    {
 		( *javaEnv )->DeleteGlobalRef( javaEnv , globalRef );
-      lua_pushstring( L , "Cannot create proxy to java class." );
-      lua_error( L );
+      throwLuaError( L , "Cannot create proxy to java class.");
    }
 
    return 1;
@@ -1965,8 +2043,7 @@ int pushJavaObject( lua_State * L , jobject javaObject )
    JNIEnv * javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    globalRef = ( *javaEnv )->NewGlobalRef( javaEnv , javaObject );
@@ -1997,6 +2074,11 @@ int pushJavaObject( lua_State * L , jobject javaObject )
    lua_pushcfunction( L , &javaStringConcat );
    lua_rawset( L , -3 );
 
+   /* pushes the __len metamethod */
+   lua_pushstring( L , LUA_LEN_METAMETHOD_TAG );
+   lua_pushcfunction( L , &objectContainerSize );
+   lua_rawset( L , -3 );
+
    /* pushes the __gc metamethod */
    lua_pushstring( L , LUAGCMETAMETHODTAG );
    lua_pushcfunction( L , &gc );
@@ -2010,8 +2092,7 @@ int pushJavaObject( lua_State * L , jobject javaObject )
    if ( lua_setmetatable( L , -2 ) == 0 )
    {
 		( *javaEnv )->DeleteGlobalRef( javaEnv , globalRef );
-      lua_pushstring( L , "Cannot create proxy to java object." );
-      lua_error( L );
+      throwLuaError( L , "Cannot create proxy to java object.");
    }
 
    return 1;
@@ -2031,8 +2112,7 @@ int pushJavaArray( lua_State * L , jobject javaObject )
    JNIEnv * javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    globalRef = ( *javaEnv )->NewGlobalRef( javaEnv , javaObject );
@@ -2081,8 +2161,7 @@ int pushJavaArray( lua_State * L , jobject javaObject )
    if ( lua_setmetatable( L , -2 ) == 0 )
    {
 		( *javaEnv )->DeleteGlobalRef( javaEnv , globalRef );
-      lua_pushstring( L , "Cannot create proxy to java object." );
-      lua_error( L );
+      throwLuaError( L , "Cannot create proxy to java object.");
    }
 
    return 1;
@@ -2150,8 +2229,7 @@ int luaJavaFunctionCall( lua_State * L )
    
    if ( !isJavaObject( L , 1 ) )
    {
-      lua_pushstring( L , "Not a java Function." );
-      lua_error( L );
+      throwLuaError( L , "Not a java Function.");
    }
 
    obj = lua_touserdata( L , 1 );
@@ -2160,8 +2238,7 @@ int luaJavaFunctionCall( lua_State * L )
    javaEnv = getEnvFromState( L );
    if ( javaEnv == NULL )
    {
-      lua_pushstring( L , "Invalid JNI Environment." );
-      lua_error( L );
+      throwLuaError( L , "Invalid JNI Environment.");
    }
 
    /* the Object must be an instance of the JavaFunction class */
