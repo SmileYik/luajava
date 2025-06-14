@@ -41,6 +41,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef LUA_RIDX_GLOBALS
+#define LUAJAVA_LUA_RIDX_GLOBALS LUA_RIDX_GLOBALS
+#else
+#define LUAJAVA_LUA_RIDX_GLOBALS LUA_GLOBALSINDEX
+#endif
 
 /*
 ** Assumes the table is on top of the stack.
@@ -89,7 +94,7 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1luaRegistryInde
  */
 JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1luaGlobalsIndex(
     JNIEnv *env, jclass clazz) {
-  return (jint) LUA_GLOBALSINDEX;
+  return (jint) LUAJAVA_LUA_RIDX_GLOBALS;
 }
 
 /************************************************************************
