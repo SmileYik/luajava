@@ -208,9 +208,7 @@ public final class LuaJavaAPI {
                 return 1;
             }
 
-            res = checkMethod(luaState, clazz, searchName);
-
-            if (res != 0) {
+            if (checkMethod(luaState, clazz, searchName)) {
                 return 2;
             }
 
@@ -418,14 +416,13 @@ public final class LuaJavaAPI {
      * @param luaState   int that represents the state to be used
      * @param obj        object to be inspected
      * @param methodName name of the field to be inpected
-     * @return number of returned objects
+     * @return return 1 then means has method named target name
      */
-    private static int checkMethod(int luaState, Object obj, String methodName) {
-        if (obj == null) return 0;
+    public static boolean checkMethod(int luaState, Object obj, String methodName) {
+        if (obj == null) return false;
         Class<?> clazz = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
         boolean isStatic = clazz == obj;
-        boolean result = existsMethodByName(clazz, methodName, false, false, isStatic);
-        return result ? 1 : 0;
+        return existsMethodByName(clazz, methodName, false, false, isStatic);
     }
 
     /**

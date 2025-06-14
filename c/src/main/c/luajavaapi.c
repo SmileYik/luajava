@@ -3,12 +3,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static jclass throwable_class = NULL;
-static jmethodID get_message_method = NULL;
-static jclass java_function_class = NULL;
-static jmethodID java_function_method = NULL;
-static jclass luajava_api_class = NULL;
-static jclass java_lang_class = NULL;
+static jclass    throwable_class         = NULL;
+static jmethodID get_message_method      = NULL;
+static jclass    java_function_class     = NULL;
+static jmethodID java_function_method    = NULL;
+static jclass    java_lang_class         = NULL;
+
+static jclass    luajava_api_class       = NULL;
+static jmethodID luajava_api_method_checkField  = NULL;
+static jmethodID luajava_api_method_checkMethod = NULL;
+
 
 /********************* Implementations ***************************/
 
@@ -29,6 +33,24 @@ void setupLuaJavaApi(JNIEnv *env) {
 
     if ((luajava_api_class = (*env)->NewGlobalRef(env, tempClass)) == NULL) {
       fprintf(stderr, "Could not bind to LuaJavaAPI class\n");
+      exit(1);
+    }
+  }
+
+  if (luajava_api_method_checkField == NULL) {
+    luajava_api_method_checkField = (*env)->GetStaticMethodID(env, luajava_api_class, 
+                            "checkField", "(ILjava/lang/Object;Ljava/lang/String;)I");
+    if (!luajava_api_method_checkField) {
+      fprintf(stderr, "Could not find <checkField> method in LuaJavaApi\n");
+      exit(1);
+    }
+  }
+
+  if (luajava_api_method_checkMethod == NULL) {
+    luajava_api_method_checkMethod = (*env)->GetStaticMethodID(env, luajava_api_class, 
+                            "checkMethod", "(ILjava/lang/Object;Ljava/lang/String;)Z");
+    if (!luajava_api_method_checkMethod) {
+      fprintf(stderr, "Could not find <checkMethod> method in LuaJavaApi\n");
       exit(1);
     }
   }
@@ -160,8 +182,8 @@ void throwLuaError(lua_State *L, const char *msg) {
 int objectIndex(lua_State *L) {
   lua_Number stateIndex;
   const char *key;
-  jmethodID method;
   jint checkField;
+  jboolean checkMethodRet;
   jobject *obj;
   jstring str;
   jthrowable exp;
@@ -186,14 +208,10 @@ int objectIndex(lua_State *L) {
 
   obj = (jobject *)lua_touserdata(L, 1);
 
-  method =
-      (*javaEnv)->GetStaticMethodID(javaEnv, luajava_api_class, "checkField",
-                                    "(ILjava/lang/Object;Ljava/lang/String;)I");
-
   str = (*javaEnv)->NewStringUTF(javaEnv, key);
 
   checkField = (*javaEnv)->CallStaticIntMethod(
-      javaEnv, luajava_api_class, method, (jint)stateIndex, *obj, str);
+      javaEnv, luajava_api_class, luajava_api_method_checkField, (jint)stateIndex, *obj, str);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
 
@@ -227,10 +245,47 @@ int objectIndex(lua_State *L) {
     lua_error(L);
   }
 
-  (*javaEnv)->DeleteLocalRef(javaEnv, str);
-
   if (checkField != 0) {
+    (*javaEnv)->DeleteLocalRef(javaEnv, str);
     return checkField;
+  }
+
+  checkMethodRet = (*javaEnv)->CallStaticIntMethod(
+      javaEnv, luajava_api_class, luajava_api_method_checkMethod, (jint)stateIndex, *obj, str);
+  exp = (*javaEnv)->ExceptionOccurred(javaEnv);
+  /* Handles exception */
+  if (exp != NULL) {
+    jobject jstr;
+    const char *cStr;
+
+    (*javaEnv)->ExceptionClear(javaEnv);
+    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
+
+    (*javaEnv)->DeleteLocalRef(javaEnv, str);
+
+    if (jstr == NULL) {
+      jmethodID methodId;
+
+      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
+                                         "()Ljava/lang/String;");
+      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
+    }
+
+    cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
+
+    char errorStack[1 << 10] = "";
+    sprintf(errorStack, "%s", cStr);
+    generateLuaStateStack(L, errorStack);
+    lua_pushstring(L, errorStack);
+
+    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, cStr);
+
+    lua_error(L);
+  }
+
+  (*javaEnv)->DeleteLocalRef(javaEnv, str);
+  if (!checkMethodRet) {
+    return 0;
   }
 
   lua_getmetatable(L, 1);

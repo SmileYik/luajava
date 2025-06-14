@@ -5,28 +5,28 @@
 #include <lua.h>
 
 /* Constant that is used to index the JNI Environment */
-#define LUAJAVAJNIENVTAG "__JNIEnv"
+#define LUAJAVAJNIENVTAG          "__JNIEnv"
 /* Defines whether the metatable is of a java Object */
-#define LUAJAVAOBJECTIND "__IsJavaObject"
+#define LUAJAVAOBJECTIND          "__IsJavaObject"
 /* Defines the lua State Index Property Name */
-#define LUAJAVASTATEINDEX "LuaJavaStateIndex"
+#define LUAJAVASTATEINDEX         "LuaJavaStateIndex"
 /* Index metamethod name */
-#define LUAINDEXMETAMETHODTAG "__index"
+#define LUAINDEXMETAMETHODTAG     "__index"
 /* New index metamethod name */
-#define LUANEWINDEXMETAMETHODTAG "__newindex"
+#define LUANEWINDEXMETAMETHODTAG  "__newindex"
 /* Garbage collector metamethod name */
-#define LUAGCMETAMETHODTAG "__gc"
+#define LUAGCMETAMETHODTAG        "__gc"
 /* __len */
-#define LUA_LEN_METAMETHOD_TAG "__len"
+#define LUA_LEN_METAMETHOD_TAG    "__len"
 /* __eq */
-#define LUA_EQ_METAMETHOD_TAG "__eq"
+#define LUA_EQ_METAMETHOD_TAG     "__eq"
 /* __concat */
 #define LUA_CONCAT_METAMETHOD_TAG "__concat"
 /* Call metamethod name */
-#define LUACALLMETAMETHODTAG "__call"
+#define LUACALLMETAMETHODTAG      "__call"
 /* Constant that defines where in the metatable should I place the function name
  */
-#define LUAJAVAOBJFUNCCALLED "__FunctionCalled"
+#define LUAJAVAOBJFUNCCALLED      "__FunctionCalled"
 
 /***************************************************************************
  *
