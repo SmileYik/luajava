@@ -18,6 +18,7 @@ public class LuajavaTest {
     public void luaObjectGcTest() throws InterruptedException {
         String lua = "map = {b = 2}";
         LuaStateFacade facade = LuaStateFactory.newLuaState();
+        System.out.println(LuaState.LUA_VERSION);
         facade.lock(L -> {
             L.openLibs();
             int exp = L.LdoString(lua);

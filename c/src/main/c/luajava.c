@@ -62,6 +62,36 @@ static void set_info(lua_State *L) {
 
 /**************************** JNI FUNCTIONS ****************************/
 
+/*
+ * Class:     org_keplerproject_luajava_LuaState
+ * Method:    _luaVersion
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_org_keplerproject_luajava_LuaState__1luaVersion(
+    JNIEnv *env, jclass clazz) {
+  return (*env)->NewStringUTF(env, LUA_VERSION);
+}
+
+/*
+ * Class:     org_keplerproject_luajava_LuaState
+ * Method:    _luaRegistryIndex
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1luaRegistryIndex(
+    JNIEnv *env, jclass clazz) {
+  return (jint) LUA_REGISTRYINDEX;
+}
+
+/*
+ * Class:     org_keplerproject_luajava_LuaState
+ * Method:    _luaGlobalsIndex
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1luaGlobalsIndex(
+    JNIEnv *env, jclass clazz) {
+  return (jint) LUA_GLOBALSINDEX;
+}
+
 /************************************************************************
  *   JNI Called function
  *      LuaJava API Function

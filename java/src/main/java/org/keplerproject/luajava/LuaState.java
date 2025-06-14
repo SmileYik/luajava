@@ -36,8 +36,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author Thiago Ponte
  */
 public class LuaState {
-    final public static int LUA_GLOBALSINDEX = -10002;
-    final public static int LUA_REGISTRYINDEX = -10000;
+    final public static String LUA_VERSION = _luaVersion();
+
+    final public static int LUA_GLOBALSINDEX = _luaGlobalsIndex();
+    final public static int LUA_REGISTRYINDEX = _luaRegistryIndex();
     final public static int LUA_TNONE = -1;
     final public static int LUA_TNIL = 0;
     final public static int LUA_TBOOLEAN = 1;
@@ -160,6 +162,10 @@ public class LuaState {
     }
 
     /********************* Lua Native Interface *************************/
+
+    private static native String _luaVersion();
+    private static native int _luaRegistryIndex();
+    private static native int _luaGlobalsIndex();
 
     private native CPtr _open();
 
