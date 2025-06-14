@@ -69,6 +69,7 @@ static void set_info(lua_State *L) {
 
 JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState_luajava_1open(
     JNIEnv *env, jobject jobj, jobject cptr, jint stateId) {
+  
   lua_State *L;
 
   L = getStateFromCPtr(env, cptr);
@@ -106,7 +107,6 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState_luajava_1open(
   lua_settable(L, -3);
 
   lua_pop(L, 1);
-  setupLuaJavaApi(env);
   pushJNIEnv(env, L);
 }
 
@@ -251,18 +251,7 @@ Java_org_keplerproject_luajava_LuaState__1isJavaFunction(JNIEnv *env,
 JNIEXPORT jobject JNICALL
 Java_org_keplerproject_luajava_LuaState__1open(JNIEnv *env, jobject jobj) {
   lua_State *L = lua_open();
-
-  jobject obj;
-  jclass tempClass;
-
-  tempClass = (*env)->FindClass(env, "org/keplerproject/luajava/CPtr");
-
-  obj = (*env)->AllocObject(env, tempClass);
-  if (obj) {
-    (*env)->SetLongField(
-        env, obj, (*env)->GetFieldID(env, tempClass, "peer", "J"), (jlong)L);
-  }
-  return obj;
+  return newCPtr(env, (jlong)L);
 }
 
 /************************************************************************
@@ -417,21 +406,10 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1close(
 JNIEXPORT jobject JNICALL Java_org_keplerproject_luajava_LuaState__1newthread(
     JNIEnv *env, jobject jobj, jobject cptr) {
   lua_State *L = getStateFromCPtr(env, cptr);
-  lua_State *newThread;
-
-  jobject obj;
-  jclass tempClass;
-
-  newThread = lua_newthread(L);
-
-  tempClass = (*env)->FindClass(env, "org/keplerproject/luajava/CPtr");
-  obj = (*env)->AllocObject(env, tempClass);
-  if (obj) {
-    (*env)->SetLongField(
-        env, obj, (*env)->GetFieldID(env, tempClass, "peer", "J"), (jlong)L);
-  }
-
-  return obj;
+  lua_State *newThread  = lua_newthread(L);
+  // origin returns L's pointer. 
+  // may return newThread's 
+  return newCPtr(env, (jlong)newThread);
 }
 
 /************************************************************************
@@ -795,22 +773,9 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1objlen(
 JNIEXPORT jobject JNICALL Java_org_keplerproject_luajava_LuaState__1toThread(
     JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
   lua_State *L, *thr;
-
-  jobject obj;
-  jclass tempClass;
-
   L = getStateFromCPtr(env, cptr);
-
   thr = lua_tothread(L, (int)idx);
-
-  tempClass = (*env)->FindClass(env, "org/keplerproject/luajava/CPtr");
-
-  obj = (*env)->AllocObject(env, tempClass);
-  if (obj) {
-    (*env)->SetLongField(
-        env, obj, (*env)->GetFieldID(env, tempClass, "peer", "J"), (jlong)thr);
-  }
-  return obj;
+  return newCPtr(env, (jlong)thr);
 }
 
 /************************************************************************

@@ -46,7 +46,7 @@
   BIND_JAVA_METHOD(ENV, GetMethodID, TARGET_METHOD_VAR, CLASS, METHOD_NAME, METHOD_SIGN)
 
 /**
- * @brief bind java static method to target variable.
+ * @brief bind java method to target variable.
  * @arg ENV               - JNIEnv.
  * @arg FIND_METHOD       - JNIEnv method
  * @arg TARGET_METHOD_VAR - store result to target variable.
@@ -58,8 +58,39 @@
   if (TARGET_METHOD_VAR == NULL) { \
     TARGET_METHOD_VAR = (*ENV)->FIND_METHOD(ENV, CLASS, METHOD_NAME, METHOD_SIGN); \
     if (!TARGET_METHOD_VAR) { \
-      fprintf(stderr, "Could mpt find static method \"" \
+      fprintf(stderr, "Could not find method \"" \
                        METHOD_NAME "( " METHOD_SIGN " )\"" \
+                       " in class: "#CLASS ".\n"); \
+      exit(1); \
+    } \
+  }
+
+/**
+ * @brief bind java field to target variable.
+ * @arg ENV               - JNIEnv.
+ * @arg TARGET_FIELD_VAR  - store result to target variable.
+ * @arg CLASS             - java class instance
+ * @arg FIELD_NAME        - field name
+ * @arg FIELD_TYPE        - field type like "J"
+ */
+#define BIND_JAVA_NORMAL_FIELD( ENV, TARGET_FIELD_VAR, CLASS, FIELD_NAME, FIELD_TYPE ) \
+  BIND_JAVA_FIELD( ENV, GetFieldID, TARGET_FIELD_VAR, CLASS, FIELD_NAME, FIELD_TYPE )
+
+/**
+ * @brief bind java field to target variable.
+ * @arg ENV               - JNIEnv.
+ * @arg FIND_METHOD       - JNIEnv method
+ * @arg TARGET_FIELD_VAR  - store result to target variable.
+ * @arg CLASS             - java class instance
+ * @arg FIELD_NAME        - field name
+ * @arg FIELD_TYPE        - field type like "J"
+ */
+#define BIND_JAVA_FIELD( ENV, FIND_METHOD, TARGET_FIELD_VAR, CLASS, FIELD_NAME, FIELD_TYPE ) \
+  if (TARGET_FIELD_VAR == NULL) { \
+    TARGET_FIELD_VAR = (*ENV)->FIND_METHOD(ENV, CLASS, FIELD_NAME, FIELD_TYPE); \
+    if (!TARGET_FIELD_VAR) { \
+      fprintf(stderr, "Could not find field \"" \
+                       FIELD_NAME "( " FIELD_TYPE " )\"" \
                        " in class: "#CLASS ".\n"); \
       exit(1); \
     } \
@@ -111,7 +142,10 @@ static jclass    luajava_api_class       = NULL;
 static jmethodID luajava_api_static_method_checkField  = NULL;
 static jmethodID luajava_api_static_method_checkMethod = NULL;
 
+static jclass    cptr_class = NULL;
+static jfieldID  cptr_field_peer = NULL;
 
+static unsigned char setup_luajava_api_result = 0;
 /********************* Implementations ***************************/
 
 /***************************************************************************
@@ -120,6 +154,8 @@ static jmethodID luajava_api_static_method_checkMethod = NULL;
  *  ****/
 
 void setupLuaJavaApi(JNIEnv *env) {
+  setup_luajava_api_result = 1;
+
   jclass tempClass;
   
   BIND_JAVA_CLASS(tempClass, env, java_object_class, "java/lang/Object");
@@ -141,6 +177,24 @@ void setupLuaJavaApi(JNIEnv *env) {
                           "getMessage", "()Ljava/lang/String;");
 
   BIND_JAVA_CLASS(tempClass, env, java_lang_class, "java/lang/Class");
+
+  BIND_JAVA_CLASS(tempClass, env, cptr_class, "org/keplerproject/luajava/CPtr");
+  BIND_JAVA_NORMAL_FIELD(env, cptr_field_peer, cptr_class, "peer", "J");
+}
+
+/***************************************************************************
+ *
+ *  Function: newCPtr
+ *  ****/
+
+jobject newCPtr(JNIEnv *env, jlong peer)
+{
+  if (!setup_luajava_api_result) setupLuaJavaApi(env);
+  jobject obj = (*env)->AllocObject(env, cptr_class);
+  if (obj) {
+    (*env)->SetLongField(env, obj, cptr_field_peer, peer);
+  }
+  return obj;
 }
 
 /***************************************************************************
@@ -1252,15 +1306,9 @@ jboolean isJavaFunctionInstance(JNIEnv *env, jobject *obj) {
 
 lua_State *getStateFromCPtr(JNIEnv *env, jobject cptr) {
   lua_State *L;
-
-  jclass classPtr = (*env)->GetObjectClass(env, cptr);
-  jfieldID CPtr_peer_ID = (*env)->GetFieldID(env, classPtr, "peer", "J");
-  jbyte *peer = (jbyte *)(*env)->GetLongField(env, cptr, CPtr_peer_ID);
-
+  jbyte *peer = (jbyte *)(*env)->GetLongField(env, cptr, cptr_field_peer);
   L = (lua_State *)peer;
-
   pushJNIEnv(env, L);
-
   return L;
 }
 

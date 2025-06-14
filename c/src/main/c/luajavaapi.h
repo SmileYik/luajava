@@ -39,11 +39,29 @@
  *    None
  *
  * $FV Returned Value
- *    None
+ *    unsigned char as result
  *
  *$. **********************************************************************/
 
 void setupLuaJavaApi(JNIEnv *env);
+
+/***************************************************************************
+ *
+ * $FC Function newCPtr
+ *
+ * $ED Description
+ *    new CPtr instance.
+ *
+ * $EP Function Parameters
+ *    $P env     - JNIEnv
+ *    $P peer    - pointer
+ *
+ * $FV Returned Value
+ *    jobject.
+ *
+ *$. **********************************************************************/
+
+jobject newCPtr(JNIEnv *env, jlong peer);
 
 /***************************************************************************
  *
