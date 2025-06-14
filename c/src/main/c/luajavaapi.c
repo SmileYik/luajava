@@ -3,6 +3,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* Handles exception */
+#define HANDLES_JAVA_EXCEPTION( L, exp, javaEnv, CLEANCODE ) \
+  if ( exp != NULL ) { \
+    jobject jStr; \
+    const char *cStr; \
+    \
+    (*javaEnv)->ExceptionClear(javaEnv); \
+    jStr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method); \
+    \
+    CLEANCODE \
+    \
+    if (jStr == NULL) { \
+      jmethodID methodId; \
+      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString", \
+                                         "()Ljava/lang/String;"); \
+      jStr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId); \
+    } \
+    \
+    cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jStr, NULL); \
+    \
+    char errorStack[1 << 10] = ""; \
+    sprintf(errorStack, "%s", cStr); \
+    generateLuaStateStack(L, errorStack); \
+    lua_pushstring(L, errorStack); \
+    \
+    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jStr, cStr); \
+    lua_error(L); \
+  }
+
 static jclass    throwable_class         = NULL;
 static jmethodID get_message_method      = NULL;
 static jclass    java_function_class     = NULL;
@@ -214,36 +243,9 @@ int objectIndex(lua_State *L) {
       javaEnv, luajava_api_class, luajava_api_method_checkField, (jint)stateIndex, *obj, str);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *cStr;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
     (*javaEnv)->DeleteLocalRef(javaEnv, str);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", cStr);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, cStr);
-
-    lua_error(L);
-  }
+  });
 
   if (checkField != 0) {
     (*javaEnv)->DeleteLocalRef(javaEnv, str);
@@ -253,35 +255,9 @@ int objectIndex(lua_State *L) {
   checkMethodRet = (*javaEnv)->CallStaticIntMethod(
       javaEnv, luajava_api_class, luajava_api_method_checkMethod, (jint)stateIndex, *obj, str);
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *cStr;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
     (*javaEnv)->DeleteLocalRef(javaEnv, str);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", cStr);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, cStr);
-
-    lua_error(L);
-  }
+  });
 
   (*javaEnv)->DeleteLocalRef(javaEnv, str);
   if (!checkMethodRet) {
@@ -362,36 +338,9 @@ int objectIndexReturn(lua_State *L) {
                                         (jint)stateIndex, *pObject, str);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *cStr;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
     (*javaEnv)->DeleteLocalRef(javaEnv, str);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", cStr);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, cStr);
-
-    lua_error(L);
-  }
+  });
 
   (*javaEnv)->DeleteLocalRef(javaEnv, str);
 
@@ -447,36 +396,9 @@ int objectNewIndex(lua_State *L) {
                                         (jint)stateIndex, *obj, str);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *cStr;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
     (*javaEnv)->DeleteLocalRef(javaEnv, str);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", cStr);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, cStr);
-
-    lua_error(L);
-  }
+  });
 
   (*javaEnv)->DeleteLocalRef(javaEnv, str);
 
@@ -532,36 +454,9 @@ int classIndex(lua_State *L) {
                                         (jint)stateIndex, *obj, str);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *cStr;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
     (*javaEnv)->DeleteLocalRef(javaEnv, str);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", cStr);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, cStr);
-
-    lua_error(L);
-  }
+  });
 
   (*javaEnv)->DeleteLocalRef(javaEnv, str);
 
@@ -634,34 +529,7 @@ int arrayIndex(lua_State *L) {
                                         (jint)stateIndex, *obj, (jlong)key);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *cStr;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", cStr);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, cStr);
-
-    lua_error(L);
-  }
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {});
 
   return ret;
 }
@@ -710,34 +578,7 @@ int arrayNewIndex(lua_State *L) {
                                         (jint)stateIndex, *obj, (jint)key);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *cStr;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", cStr);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, cStr);
-
-    lua_error(L);
-  }
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {});
 
   return ret;
 }
@@ -812,33 +653,8 @@ int objectContainerSize(lua_State *L) {
   }
   ret = (*javaEnv)->CallIntMethod(javaEnv, *obj, method);
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *str;
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {});
 
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    str = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", str);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, str);
-
-    lua_error(L);
-  }
   lua_pushinteger(L, ret);
   return 1;
 }
@@ -912,34 +728,8 @@ int javaStringConcat(lua_State *L) {
   ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, method,
                                         (jint)stateIndex);
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *str;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    str = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", str);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, str);
-
-    lua_error(L);
-  }
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {});
+  
   return ret;
 }
 
@@ -1013,36 +803,9 @@ int javaBindClass(lua_State *L) {
                                                      method, javaClassName);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *cStr;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
     (*javaEnv)->DeleteLocalRef(javaEnv, javaClassName);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", cStr);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, cStr);
-
-    lua_error(L);
-  }
+  });
 
   (*javaEnv)->DeleteLocalRef(javaEnv, javaClassName);
 
@@ -1092,36 +855,9 @@ int createProxy(lua_State *L) {
                                         (jint)stateIndex, str);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *cStr;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
     (*javaEnv)->DeleteLocalRef(javaEnv, str);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", cStr);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, cStr);
-
-    lua_error(L);
-  }
+  });
 
   (*javaEnv)->DeleteLocalRef(javaEnv, str);
 
@@ -1185,34 +921,8 @@ int javaNew(lua_State *L) {
                                         (jint)stateIndex, classInstance);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {});
 
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *str;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    str = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", str);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, str);
-
-    lua_error(L);
-  }
   return ret;
 }
 
@@ -1254,38 +964,10 @@ int javaNewInstance(lua_State *L) {
   ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, method,
                                         (jint)stateIndex, javaClassName);
 
-  exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *str;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
+  exp = (*javaEnv)->ExceptionOccurred(javaEnv);  
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
     (*javaEnv)->DeleteLocalRef(javaEnv, javaClassName);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    str = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", str);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, str);
-
-    lua_error(L);
-  }
-
+  });
   (*javaEnv)->DeleteLocalRef(javaEnv, javaClassName);
 
   return ret;
@@ -1339,37 +1021,10 @@ int javaLoadLib(lua_State *L) {
                                         javaMethodName);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *str;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
     (*javaEnv)->DeleteLocalRef(javaEnv, javaClassName);
     (*javaEnv)->DeleteLocalRef(javaEnv, javaMethodName);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    str = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", str);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, str);
-
-    lua_error(L);
-  }
+  });
 
   (*javaEnv)->DeleteLocalRef(javaEnv, javaClassName);
   (*javaEnv)->DeleteLocalRef(javaEnv, javaMethodName);
@@ -1651,34 +1306,8 @@ int luaJavaFunctionCall(lua_State *L) {
   ret = (*javaEnv)->CallIntMethod(javaEnv, *obj, java_function_method);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
-
-  /* Handles exception */
-  if (exp != NULL) {
-    jobject jstr;
-    const char *str;
-
-    (*javaEnv)->ExceptionClear(javaEnv);
-    jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method);
-
-    if (jstr == NULL) {
-      jmethodID methodId;
-
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString",
-                                         "()Ljava/lang/String;");
-      jstr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId);
-    }
-
-    str = (*javaEnv)->GetStringUTFChars(javaEnv, jstr, NULL);
-
-    char errorStack[1 << 10] = "";
-    sprintf(errorStack, "%s", str);
-    generateLuaStateStack(L, errorStack);
-    lua_pushstring(L, errorStack);
-
-    (*javaEnv)->ReleaseStringUTFChars(javaEnv, jstr, str);
-
-    lua_error(L);
-  }
+  HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {});
+  
   return ret;
 }
 
