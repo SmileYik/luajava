@@ -3,7 +3,75 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Handles exception */
+/**
+ * @brief bind java class to target variable.
+ * @arg TEMP_CLASS_VAR   - A temp variable.
+ * @arg ENV              - JNIEnv.
+ * @arg TARGET_CLASS_VAR - store result to target variable.
+ * @arg CLASS_NAME       - class name, like "java/lang/String"
+ */
+#define BIND_JAVA_CLASS( TEMP_CLASS_VAR, ENV, TARGET_CLASS_VAR, CLASS_NAME ) \
+  if (TARGET_CLASS_VAR == NULL) { \
+    TEMP_CLASS_VAR = (*ENV)->FindClass(ENV, CLASS_NAME); \
+    if (TEMP_CLASS_VAR == NULL) { \
+      fprintf(stderr, "Could not find class: " CLASS_NAME "!\n"); \
+      exit(1); \
+    } \
+    if ((TARGET_CLASS_VAR = (*ENV)->NewGlobalRef(ENV, TEMP_CLASS_VAR)) == NULL) { \
+      fprintf(stderr, "Could not bind to class: " CLASS_NAME "!\n"); \
+      exit(1); \
+    } \
+  }
+
+/**
+ * @brief bind java static method to target variable.
+ * @arg ENV               - JNIEnv.
+ * @arg TARGET_METHOD_VAR - store result to target variable.
+ * @arg CLASS             - java class instance
+ * @arg METHOD_NAME       - method name
+ * @arg METHOD_SIGN       - like "()I"
+ */
+#define BIND_JAVA_STATIC_METHOD( ENV, TARGET_METHOD_VAR, CLASS, METHOD_NAME, METHOD_SIGN ) \
+  BIND_JAVA_METHOD(ENV, GetStaticMethodID, TARGET_METHOD_VAR, CLASS, METHOD_NAME, METHOD_SIGN)
+
+/**
+ * @brief bind java normal method to target variable.
+ * @arg ENV               - JNIEnv.
+ * @arg TARGET_METHOD_VAR - store result to target variable.
+ * @arg CLASS             - java class instance
+ * @arg METHOD_NAME       - method name
+ * @arg METHOD_SIGN       - like "()I"
+ */
+#define BIND_JAVA_NORMAL_METHOD( ENV, TARGET_METHOD_VAR, CLASS, METHOD_NAME, METHOD_SIGN ) \
+  BIND_JAVA_METHOD(ENV, GetMethodID, TARGET_METHOD_VAR, CLASS, METHOD_NAME, METHOD_SIGN)
+
+/**
+ * @brief bind java static method to target variable.
+ * @arg ENV               - JNIEnv.
+ * @arg FIND_METHOD       - JNIEnv method
+ * @arg TARGET_METHOD_VAR - store result to target variable.
+ * @arg CLASS             - java class instance
+ * @arg METHOD_NAME       - method name
+ * @arg METHOD_SIGN       - like "()I"
+ */
+#define BIND_JAVA_METHOD( ENV, FIND_METHOD, TARGET_METHOD_VAR, CLASS, METHOD_NAME, METHOD_SIGN ) \
+  if (TARGET_METHOD_VAR == NULL) { \
+    TARGET_METHOD_VAR = (*ENV)->FIND_METHOD(ENV, CLASS, METHOD_NAME, METHOD_SIGN); \
+    if (!TARGET_METHOD_VAR) { \
+      fprintf(stderr, "Could mpt find static method \"" \
+                       METHOD_NAME "( " METHOD_SIGN " )\"" \
+                       " in class: "#CLASS ".\n"); \
+      exit(1); \
+    } \
+  }
+
+/**
+ * @brief Handles exception
+ * @arg L         - luaState*
+ * @arg exp       - exception instance
+ * @arg javaEnv   - JNIEnv
+ * @arg CLEANCODE - Other code.
+ */
 #define HANDLES_JAVA_EXCEPTION( L, exp, javaEnv, CLEANCODE ) \
   if ( exp != NULL ) { \
     jobject jStr; \
@@ -15,10 +83,7 @@
     CLEANCODE \
     \
     if (jStr == NULL) { \
-      jmethodID methodId; \
-      methodId = (*javaEnv)->GetMethodID(javaEnv, throwable_class, "toString", \
-                                         "()Ljava/lang/String;"); \
-      jStr = (*javaEnv)->CallObjectMethod(javaEnv, exp, methodId); \
+      jStr = (*javaEnv)->CallObjectMethod(javaEnv, exp, java_object_method_toString); \
     } \
     \
     cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jStr, NULL); \
@@ -32,15 +97,19 @@
     lua_error(L); \
   }
 
+static jclass    java_object_class           = NULL;
+static jmethodID java_object_method_toString = NULL;
+
 static jclass    throwable_class         = NULL;
 static jmethodID get_message_method      = NULL;
+
 static jclass    java_function_class     = NULL;
 static jmethodID java_function_method    = NULL;
 static jclass    java_lang_class         = NULL;
 
 static jclass    luajava_api_class       = NULL;
-static jmethodID luajava_api_method_checkField  = NULL;
-static jmethodID luajava_api_method_checkMethod = NULL;
+static jmethodID luajava_api_static_method_checkField  = NULL;
+static jmethodID luajava_api_static_method_checkMethod = NULL;
 
 
 /********************* Implementations ***************************/
@@ -52,104 +121,26 @@ static jmethodID luajava_api_method_checkMethod = NULL;
 
 void setupLuaJavaApi(JNIEnv *env) {
   jclass tempClass;
-  if (luajava_api_class == NULL) {
-    tempClass = (*env)->FindClass(env, "org/keplerproject/luajava/LuaJavaAPI");
+  
+  BIND_JAVA_CLASS(tempClass, env, java_object_class, "java/lang/Object");
+  BIND_JAVA_NORMAL_METHOD(env, java_object_method_toString, java_object_class, 
+                          "toString", "()Ljava/lang/String;");
 
-    if (tempClass == NULL) {
-      fprintf(stderr, "Could not find LuaJavaAPI class\n");
-      exit(1);
-    }
+  BIND_JAVA_CLASS(tempClass, env, luajava_api_class, "org/keplerproject/luajava/LuaJavaAPI");
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_checkField, luajava_api_class, 
+                          "checkField", "(ILjava/lang/Object;Ljava/lang/String;)I");
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_checkMethod, luajava_api_class, 
+                          "checkMethod", "(ILjava/lang/Object;Ljava/lang/String;)Z");
 
-    if ((luajava_api_class = (*env)->NewGlobalRef(env, tempClass)) == NULL) {
-      fprintf(stderr, "Could not bind to LuaJavaAPI class\n");
-      exit(1);
-    }
-  }
+  BIND_JAVA_CLASS(tempClass, env, java_function_class, "org/keplerproject/luajava/JavaFunction");
+  BIND_JAVA_NORMAL_METHOD(env, java_function_method, java_function_class, 
+                          "execute", "()I");
 
-  if (luajava_api_method_checkField == NULL) {
-    luajava_api_method_checkField = (*env)->GetStaticMethodID(env, luajava_api_class, 
-                            "checkField", "(ILjava/lang/Object;Ljava/lang/String;)I");
-    if (!luajava_api_method_checkField) {
-      fprintf(stderr, "Could not find <checkField> method in LuaJavaApi\n");
-      exit(1);
-    }
-  }
+  BIND_JAVA_CLASS(tempClass, env, throwable_class, "java/lang/Throwable");
+  BIND_JAVA_NORMAL_METHOD(env, get_message_method, throwable_class, 
+                          "getMessage", "()Ljava/lang/String;");
 
-  if (luajava_api_method_checkMethod == NULL) {
-    luajava_api_method_checkMethod = (*env)->GetStaticMethodID(env, luajava_api_class, 
-                            "checkMethod", "(ILjava/lang/Object;Ljava/lang/String;)Z");
-    if (!luajava_api_method_checkMethod) {
-      fprintf(stderr, "Could not find <checkMethod> method in LuaJavaApi\n");
-      exit(1);
-    }
-  }
-
-  if (java_function_class == NULL) {
-    tempClass =
-        (*env)->FindClass(env, "org/keplerproject/luajava/JavaFunction");
-
-    if (tempClass == NULL) {
-      fprintf(stderr, "Could not find JavaFunction interface\n");
-      exit(1);
-    }
-
-    if ((java_function_class = (*env)->NewGlobalRef(env, tempClass)) == NULL) {
-      fprintf(stderr, "Could not bind to JavaFunction interface\n");
-      exit(1);
-    }
-  }
-
-  if (java_function_method == NULL) {
-    java_function_method =
-        (*env)->GetMethodID(env, java_function_class, "execute", "()I");
-    if (!java_function_method) {
-      fprintf(stderr, "Could not find <execute> method in JavaFunction\n");
-      exit(1);
-    }
-  }
-
-  if (throwable_class == NULL) {
-    tempClass = (*env)->FindClass(env, "java/lang/Throwable");
-
-    if (tempClass == NULL) {
-      fprintf(stderr, "Error. Couldn't bind java class java.lang.Throwable\n");
-      exit(1);
-    }
-
-    throwable_class = (*env)->NewGlobalRef(env, tempClass);
-
-    if (throwable_class == NULL) {
-      fprintf(stderr, "Error. Couldn't bind java class java.lang.Throwable\n");
-      exit(1);
-    }
-  }
-
-  if (get_message_method == NULL) {
-    get_message_method = (*env)->GetMethodID(env, throwable_class, "getMessage",
-                                             "()Ljava/lang/String;");
-
-    if (get_message_method == NULL) {
-      fprintf(stderr,
-              "Could not find <getMessage> method in java.lang.Throwable\n");
-      exit(1);
-    }
-  }
-
-  if (java_lang_class == NULL) {
-    tempClass = (*env)->FindClass(env, "java/lang/Class");
-
-    if (tempClass == NULL) {
-      fprintf(stderr, "Error. Coundn't bind java class java.lang.Class\n");
-      exit(1);
-    }
-
-    java_lang_class = (*env)->NewGlobalRef(env, tempClass);
-
-    if (java_lang_class == NULL) {
-      fprintf(stderr, "Error. Couldn't bind java class java.lang.Throwable\n");
-      exit(1);
-    }
-  }
+  BIND_JAVA_CLASS(tempClass, env, java_lang_class, "java/lang/Class");
 }
 
 /***************************************************************************
@@ -182,7 +173,7 @@ void generateLuaStateStack(lua_State *L, char *stack_str) {
   int level = 0;
   while (lua_getstack(L, level++, &ar)) {
     lua_getinfo(L, "nSl", &ar);
-    sprintf(stack_str, "%s\n\t[Stack %d] [%s] %s: %s (%s#%d)", stack_str,
+    sprintf(stack_str, "%s\n\tat [LuaVM] [%d] [%s] %s: %s (%s:%d)", stack_str,
             level - 1, ar.what ? ar.what : "(unknown what)",
             ar.namewhat ? ar.namewhat : "(unknown namewhat)",
             ar.name ? ar.name : "(unknown name)",
@@ -240,7 +231,7 @@ int objectIndex(lua_State *L) {
   str = (*javaEnv)->NewStringUTF(javaEnv, key);
 
   checkField = (*javaEnv)->CallStaticIntMethod(
-      javaEnv, luajava_api_class, luajava_api_method_checkField, (jint)stateIndex, *obj, str);
+      javaEnv, luajava_api_class, luajava_api_static_method_checkField, (jint)stateIndex, *obj, str);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
   HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
@@ -252,8 +243,8 @@ int objectIndex(lua_State *L) {
     return checkField;
   }
 
-  checkMethodRet = (*javaEnv)->CallStaticIntMethod(
-      javaEnv, luajava_api_class, luajava_api_method_checkMethod, (jint)stateIndex, *obj, str);
+  checkMethodRet = (*javaEnv)->CallStaticBooleanMethod(
+      javaEnv, luajava_api_class, luajava_api_static_method_checkMethod, (jint)stateIndex, *obj, str);
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
   HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
     (*javaEnv)->DeleteLocalRef(javaEnv, str);
@@ -1307,7 +1298,7 @@ int luaJavaFunctionCall(lua_State *L) {
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
   HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {});
-  
+
   return ret;
 }
 
