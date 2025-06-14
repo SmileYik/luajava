@@ -82,24 +82,6 @@ inline lua_Number getLuaStateIndex(lua_State *L);
 
 /***************************************************************************
  *
- * $FC Function throwLuaError
- *
- * $ED Description
- *    Throw error with stack.
- *
- * $EP Function Parameters
- *    $P L - lua State
- *    $P msg - error message
- *
- * $FV Returned Value
- *    None
- *
- *$. **********************************************************************/
-
-inline void throwLuaError(lua_State *L, const char *msg);
-
-/***************************************************************************
- *
  * $FC Function objectIndex
  *
  * $ED Description

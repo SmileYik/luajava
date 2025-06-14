@@ -86,6 +86,7 @@ public class LuaJavaApiTest {
         facade.openLibs();
         facade.setGlobal("a", A.class).justThrow();
         facade.evalFile("test/findMethodTest.lua").justThrow();
+        facade.evalString("print(a:a(1))").justThrow();
         facade.close();
     }
 
