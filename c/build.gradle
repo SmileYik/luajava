@@ -51,8 +51,7 @@ model {
                     }
                     source {
                         srcDir "src/main/c"
-                        include "**/luajavaapi.c"
-                        include "**/luajava.c"
+                        include "**/*.c"
                     }
                 }
             }

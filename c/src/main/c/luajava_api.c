@@ -1,4 +1,4 @@
-#include "luajavaapi.h"
+#include "luajava_api.h"
 #include "lauxlib.h"
 #include <stdio.h>
 #include <stdlib.h>

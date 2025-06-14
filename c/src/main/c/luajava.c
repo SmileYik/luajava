@@ -36,7 +36,7 @@
 #include "luajava.h"
 #include "lauxlib.h"
 #include "lua.h"
-#include "luajavaapi.h"
+#include "luajava_api.h"
 #include "lualib.h"
 #include <stdio.h>
 #include <stdlib.h>
