@@ -439,13 +439,11 @@ public final class LuaJavaAPI {
 
         luaStateFacade.lockThrow(L -> {
             try {
-                if (!(L.isTable(2)))
-                    throw new LuaException(
-                            "Parameter is not a table. Can't create proxy.");
-
-                LuaObject luaObj = luaStateFacade.getLuaObject(2).getOrThrow();
-
-                Object proxy = luaObj.createProxy(implem);
+                if (!(L.isTable(2))) {
+                    throw new LuaException("Parameter is not a table. Can't create proxy.");
+                }
+                LuaObject luaObj = luaStateFacade.getLuaObject(2).getOrThrow(LuaException.class);
+                Object proxy = luaObj.createProxy(implem).getOrThrow(LuaException.class);
                 L.pushJavaObject(proxy);
             } catch (Exception e) {
                 throw new LuaException(e);

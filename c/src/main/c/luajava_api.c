@@ -4,6 +4,10 @@
 #include "luajava_api.h"
 #include "lauxlib.h"
 
+
+/**
+ * Generate lua stack.
+ */
 #define GENERATE_LUA_STATE_STACK( L, RESULT, MSG, ... ) \
   lua_Debug ar; \
   int level = 0; \
@@ -17,6 +21,9 @@
             ar.source ? ar.source : "(unknown source)", ar.currentline); \
   }
 
+/**
+ * Throw lua error.
+ */
 #define THROW_LUA_ERROR( L, MSG, ... ) \
   char errorStack[1 << 10] = ""; \
   GENERATE_LUA_STATE_STACK(L, errorStack, MSG, ##__VA_ARGS__); \
@@ -157,10 +164,20 @@ static jmethodID get_message_method      = NULL;
 static jclass    java_function_class     = NULL;
 static jmethodID java_function_method    = NULL;
 static jclass    java_lang_class         = NULL;
+static jmethodID java_lang_class_static_method_forName   = NULL;
 
 static jclass    luajava_api_class       = NULL;
-static jmethodID luajava_api_static_method_checkField  = NULL;
-static jmethodID luajava_api_static_method_checkMethod = NULL;
+static jmethodID luajava_api_static_method_checkField       = NULL;
+static jmethodID luajava_api_static_method_checkMethod      = NULL;
+static jmethodID luajava_api_static_method_objectIndex      = NULL;
+static jmethodID luajava_api_static_method_classIndex       = NULL;
+static jmethodID luajava_api_static_method_arrayIndex       = NULL;
+static jmethodID luajava_api_static_method_arrayNewIndex    = NULL;
+static jmethodID luajava_api_static_method_objectConcat     = NULL;
+static jmethodID luajava_api_static_method_objectNewIndex   = NULL;
+static jmethodID luajava_api_static_method_javaNew          = NULL;
+static jmethodID luajava_api_static_method_javaNewInstance  = NULL;
+static jmethodID luajava_api_static_method_javaLoadLib      = NULL;
 
 static jclass    cptr_class = NULL;
 static jfieldID  cptr_field_peer = NULL;
@@ -187,6 +204,24 @@ void setupLuaJavaApi(JNIEnv *env) {
                           "checkField", "(ILjava/lang/Object;Ljava/lang/String;)I");
   BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_checkMethod, luajava_api_class, 
                           "checkMethod", "(ILjava/lang/Object;Ljava/lang/String;)Z");
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_objectIndex, luajava_api_class, 
+                          "objectIndex", "(ILjava/lang/Object;Ljava/lang/String;)I");
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_classIndex, luajava_api_class, 
+                          "classIndex", "(ILjava/lang/Class;Ljava/lang/String;)I");
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_arrayIndex, luajava_api_class, 
+                          "arrayIndex", "(ILjava/lang/Object;I)I");
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_arrayNewIndex, luajava_api_class, 
+                          "arrayNewIndex", "(ILjava/lang/Object;I)I");
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_objectConcat, luajava_api_class, 
+                          "objectConcat", "(I)I");
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_objectNewIndex, luajava_api_class, 
+                          "objectNewIndex", "(ILjava/lang/Object;Ljava/lang/String;)I");
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_javaNew, luajava_api_class, 
+                          "javaNew", "(ILjava/lang/Class;)I");                
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_javaNewInstance, luajava_api_class, 
+                          "javaNewInstance", "(ILjava/lang/String;)I");     
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_javaLoadLib, luajava_api_class, 
+                          "javaLoadLib", "(ILjava/lang/String;Ljava/lang/String;)I");   
 
   BIND_JAVA_CLASS(tempClass, env, java_function_class, "org/keplerproject/luajava/JavaFunction");
   BIND_JAVA_NORMAL_METHOD(env, java_function_method, java_function_class, 
@@ -197,6 +232,8 @@ void setupLuaJavaApi(JNIEnv *env) {
                           "getMessage", "()Ljava/lang/String;");
 
   BIND_JAVA_CLASS(tempClass, env, java_lang_class, "java/lang/Class");
+  BIND_JAVA_STATIC_METHOD(env, java_lang_class_static_method_forName, java_lang_class, 
+                          "forName", "(Ljava/lang/String;)Ljava/lang/Class;");
 
   BIND_JAVA_CLASS(tempClass, env, cptr_class, "org/keplerproject/luajava/CPtr");
   BIND_JAVA_NORMAL_FIELD(env, cptr_field_peer, cptr_class, "peer", "J");
@@ -222,7 +259,7 @@ jobject newCPtr(JNIEnv *env, jlong peer)
  *  Function: getLuaStateIndex
  *  ****/
 
-static lua_Number getLuaStateIndex(lua_State *L) {
+lua_Number getLuaStateIndex(lua_State *L) {
   lua_Number stateIndex;
   /* Gets the luaState index */
   lua_pushstring(L, LUAJAVASTATEINDEX);
@@ -247,7 +284,7 @@ void generateLuaStateStack(lua_State *L, char *stack_str) {
   int level = 0;
   while (lua_getstack(L, level++, &ar)) {
     lua_getinfo(L, "nSl", &ar);
-    snprintf(stack_str, sizeof(stack_str), "%s\n\tat [LuaVM] [%d] [%s] %s: %s (%s:%d)", stack_str,
+    snprintf(stack_str, 0, "%s\n\tat [LuaVM] [%d] [%s] %s: %s (%s:%d)", stack_str,
             level - 1, ar.what ? ar.what : "(unknown what)",
             ar.namewhat ? ar.namewhat : "(unknown namewhat)",
             ar.name ? ar.name : "(unknown name)",
@@ -341,7 +378,6 @@ int objectIndex(lua_State *L) {
 int objectIndexReturn(lua_State *L) {
   lua_Number stateIndex;
   jobject *pObject;
-  jmethodID method;
   jthrowable exp;
   const char *methodName;
   jint ret;
@@ -382,13 +418,9 @@ int objectIndexReturn(lua_State *L) {
   }
 
   /* Gets method */
-  method =
-      (*javaEnv)->GetStaticMethodID(javaEnv, luajava_api_class, "objectIndex",
-                                    "(ILjava/lang/Object;Ljava/lang/String;)I");
-
   str = (*javaEnv)->NewStringUTF(javaEnv, methodName);
 
-  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, method,
+  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, luajava_api_static_method_objectIndex,
                                         (jint)stateIndex, *pObject, str);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
@@ -410,7 +442,6 @@ int objectIndexReturn(lua_State *L) {
 int objectNewIndex(lua_State *L) {
   lua_Number stateIndex;
   jobject *obj;
-  jmethodID method;
   const char *fieldName;
   jstring str;
   jint ret;
@@ -440,13 +471,9 @@ int objectNewIndex(lua_State *L) {
      THROW_LUA_ERROR(L, "Invalid JNI Environment.");
   }
 
-  method = (*javaEnv)->GetStaticMethodID(
-      javaEnv, luajava_api_class, "objectNewIndex",
-      "(ILjava/lang/Object;Ljava/lang/String;)I");
-
   str = (*javaEnv)->NewStringUTF(javaEnv, fieldName);
 
-  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, method,
+  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, luajava_api_static_method_objectNewIndex,
                                         (jint)stateIndex, *obj, str);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
@@ -467,7 +494,6 @@ int objectNewIndex(lua_State *L) {
 int classIndex(lua_State *L) {
   lua_Number stateIndex;
   jobject *obj;
-  jmethodID method;
   const char *fieldName;
   jstring str;
   jint ret;
@@ -497,14 +523,10 @@ int classIndex(lua_State *L) {
      THROW_LUA_ERROR(L, "Invalid JNI Environment.");
   }
 
-  method =
-      (*javaEnv)->GetStaticMethodID(javaEnv, luajava_api_class, "classIndex",
-                                    "(ILjava/lang/Class;Ljava/lang/String;)I");
-
   str = (*javaEnv)->NewStringUTF(javaEnv, fieldName);
 
   /* Return 1 for field, 2 for method or 0 for error */
-  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, method,
+  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, luajava_api_static_method_classIndex,
                                         (jint)stateIndex, *obj, str);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
@@ -542,7 +564,6 @@ int classIndex(lua_State *L) {
 int arrayIndex(lua_State *L) {
   lua_Number stateIndex;
   lua_Integer key;
-  jmethodID method;
   jint ret;
   jobject *obj;
   jthrowable exp;
@@ -576,10 +597,7 @@ int arrayIndex(lua_State *L) {
 
   obj = (jobject *)lua_touserdata(L, 1);
 
-  method = (*javaEnv)->GetStaticMethodID(
-      javaEnv, luajava_api_class, "arrayIndex", "(ILjava/lang/Object;I)I");
-
-  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, method,
+  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, luajava_api_static_method_arrayIndex,
                                         (jint)stateIndex, *obj, (jlong)key);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
@@ -596,7 +614,6 @@ int arrayIndex(lua_State *L) {
 int arrayNewIndex(lua_State *L) {
   lua_Number stateIndex;
   jobject *obj;
-  jmethodID method;
   lua_Integer key;
   jint ret;
   jthrowable exp;
@@ -625,10 +642,7 @@ int arrayNewIndex(lua_State *L) {
      THROW_LUA_ERROR(L, "Invalid JNI Environment.");
   }
 
-  method = (*javaEnv)->GetStaticMethodID(
-      javaEnv, luajava_api_class, "arrayNewIndex", "(ILjava/lang/Object;I)I");
-
-  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, method,
+  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, luajava_api_static_method_arrayNewIndex,
                                         (jint)stateIndex, *obj, (jint)key);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
@@ -752,7 +766,6 @@ int javaObjectEquals(lua_State *L) {
  *  ****/
 
 int javaStringConcat(lua_State *L) {
-  jmethodID method;
   JNIEnv *javaEnv;
   lua_Number stateIndex;
   jthrowable exp;
@@ -771,16 +784,8 @@ int javaStringConcat(lua_State *L) {
      THROW_LUA_ERROR(L, "Invalid JNI Environment.");
   }
 
-  method = (*javaEnv)->GetStaticMethodID(javaEnv, luajava_api_class,
-                                         "objectConcat", "(I)I");
-
-  if (method == NULL) {
-     THROW_LUA_ERROR(
-        L, "Invalid method org.keplerproject.luajava.LuaJavaAPI.objectConcat.");
-  }
-
-  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, method,
-                                        (jint)stateIndex);
+  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, 
+                                        luajava_api_static_method_objectConcat, (jint)stateIndex);
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
   HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {});
   
@@ -820,7 +825,6 @@ int gc(lua_State *L) {
 
 int javaBindClass(lua_State *L) {
   int top;
-  jmethodID method;
   const char *className;
   jstring javaClassName;
   jobject classInstance;
@@ -847,14 +851,10 @@ int javaBindClass(lua_State *L) {
   }
   className = lua_tostring(L, 1);
 
-  method =
-      (*javaEnv)->GetStaticMethodID(javaEnv, java_lang_class, "forName",
-                                    "(Ljava/lang/String;)Ljava/lang/Class;");
-
   javaClassName = (*javaEnv)->NewStringUTF(javaEnv, className);
 
   classInstance = (*javaEnv)->CallStaticObjectMethod(javaEnv, java_lang_class,
-                                                     method, javaClassName);
+                                                     java_lang_class_static_method_forName, javaClassName);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
   HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
@@ -926,8 +926,6 @@ int createProxy(lua_State *L) {
 int javaNew(lua_State *L) {
   int top;
   jint ret;
-  jclass clazz;
-  jmethodID method;
   jobject classInstance;
   jthrowable exp;
   jobject *userData;
@@ -953,25 +951,15 @@ int javaNew(lua_State *L) {
      THROW_LUA_ERROR(L, "Invalid JNI Environment.");
   }
 
-  clazz = (*javaEnv)->FindClass(javaEnv, "java/lang/Class");
-
   userData = (jobject *)lua_touserdata(L, 1);
 
   classInstance = (jobject)*userData;
 
-  if ((*javaEnv)->IsInstanceOf(javaEnv, classInstance, clazz) == JNI_FALSE) {
+  if ((*javaEnv)->IsInstanceOf(javaEnv, classInstance, java_lang_class) == JNI_FALSE) {
      THROW_LUA_ERROR(L, "Argument not a valid Java Class.");
   }
 
-  method = (*javaEnv)->GetStaticMethodID(javaEnv, luajava_api_class, "javaNew",
-                                         "(ILjava/lang/Class;)I");
-
-  if (clazz == NULL || method == NULL) {
-     THROW_LUA_ERROR(
-        L, "Invalid method org.keplerproject.luajava.LuaJavaAPI.javaNew.");
-  }
-
-  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, clazz, method,
+  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, luajava_api_static_method_javaNew,
                                         (jint)stateIndex, classInstance);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
@@ -987,7 +975,6 @@ int javaNew(lua_State *L) {
 
 int javaNewInstance(lua_State *L) {
   jint ret;
-  jmethodID method;
   const char *className;
   jstring javaClassName;
   jthrowable exp;
@@ -1010,12 +997,9 @@ int javaNewInstance(lua_State *L) {
      THROW_LUA_ERROR(L, "Invalid JNI Environment.");
   }
 
-  method = (*javaEnv)->GetStaticMethodID(
-      javaEnv, luajava_api_class, "javaNewInstance", "(ILjava/lang/String;)I");
-
   javaClassName = (*javaEnv)->NewStringUTF(javaEnv, className);
 
-  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, method,
+  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, luajava_api_static_method_javaNewInstance,
                                         (jint)stateIndex, javaClassName);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);  
@@ -1037,7 +1021,6 @@ int javaLoadLib(lua_State *L) {
   int top;
   const char *className, *methodName;
   lua_Number stateIndex;
-  jmethodID method;
   jthrowable exp;
   jstring javaClassName, javaMethodName;
   JNIEnv *javaEnv;
@@ -1063,16 +1046,11 @@ int javaLoadLib(lua_State *L) {
      THROW_LUA_ERROR(L, "Invalid JNI Environment.");
   }
 
-  method =
-      (*javaEnv)->GetStaticMethodID(javaEnv, luajava_api_class, "javaLoadLib",
-                                    "(ILjava/lang/String;Ljava/lang/String;)I");
-
   javaClassName = (*javaEnv)->NewStringUTF(javaEnv, className);
   javaMethodName = (*javaEnv)->NewStringUTF(javaEnv, methodName);
 
-  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, method,
-                                        (jint)stateIndex, javaClassName,
-                                        javaMethodName);
+  ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, luajava_api_static_method_javaLoadLib,
+                                        (jint)stateIndex, javaClassName, javaMethodName);
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
   HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
