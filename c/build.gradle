@@ -42,6 +42,7 @@ model {
                 c {
                     lib library: 'luajit', linkage: 'static'
                     exportedHeaders {
+                        srcDir "src/main/c"
                         srcDir layout.buildDirectory.dir('headers')
                         srcDir "${System.properties['java.home']}/include"
                         srcDir "${System.properties['java.home']}/include/linux"
@@ -50,7 +51,8 @@ model {
                     }
                     source {
                         srcDir "src/main/c"
-                        include "**/*.c"
+                        include "**/luajavaapi.c"
+                        include "**/luajava.c"
                     }
                 }
             }
