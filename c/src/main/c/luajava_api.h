@@ -28,6 +28,15 @@
  */
 #define LUAJAVAOBJFUNCCALLED      "__FunctionCalled"
 
+/* if not define get meta table method, then use lua_getmetatable */
+#ifndef LUAJAVA_GET_METATABLE
+#define LUAJAVA_GET_METATABLE( L , OBJ_IDX ) lua_getmetatable(L, OBJ_IDX)
+#endif
+/* if not define set meta table method, then use lua_setmetatable */
+#ifndef LUAJAVA_SET_METATABLE
+#define LUAJAVA_SET_METATABLE( L , OBJ_IDX ) lua_setmetatable(L, OBJ_IDX)
+#endif
+
 /***************************************************************************
  *
  * $FC Function setupLuaJavaApi
@@ -561,5 +570,42 @@ JNIEnv *getEnvFromState(lua_State *L);
  *$. **********************************************************************/
 
 void generateLuaStateStack(lua_State *L, char *stack_str);
+
+/***************************************************************************
+ *
+ * $FC luajavaSetObjectFunctionCalled
+ *
+ * $ED Description
+ *    set java method name to userdata object (java object).
+ *
+ * $EP Function Parameters
+ *    $P L - lua State
+ *    $P objIdx - target object index in stack
+ *    $P methodName - java method name.
+ *
+ * $FV Returned Value
+ *    void
+ *
+ *$. **********************************************************************/
+
+inline void luajavaSetObjectFunctionCalled(lua_State *L, int objIdx, const char *methodName);
+
+/***************************************************************************
+ *
+ * $FC luajavaGetObjectFunctionCalled
+ *
+ * $ED Description
+ *    set java method name to userdata object (java object).
+ *
+ * $EP Function Parameters
+ *    $P L - lua State
+ *    $P objIdx - target object index in stack
+ *
+ * $FV Returned Value
+ *    void
+ *
+ *$. **********************************************************************/
+
+inline const char* luajavaGetObjectFunctionCalled(lua_State *L, int objIdx);
 
 #endif // LUAJAVA_LUAJAVA_API_H

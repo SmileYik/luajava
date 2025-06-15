@@ -353,20 +353,9 @@ int objectIndex(lua_State *L) {
     return 0;
   }
 
-  lua_getmetatable(L, 1);
-
-  if (!lua_istable(L, -1)) {
-     THROW_LUA_ERROR(L, "Invalid MetaTable.");
-  }
-
-  lua_pushstring(L, LUAJAVAOBJFUNCCALLED);
-  lua_pushstring(L, key);
-  lua_rawset(L, -3);
-
-  lua_pop(L, 1);
+  luajavaSetObjectFunctionCalled(L, 1, key);
 
   lua_pushcfunction(L, &objectIndexReturn);
-
   return 1;
 }
 
@@ -392,21 +381,7 @@ int objectIndexReturn(lua_State *L) {
      "If you want call a java method, use 'objet:method()' not 'object.method()'");
   }
 
-  lua_getmetatable(L, 1);
-  if (lua_type(L, -1) == LUA_TNIL) {
-     THROW_LUA_ERROR(L, "Not a valid java Object.");
-  }
-
-  /* Gets the method Name */
-  lua_pushstring(L, LUAJAVAOBJFUNCCALLED);
-  lua_rawget(L, -2);
-  if (lua_type(L, -1) == LUA_TNIL) {
-     THROW_LUA_ERROR(L, "Not a OO function call."
-     "If you want call a java method, use 'objet:method()' not 'object.method()'");
-  }
-  methodName = lua_tostring(L, -1);
-
-  lua_pop(L, 2);
+  methodName = luajavaGetObjectFunctionCalled(L, 1);
 
   /* Gets the object reference */
   pObject = (jobject *)lua_touserdata(L, 1);
@@ -541,15 +516,9 @@ int classIndex(lua_State *L) {
   }
 
   if (ret == 2) {
-    lua_getmetatable(L, 1);
-    lua_pushstring(L, LUAJAVAOBJFUNCCALLED);
-    lua_pushstring(L, fieldName);
-    lua_rawset(L, -3);
-
-    lua_pop(L, 1);
+    luajavaSetObjectFunctionCalled(L, 1, fieldName);
 
     lua_pushcfunction(L, &objectIndexReturn);
-
     return 1;
   }
 
@@ -1393,4 +1362,52 @@ void pushJNIEnv(JNIEnv *env, lua_State *L) {
     lua_insert(L, -2);
     lua_rawset(L, LUA_REGISTRYINDEX);
   }
+}
+
+/***************************************************************************
+ *
+ *  Function: luajavaSetObjectFunctionCalled
+ *  ****/
+
+void luajavaSetObjectFunctionCalled(lua_State *L, int objIdx, const char *methodName) {
+  LUAJAVA_GET_METATABLE(L, objIdx);
+
+  if (!lua_istable(L, -1)) {
+     lua_pop(L, 1);
+     lua_newtable(L);
+     lua_pushstring(L, LUAJAVAOBJFUNCCALLED);
+     lua_pushstring(L, methodName);
+     lua_rawset(L, -3);
+     LUAJAVA_SET_METATABLE(L, objIdx);
+  } else {
+    lua_pushstring(L, LUAJAVAOBJFUNCCALLED);
+    lua_pushstring(L, methodName);
+    lua_rawset(L, -3);
+    lua_pop(L, 1);
+  }
+}
+
+/***************************************************************************
+ *
+ *  Function: luajavaGetObjectFunctionCalled
+ *  ****/
+
+const char* luajavaGetObjectFunctionCalled(lua_State *L, int objIdx) {
+  const char* methodName;
+
+  LUAJAVA_GET_METATABLE(L, objIdx);
+  if (!lua_istable(L, -1)) {
+     THROW_LUA_ERROR(L, "Not a valid java Object.");
+  }
+
+  /* Gets the method Name */
+  lua_pushstring(L, LUAJAVAOBJFUNCCALLED);
+  lua_rawget(L, -2);
+  if (lua_type(L, -1) == LUA_TNIL) {
+     THROW_LUA_ERROR(L, "Not a OO function call."
+     "If you want call a java method, use 'objet:method()' not 'object.method()'");
+  }
+  methodName = lua_tostring(L, -1);
+  lua_pop(L, 2);
+  return methodName;
 }

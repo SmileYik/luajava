@@ -7,6 +7,8 @@
 #define LUAJAVA_LUA_RIDX_GLOBALS LUA_GLOBALSINDEX
 #endif
 
+#define LUAJAVA_GET_METATABLE( L , OBJ_IDX ) lua_getuservalue(L, OBJ_IDX)
+#define LUAJAVA_SET_METATABLE( L , OBJ_IDX ) lua_setuservalue(L, OBJ_IDX)
 
 // lua 5.2 remove lua_open()
 #define lua_open()                      luaL_newstate()
