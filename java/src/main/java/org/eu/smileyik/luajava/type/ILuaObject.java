@@ -5,6 +5,8 @@ import org.keplerproject.luajava.LuaStateFacade;
 public interface ILuaObject {
     LuaStateFacade getLuaState();
 
+    boolean isClosed();
+
     public void push();
 
     public int type();

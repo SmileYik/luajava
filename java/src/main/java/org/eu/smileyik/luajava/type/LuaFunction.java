@@ -23,37 +23,7 @@ public class LuaFunction extends LuaObject implements ILuaCallable {
     }
 
     @Override
-    public boolean isFunction() {
-        return true;
-    }
-
-    @Override
     public int type() {
         return LuaType.FUNCTION;
-    }
-
-    @Override
-    public boolean isString() {
-        return false;
-    }
-
-    @Override
-    public boolean isNumber() {
-        return false;
-    }
-
-    @Override
-    public boolean isBoolean() {
-        return false;
-    }
-
-    @Override
-    public boolean isTable() {
-        return false;
-    }
-
-    @Override
-    public boolean isUserdata() {
-        return false;
     }
 }

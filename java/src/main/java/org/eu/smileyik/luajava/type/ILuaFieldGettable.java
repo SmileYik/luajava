@@ -10,6 +10,7 @@ public interface ILuaFieldGettable extends ILuaObject {
      * a field value.
      */
     public default Result<LuaObject, ? extends LuaException> getField(String field) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
         return getLuaState().getLuaObject((LuaObject) this, field);
     }
 }

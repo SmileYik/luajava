@@ -227,6 +227,7 @@ public class LuaArray extends LuaTable {
      * @throws Exception any exception
      */
     public <T> Result<Void, ? extends Exception> forEachValue(Class<T> tClass, Consumer<T> consumer) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
         return luaState.lockThrowAll(l -> {
             int top = l.getTop();
             try {
@@ -257,6 +258,7 @@ public class LuaArray extends LuaTable {
      */
     @Override
     public <K, V> Result<Void, ? extends Exception> forEach(Class<K> kClass, Class<V> vClass, BiConsumer<K, V> consumer) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
         return luaState.lockThrowAll(l -> {
             int top = l.getTop();
             try {
@@ -296,6 +298,7 @@ public class LuaArray extends LuaTable {
      * @return result
      */
     public Result<Object, ? extends LuaException> doAt(int idx) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
         if (idx < 0 || idx >= len) {
             return Result.failure(new LuaException("out of bounds: idx=" + idx + ", len=" + len));
         }
@@ -329,6 +332,7 @@ public class LuaArray extends LuaTable {
      * @return result
      */
     public Result<Void, ? extends LuaException> rawSet(int idx, Object obj) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
         if (idx < 0 || idx >= len) {
             return Result.failure(new LuaException("out of bounds: idx=" + idx + ", len=" + len));
         } else if (obj instanceof LuaObject && !Objects.equals(luaState, ((LuaObject) obj).getLuaState())) {

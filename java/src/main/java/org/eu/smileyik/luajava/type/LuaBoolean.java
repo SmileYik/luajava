@@ -17,11 +17,6 @@ public class LuaBoolean extends LuaObject {
     }
 
     @Override
-    public boolean isBoolean() {
-        return true;
-    }
-
-    @Override
     public int type() {
         return LuaType.BOOLEAN;
     }
@@ -29,30 +24,5 @@ public class LuaBoolean extends LuaObject {
     @Override
     public String toString() {
         return Boolean.toString(getBoolean());
-    }
-
-    @Override
-    public boolean isFunction() {
-        return false;
-    }
-
-    @Override
-    public boolean isString() {
-        return false;
-    }
-
-    @Override
-    public boolean isNumber() {
-        return false;
-    }
-
-    @Override
-    public boolean isTable() {
-        return false;
-    }
-
-    @Override
-    public boolean isUserdata() {
-        return false;
     }
 }

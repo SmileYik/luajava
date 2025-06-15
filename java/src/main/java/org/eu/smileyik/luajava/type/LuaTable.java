@@ -157,6 +157,7 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
      */
     public <K, V> Result<Void, ? extends Exception> forEach(Class<K> kClass,
                                                             Class<V> vClass, BiConsumer<K, V> consumer) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
         return luaState.lockThrowAll(l ->  {
             int top = l.getTop();
             try {
@@ -205,6 +206,7 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
      * @return result.
      */
     public Result<Object, ? extends LuaException> doGet(Object key) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
         LuaState inner = luaState.getLuaState();
         int top = inner.getTop();
         try {

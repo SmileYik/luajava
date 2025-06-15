@@ -25,10 +25,7 @@
 package org.keplerproject.luajava;
 
 import org.eu.smileyik.luajava.exception.Result;
-import org.eu.smileyik.luajava.type.IInnerLuaObject;
-import org.eu.smileyik.luajava.type.ILuaCallable;
-import org.eu.smileyik.luajava.type.ILuaObject;
-import org.eu.smileyik.luajava.type.InnerTypeHelper;
+import org.eu.smileyik.luajava.type.*;
 import org.eu.smileyik.luajava.util.ResourceCleaner;
 
 import java.lang.reflect.InvocationHandler;
@@ -74,6 +71,10 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
         @Override
         public void run() {
             if (!closed.compareAndSet(false, true)) {
+                return;
+            }
+            // if lua state is closed that means this object also be cleaned.
+            else if (luaState.isClosed()) {
                 return;
             }
             try {
@@ -234,12 +235,17 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
         cleanTask.run();
     }
 
+    @Override
+    public boolean isClosed() {
+        return luaState == null || luaState.isClosed();
+    }
+
     /**
      * check this lua object is callable or not.
      * @return if callable then return true.
      */
     public boolean isCallable() {
-        return this instanceof ILuaCallable;
+        return !isClosed() && this instanceof ILuaCallable;
     }
 
     /**
@@ -247,6 +253,7 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
      */
     @Override
     public void push() {
+        if (isClosed()) return;
         luaState.lock(l -> {
             l.rawGetI(LuaState.LUA_REGISTRYINDEX, ref);
         });
@@ -254,55 +261,12 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
 
     @Override
     public void rawPush() {
+        if (isClosed()) return;
         luaState.getLuaState().rawGetI(LuaState.LUA_REGISTRYINDEX, ref);
     }
 
-//    public boolean isNil() {
-//        return luaState.lock(luaState -> {
-//            push();
-//            boolean bool = luaState.isNil(-1);
-//            luaState.pop(1);
-//            return bool;
-//        });
-//    }
-//
-//    public boolean isBoolean() {
-//        return luaState.lock(luaState -> {
-//            push();
-//            boolean bool = luaState.isBoolean(-1);
-//            luaState.pop(1);
-//            return bool;
-//        });
-//    }
-//
-//    public boolean isNumber() {
-//        return luaState.lock(luaState -> {
-//            push();
-//            boolean bool = luaState.isNumber(-1);
-//            luaState.pop(1);
-//            return bool;
-//        });
-//    }
-//
-//    public boolean isString() {
-//        return luaState.lock(luaState -> {
-//            push();
-//            boolean bool = luaState.isString(-1);
-//            luaState.pop(1);
-//            return bool;
-//        });
-//    }
-//
-//    public boolean isFunction() {
-//        return luaState.lock(luaState -> {
-//            push();
-//            boolean bool = luaState.isFunction(-1);
-//            luaState.pop(1);
-//            return bool;
-//        });
-//    }
-
     public boolean isJavaObject() {
+        if (isClosed()) return false;
         return luaState.lock(luaState -> {
             push();
             boolean bool = luaState.isObject(-1);
@@ -312,6 +276,7 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
     }
 
     public boolean isJavaFunction() {
+        if (isClosed()) return false;
         return luaState.lock(luaState -> {
             push();
             boolean bool = luaState.isJavaFunction(-1);
@@ -320,25 +285,8 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
         });
     }
 
-//    public boolean isTable() {
-//        return luaState.lock(luaState -> {
-//            push();
-//            boolean bool = luaState.isTable(-1);
-//            luaState.pop(1);
-//            return bool;
-//        });
-//    }
-//
-//    public boolean isUserdata() {
-//        return luaState.lock(luaState -> {
-//            push();
-//            boolean bool = luaState.isUserdata(-1);
-//            luaState.pop(1);
-//            return bool;
-//        });
-//    }
-
     public int type() {
+        if (isClosed()) return LuaType.NIL;
         return luaState.lock(luaState -> {
             push();
             int type = luaState.type(-1);
@@ -348,6 +296,7 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
     }
 
     public boolean getBoolean() {
+        if (isClosed()) return false;
         return luaState.lock(luaState -> {
             push();
             boolean bool = luaState.toBoolean(-1);
@@ -357,6 +306,7 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
     }
 
     public double getNumber() {
+        if (isClosed()) return 0;
         return luaState.lock(luaState -> {
             push();
             double db = luaState.toNumber(-1);
@@ -366,6 +316,7 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
     }
 
     public String getString() {
+        if (isClosed()) return null;
         return luaState.lock(luaState -> {
             push();
             String str = luaState.toString(-1);
@@ -375,6 +326,7 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
     }
 
     public Object getObject() throws LuaException {
+        if (isClosed()) return null;
         return luaState.lockThrow(luaState -> {
             push();
             Object obj = luaState.getObjectFromUserdata(-1);
@@ -414,6 +366,7 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
 
     @Override
     public boolean equals(Object object) {
+        if (isClosed()) return false;
         if (this == object) return true;
         if (object == null || getClass() != object.getClass()) return false;
         LuaObject luaObject = (LuaObject) object;
@@ -427,6 +380,7 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
     }
 
     private boolean isRawEqualInLua(LuaObject other) {
+        if (isClosed()) return false;
         return luaState.lock(l -> {
             try {
                 rawPush();
@@ -444,6 +398,7 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
      * @param implem Interfaces that are implemented, separated by <code>,</code>
      */
     public Result<Object, ? extends Exception> createProxy(String implem) throws ClassNotFoundException, LuaException {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed"));
         if (!isTable())
             throw new LuaException("Invalid Object. Must be Table.");
         return luaState.lockThrowAll(L -> {

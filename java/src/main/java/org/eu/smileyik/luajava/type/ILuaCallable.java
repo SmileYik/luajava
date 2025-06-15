@@ -12,6 +12,7 @@ public interface ILuaCallable extends ILuaObject {
      * @return Object - Returned Object
      */
     public default Result<Object, ? extends LuaException> call(Object... args) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
         return getLuaState().pcall(this, args);
     }
 
@@ -25,6 +26,7 @@ public interface ILuaCallable extends ILuaObject {
      * @return Object[] - Returned Objects
      */
     public default Result<Object[], ? extends LuaException> call(int nres, Object... args) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
         return getLuaState().pcall(this, args, nres);
     }
 }

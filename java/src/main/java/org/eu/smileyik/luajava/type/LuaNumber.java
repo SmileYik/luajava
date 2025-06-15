@@ -22,38 +22,8 @@ public class LuaNumber extends LuaObject {
     }
 
     @Override
-    public boolean isNumber() {
-        return true;
-    }
-
-    @Override
     public int type() {
         return LuaType.NUMBER;
-    }
-
-    @Override
-    public boolean isFunction() {
-        return false;
-    }
-
-    @Override
-    public boolean isString() {
-        return false;
-    }
-
-    @Override
-    public boolean isBoolean() {
-        return false;
-    }
-
-    @Override
-    public boolean isTable() {
-        return false;
-    }
-
-    @Override
-    public boolean isUserdata() {
-        return false;
     }
 
     public byte getByte() {
