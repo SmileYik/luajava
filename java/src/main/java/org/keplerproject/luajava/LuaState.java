@@ -151,7 +151,7 @@ public class LuaState {
      * Returns <code>true</code> if state is closed.
      */
     public boolean isClosed() {
-        return luaState.getPeer() == 0 || luaState == null || closed.get();
+        return luaState == null || luaState.getPeer() == 0 || closed.get();
     }
 
     /**
