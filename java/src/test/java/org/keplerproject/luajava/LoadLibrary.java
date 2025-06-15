@@ -6,15 +6,28 @@ import java.util.Objects;
 
 public class LoadLibrary {
     public static void load() {
-        File sharedDir = Paths.get("..", "build", "outputs", "shared")
-                .toFile();
-        try {
-            load(sharedDir);
-        } catch (Exception e) {
-            sharedDir = Paths.get("build", "outputs", "shared")
-                    .toFile();
-            load(sharedDir);
+        load((String) null);
+    }
+
+    public static void load(String folder) {
+        File sharedDir = Paths.get("..", "build", "outputs", "shared").toFile();
+        if (!sharedDir.exists()) {
+            sharedDir = Paths.get("build", "outputs", "shared").toFile();
         }
+        if (folder != null) {
+            sharedDir = new File(sharedDir, folder);
+        } else {
+            File[] files = sharedDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isDirectory()) {
+                        sharedDir = file;
+                        break;
+                    }
+                }
+            }
+        }
+        load(sharedDir);
     }
 
     private static void load(File sharedDir) {
@@ -22,7 +35,9 @@ public class LoadLibrary {
             throw new RuntimeException("Could not find shared directory: " + sharedDir.getAbsolutePath());
         }
         for (File file : Objects.requireNonNull(sharedDir.listFiles())) {
-            System.load(file.getAbsolutePath());
+            if (file.isFile()) {
+                System.load(file.getAbsolutePath());
+            }
         }
     }
 }

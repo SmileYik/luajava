@@ -143,10 +143,12 @@ public class TestLauxlib {
             L.call(0, 1);
             System.out.println(L.toString(-1));
             L.pop(1);
-            L.pushString("testTable");
-            L.pushValue(-2);
-            L.setTable(LuaState.LUA_GLOBALSINDEX);
-            L.pop(1);
+            if (LuaState.LUA_VERSION.equals("Lua 5.1")) {
+                L.pushString("testTable");
+                L.pushValue(-2);
+                L.setTable(LuaState.LUA_GLOBALSINDEX);
+                L.pop(1);
+            }
             L.LdoString("str = testTable.ff; print(str..'fromLua');" +
                     " io.stdout:flush()");
 

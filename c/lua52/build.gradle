@@ -79,6 +79,7 @@ model {
                     cppCompiler.define 'WIN64'
                     linker.args "lua52.lib", "/LIBPATH:${LUA_SRC}"
                 } else {
+                    // cCompiler.args "-g"
                     linker.args "-llua", "-L${LUA_SRC}"
                 }
             }
@@ -99,6 +100,10 @@ tasks.register('generateHeader') {
         from layout.buildDirectory.dir("generated-headers")
         into layout.buildDirectory.dir("headers")
         rename 'org_keplerproject_luajava_LuaState.h', 'luajava.h'
+    }
+    copy {
+        from "${System.properties['java.home']}/include"
+        into layout.buildDirectory.dir("headers")
     }
 }
 
@@ -132,7 +137,7 @@ tasks.register("build${LUA_VERSION}") {
         // TODO MACOS
         exec {
             workingDir "${LUA_SRC}"
-            commandLine 'make', 'MYCFLAGS=-fPIC', 'liblua.a'
+            commandLine 'make', 'MYCFLAGS="-fPIC"', 'liblua.a'
         }
     }
 }

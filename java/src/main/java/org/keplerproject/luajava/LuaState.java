@@ -86,6 +86,21 @@ public class LuaState {
     final public static int LUA_GCSTEP = 5;
     final public static int LUA_GCSETPAUSE = 6;
     final public static int LUA_GCSETSTEPMUL = 7;
+
+    // since lua 5.2: arith
+    public static final int LUA_OPADD = 0;
+    public static final int LUA_OPSUB = 1;
+    public static final int LUA_OPMUL = 2;
+    public static final int LUA_OPDIV = 3;
+    public static final int LUA_OPMOD = 4;
+    public static final int LUA_OPPOW = 5;
+    public static final int LUA_OPUNM = 6;
+
+    // since lua 5.2: compare
+    public static final int LUA_OPEQ = 0;
+    public static final int LUA_OPLT = 1;
+    public static final int LUA_OPLE = 2;
+
     private final static String LUAJAVA_LIB = "luajava-1.1";
 
     /**
@@ -126,7 +141,7 @@ public class LuaState {
      * Closes state and removes the object from the LuaStateFactory
      */
     protected void clearRef() {
-        if (closed.compareAndSet(false, true)) {
+        if (!isClosed() && closed.compareAndSet(false, true)) {
             _close(luaState);
             this.luaState = null;
         }
@@ -136,7 +151,7 @@ public class LuaState {
      * Returns <code>true</code> if state is closed.
      */
     public boolean isClosed() {
-        return closed.get();
+        return closed.get() || luaState == null || luaState.getPeer() == 0;
     }
 
     /**
@@ -269,6 +284,12 @@ public class LuaState {
     // Coroutine Functions
     private native int _yield(CPtr ptr, int nResults);
 
+    /**
+     * removed since lua 5.2
+     * @param ptr
+     * @param nargs
+     * @return
+     */
     private native int _resume(CPtr ptr, int nargs);
 
     private native int _status(CPtr ptr);
@@ -379,6 +400,46 @@ public class LuaState {
     private native void _openDebug(CPtr ptr);
 
     private native void _openPackage(CPtr ptr);
+
+    // ******************** addition since lua 5.2 start ***********************
+    /**
+     * added since lua 5.2
+     * @param ptr
+     * @param idx
+     * @return
+     */
+    private native int _rawlen(CPtr ptr, int idx);
+
+    /**
+     * added since lua 5.2
+     * @param ptr
+     * @param idx1
+     * @param idx2
+     * @param op
+     * @return
+     */
+    private native int _compare(CPtr ptr, int idx1, int idx2, int op);
+
+    private native void _arith(CPtr ptr, int op);
+
+    private native void _len(CPtr ptr, int idx);
+
+    /**
+     * added since lua 5.2
+     * @param ptr
+     * @param threadPtr
+     * @param nargs
+     * @return
+     */
+    private native int _resume(CPtr ptr, CPtr threadPtr, int nargs);
+
+    private native int _pushthread(CPtr ptr, CPtr threadPtr);
+
+    private native void _setuservalue(CPtr ptr, int idx);
+    private native void _getuservalue(CPtr ptr, int idx);
+
+    // ******************** addition since lua 5.2 stop ***********************
+
 
     // Java Interface -----------------------------------------------------
 
@@ -624,6 +685,11 @@ public class LuaState {
         return _yield(luaState, nResults);
     }
 
+    /**
+     * removed since lua 5.2
+     * @param nArgs
+     * @return
+     */
     public int resume(int nArgs) {
         return _resume(luaState, nArgs);
     }
@@ -821,6 +887,59 @@ public class LuaState {
     public void openPackage() {
         _openPackage(luaState);
     }
+
+    // ******************** addition since lua 5.2 start ***********************
+    /**
+     * added since lua 5.2
+     * @param idx
+     * @return
+     */
+    public int rawLen(int idx) {
+        return _rawlen(luaState, idx);
+    }
+
+    /**
+     * added since lua 5.2
+     * @param idx1
+     * @param idx2
+     * @param op
+     * @return
+     */
+    public boolean compare(int idx1, int idx2, int op) {
+        return 0 != _compare(luaState, idx1, idx2, op);
+    }
+
+    public void arith(int op) {
+        _arith(luaState, op);
+    }
+
+    public void len(int idx) {
+        _len(luaState, idx);
+    }
+
+    /**
+     * added since lua 5.2
+     * @param thread
+     * @param nargs
+     * @return
+     */
+    public int resume(LuaState thread, int nargs) {
+        return _resume(luaState, thread.luaState, nargs);
+    }
+
+    public int pushThread(LuaState thread) {
+        return _pushthread(luaState, thread.luaState);
+    }
+
+    public void setUserValue(int idx) {
+        _setuservalue(luaState, idx);
+    }
+
+    public void getUserValue(int idx) {
+        _getuservalue(luaState, idx);
+    }
+
+    // ******************** addition since lua 5.2 stop ***********************
 
 
     /********************** Luajava API Library **********************/
