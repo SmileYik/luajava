@@ -173,7 +173,7 @@ class LuaMap implements Map, AutoCloseable, Closeable {
             int n;
             for (n = 0; facade.next(-2) != 0; n++) facade.pop(1);
 
-            facade.pop(2);
+            facade.pop(1);
 
             return n;
         });

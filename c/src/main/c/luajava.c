@@ -33,19 +33,14 @@
  *
  *****************************************************************************/
 
-#include "luajava.h"
-#include "lauxlib.h"
-#include "lua.h"
-#include "luajava_api.h"
-#include "lualib.h"
 #include <stdio.h>
 #include <stdlib.h>
-
-#ifdef LUA_RIDX_GLOBALS
-#define LUAJAVA_LUA_RIDX_GLOBALS LUA_RIDX_GLOBALS
-#else
-#define LUAJAVA_LUA_RIDX_GLOBALS LUA_GLOBALSINDEX
-#endif
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+#include "luajava.h"
+#include "luajava_api.h"
+#include "compatible.h"
 
 /*
 ** Assumes the table is on top of the stack.
@@ -429,8 +424,10 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1openLibs(
 JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1close(
     JNIEnv *env, jobject jobj, jobject cptr) {
   lua_State *L = getStateFromCPtr(env, cptr);
-
-  lua_close(L);
+  if (L) {
+    resetCPtr(env, cptr);
+    lua_close(L);
+  }
 }
 
 /************************************************************************
@@ -723,7 +720,7 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1lessthan(
     JNIEnv *env, jobject jobj, jobject cptr, jint idx1, jint idx2) {
   lua_State *L = getStateFromCPtr(env, cptr);
 
-  return (jint)lua_lessthan(L, idx1, idx2);
+  return (jint) lua_lessthan(L, idx1, idx2);
 }
 
 /************************************************************************
@@ -1156,18 +1153,6 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1gc(
  *      Lua Exported Function
  ************************************************************************/
 
-JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1getGcCount(
-    JNIEnv *env, jobject jobj, jobject cptr) {
-  lua_State *L = getStateFromCPtr(env, cptr);
-
-  return (jint)lua_getgccount(L);
-}
-
-/************************************************************************
- *   JNI Called function
- *      Lua Exported Function
- ************************************************************************/
-
 JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1next(
     JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
   lua_State *L = getStateFromCPtr(env, cptr);
@@ -1317,6 +1302,7 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1LcallMeta(
   return (jint)ret;
 }
 
+#ifdef LUAJAVA_ENABLE_METHOD_TYPEEROR
 /************************************************************************
  *   JNI Called function
  *      Lua Exported Function
@@ -1334,6 +1320,7 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1Ltyperror(
 
   return (jint)ret;
 }
+#endif // LUAJAVA_ENABLE_METHOD_TYPEEROR
 
 /************************************************************************
  *   JNI Called function
@@ -1558,28 +1545,40 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1LunRef(
  *      Lua Exported Function
  ************************************************************************/
 
-// luaL_getn 方法在 LuaJIT 2.1.1748459687 中不存在
-// JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1LgetN
-//  (JNIEnv * env , jobject jobj , jobject cptr , jint t)
-//{
-//   lua_State * L = getStateFromCPtr( env , cptr );
-//
-//   return ( jint ) luaL_getn( L , ( int ) t );
-//}
+ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1LgetN
+  (JNIEnv * env , jobject jobj , jobject cptr , jint t)
+{
+   lua_State * L = getStateFromCPtr( env , cptr );
+   // luaL_getn 方法在 Lua 5.1 中不存在
+   // 可以设置或读取表中的n字段.
+   if (!lua_istable( L, (int) t )) {
+     lua_pushstring(L, "Target object type is not table!"); \
+     lua_error(L);
+   }
+   lua_getfield( L , (int) t, "n" );
+   lua_Integer len = lua_tointeger( L , (int) t );
+   lua_pop( L, 1 );
+
+   return ( jint ) len;
+}
 
 /************************************************************************
  *   JNI Called function
  *      Lua Exported Function
  ************************************************************************/
 
-// luaL_setn 方法在 LuaJIT 2.1.1748459687 中不存在
-// JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1LsetN
-//  (JNIEnv * env , jobject jobj , jobject cptr , jint t , jint n)
-//{
-//   lua_State * L = getStateFromCPtr( env , cptr );
-//
-//   luaL_setn( L , ( int ) t , ( int ) n );
-//}
+
+ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1LsetN
+  (JNIEnv * env , jobject jobj , jobject cptr , jint t , jint n)
+{
+   lua_State * L = getStateFromCPtr( env , cptr );
+   // luaL_setn 方法在 Lua 5.1 中不存在
+   // 可以设置或读取表中的n字段.
+   lua_pushstring( L , "n" );
+   lua_pushinteger( L, (int) n );
+   if ( t < 0 ) t -= 2;
+   lua_settable( L , t );
+}
 
 /************************************************************************
  *   JNI Called function
@@ -1660,6 +1659,7 @@ JNIEXPORT jstring JNICALL Java_org_keplerproject_luajava_LuaState__1Lgsub(
   return (*env)->NewStringUTF(env, sub);
 }
 
+#ifdef LUAJAVA_ENABLE_METHOD_FINDTABLE
 /************************************************************************
  *   JNI Called function
  *      Lua Exported Function
@@ -1677,3 +1677,4 @@ JNIEXPORT jstring JNICALL Java_org_keplerproject_luajava_LuaState__1LfindTable(
 
   return (*env)->NewStringUTF(env, sub);
 }
+#endif // LUAJAVA_ENABLE_METHOD_FINDTABLE

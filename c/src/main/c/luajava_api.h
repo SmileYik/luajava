@@ -78,7 +78,7 @@ jobject newCPtr(JNIEnv *env, jlong peer);
  *
  *$. **********************************************************************/
 
-inline lua_Number getLuaStateIndex(lua_State *L);
+lua_Number getLuaStateIndex(lua_State *L);
 
 /***************************************************************************
  *
@@ -473,6 +473,23 @@ jboolean isJavaFunctionInstance(JNIEnv *env, jobject *obj);
  *$. **********************************************************************/
 
 lua_State *getStateFromCPtr(JNIEnv *env, jobject cptr);
+
+/***************************************************************************
+ *
+ * $FC resetCPtr
+ *
+ * $ED Description
+ *    Returns the lua_State from the CPtr Java Object
+ *
+ * $EP Function Parameters
+ *    $P L - lua State
+ *    $P cptr - CPtr object
+ *
+ * $FV Returned Value
+ *    int - Number of values to be returned by the function.
+ *
+ *$. **********************************************************************/
+void resetCPtr(JNIEnv *env, jobject cptr);
 
 /***************************************************************************
  *

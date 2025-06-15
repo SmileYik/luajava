@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <lauxlib.h>
 #include "luajava_api.h"
-#include "lauxlib.h"
-
+#include "compatible.h"
 
 /**
  * Generate lua stack.
@@ -1297,6 +1297,15 @@ lua_State *getStateFromCPtr(JNIEnv *env, jobject cptr) {
   L = (lua_State *)peer;
   pushJNIEnv(env, L);
   return L;
+}
+
+/***************************************************************************
+ *
+ *  Function: resetCPtr
+ *  ****/
+
+void resetCPtr(JNIEnv *env, jobject cptr) {
+  (*env)->SetLongField(env, cptr, cptr_field_peer, (jlong)0);
 }
 
 /***************************************************************************
