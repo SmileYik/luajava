@@ -7,6 +7,14 @@
 #define LUAJAVA_LUA_RIDX_GLOBALS LUA_GLOBALSINDEX
 #endif
 
+// same metatable for class instance, need uservalue support.
+#define LUAJAVA_FORCE_SAME_METATABLE_CLASS
+// same metatable for java object instance, need uservalue support.
+#define LUAJAVA_FORCE_SAME_METATABLE_OBJECT
+// same metatable for java array instance, need uservalue support.
+#define LUAJAVA_FORCE_SAME_METATABLE_ARRAY
+
+// alternative metatable to uservalue.
 #define LUAJAVA_GET_METATABLE( L , OBJ_IDX ) lua_getuservalue(L, OBJ_IDX)
 #define LUAJAVA_SET_METATABLE( L , OBJ_IDX ) lua_setuservalue(L, OBJ_IDX)
 

@@ -10,6 +10,12 @@
 #define LUAJAVAOBJECTIND          "__IsJavaObject"
 /* Defines the lua State Index Property Name */
 #define LUAJAVASTATEINDEX         "LuaJavaStateIndex"
+/* Defines the java class object metatable Name */
+#define LUAJAVA_METATABLE_CLASS   "LuaJavaMetatableClass"
+/* Defines the java object metatable name */
+#define LUAJAVA_METATABLE_OBJECT  "LuaJavaMetatableObject"
+/* Defines the java array object metatable name */
+#define LUAJAVA_METATABLE_ARRAY   "LuaJavaMetatableArray"
 /* Index metamethod name */
 #define LUAINDEXMETAMETHODTAG     "__index"
 /* New index metamethod name */
@@ -30,10 +36,16 @@
 
 /* if not define get meta table method, then use lua_getmetatable */
 #ifndef LUAJAVA_GET_METATABLE
+#undef LUAJAVA_FORCE_SAME_METATABLE_CLASS
+#undef LUAJAVA_FORCE_SAME_METATABLE_OBJECT
+#undef LUAJAVA_FORCE_SAME_METATABLE_ARRAY
 #define LUAJAVA_GET_METATABLE( L , OBJ_IDX ) lua_getmetatable(L, OBJ_IDX)
 #endif
 /* if not define set meta table method, then use lua_setmetatable */
 #ifndef LUAJAVA_SET_METATABLE
+#undef LUAJAVA_FORCE_SAME_METATABLE_CLASS
+#undef LUAJAVA_FORCE_SAME_METATABLE_OBJECT
+#undef LUAJAVA_FORCE_SAME_METATABLE_ARRAY
 #define LUAJAVA_SET_METATABLE( L , OBJ_IDX ) lua_setmetatable(L, OBJ_IDX)
 #endif
 
@@ -607,5 +619,11 @@ inline void luajavaSetObjectFunctionCalled(lua_State *L, int objIdx, const char 
  *$. **********************************************************************/
 
 inline const char* luajavaGetObjectFunctionCalled(lua_State *L, int objIdx);
+
+inline void luajavaNewJavaClassMetatable(lua_State *L);
+
+inline void luajavaNewJavaObjectMetatable(lua_State *L);
+
+inline void luajavaNewJavaArrayMetatable(lua_State *L);
 
 #endif // LUAJAVA_LUAJAVA_API_H

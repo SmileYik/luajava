@@ -20,8 +20,10 @@ public class LuaJavaApiTest {
         LuaStateFacade facade = LuaStateFactory.newLuaState();
         facade.openLibs();
         String[] strings = new String[] {"hello", ", ", "world", "!"};
+        int[] ints = new int[] {1, 2, 3, 4, 5, 6};
         facade.setGlobal("strings", strings).justThrow();
         facade.setGlobal("strs", strings).justThrow();
+        facade.setGlobal("ints", ints).justThrow();
         List<String> list = Arrays.asList(strings);
         facade.setGlobal("list", list).justThrow();
         Map<String, String> map = new HashMap<>();
@@ -35,6 +37,8 @@ public class LuaJavaApiTest {
         facade.evalString("print('#map = ', #map)").justThrow();
 //        facade.evalString("print('#obj = ', #obj)").justThrow();
         facade.evalString("print(strs == strings, strs == strs, strings.__len, getmetatable(strs).__eq(strs, strings))").justThrow();
+        facade.evalString("print(getmetatable(strs).__eq, getmetatable(strings).__eq, getmetatable(ints).__eq)").getOrSneakyThrow();
+        facade.evalString("print(getmetatable(strs), getmetatable(strings), getmetatable(ints))").getOrSneakyThrow();
         facade.evalString("print(('123'..strings)..'456')").justThrow();
     }
 

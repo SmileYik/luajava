@@ -250,6 +250,25 @@ jobject newCPtr(JNIEnv *env, jlong peer)
   jobject obj = (*env)->AllocObject(env, cptr_class);
   if (obj) {
     (*env)->SetLongField(env, obj, cptr_field_peer, peer);
+    lua_State *L = (lua_State *) ((jbyte *) peer);
+
+#ifdef LUAJAVA_FORCE_SAME_METATABLE_CLASS
+    lua_pushstring(L, LUAJAVA_METATABLE_CLASS);
+    luajavaNewJavaClassMetatable(L);
+    lua_rawset(L, LUA_REGISTRYINDEX);
+#endif
+
+#ifdef LUAJAVA_FORCE_SAME_METATABLE_OBJECT
+    lua_pushstring(L, LUAJAVA_METATABLE_OBJECT);
+    luajavaNewJavaObjectMetatable(L);
+    lua_rawset(L, LUA_REGISTRYINDEX);
+#endif
+
+#ifdef LUAJAVA_FORCE_SAME_METATABLE_ARRAY
+    lua_pushstring(L, LUAJAVA_METATABLE_ARRAY);
+    luajavaNewJavaArrayMetatable(L);
+    lua_rawset(L, LUA_REGISTRYINDEX);
+#endif
   }
   return obj;
 }
@@ -1052,38 +1071,12 @@ int pushJavaClass(lua_State *L, jobject javaObject) {
   userData = (jobject *)lua_newuserdata(L, sizeof(jobject));
   *userData = globalRef;
 
-  /* Creates metatable */
-  lua_newtable(L);
-
-  /* pushes the __index metamethod */
-  lua_pushstring(L, LUAINDEXMETAMETHODTAG);
-  lua_pushcfunction(L, &classIndex);
-  lua_rawset(L, -3);
-
-  /* pushes the __newindex metamethod */
-  lua_pushstring(L, LUANEWINDEXMETAMETHODTAG);
-  lua_pushcfunction(L, &objectNewIndex);
-  lua_rawset(L, -3);
-
-  /* pushes the __eq metamethod */
-  lua_pushstring(L, LUA_EQ_METAMETHOD_TAG);
-  lua_pushcfunction(L, &javaObjectEquals);
-  lua_rawset(L, -3);
-
-  /* pushes the __concat metamethod */
-  lua_pushstring(L, LUA_CONCAT_METAMETHOD_TAG);
-  lua_pushcfunction(L, &javaStringConcat);
-  lua_rawset(L, -3);
-
-  /* pushes the __gc metamethod */
-  lua_pushstring(L, LUAGCMETAMETHODTAG);
-  lua_pushcfunction(L, &gc);
-  lua_rawset(L, -3);
-
-  /* Is Java Object boolean */
-  lua_pushstring(L, LUAJAVAOBJECTIND);
-  lua_pushboolean(L, 1);
-  lua_rawset(L, -3);
+#ifdef LUAJAVA_FORCE_SAME_METATABLE_CLASS
+  lua_pushstring(L, LUAJAVA_METATABLE_CLASS);
+  lua_rawget(L, LUA_REGISTRYINDEX);
+#else
+  luajavaNewJavaClassMetatable(L);
+#endif
 
   if (lua_setmetatable(L, -2) == 0) {
     (*javaEnv)->DeleteGlobalRef(javaEnv, globalRef);
@@ -1112,43 +1105,12 @@ int pushJavaObject(lua_State *L, jobject javaObject) {
   userData = (jobject *)lua_newuserdata(L, sizeof(jobject));
   *userData = globalRef;
 
-  /* Creates metatable */
-  lua_newtable(L);
-
-  /* pushes the __index metamethod */
-  lua_pushstring(L, LUAINDEXMETAMETHODTAG);
-  lua_pushcfunction(L, &objectIndex);
-  lua_rawset(L, -3);
-
-  /* pushes the __newindex metamethod */
-  lua_pushstring(L, LUANEWINDEXMETAMETHODTAG);
-  lua_pushcfunction(L, &objectNewIndex);
-  lua_rawset(L, -3);
-
-  /* pushes the __eq metamethod */
-  lua_pushstring(L, LUA_EQ_METAMETHOD_TAG);
-  lua_pushcfunction(L, &javaObjectEquals);
-  lua_rawset(L, -3);
-
-  /* pushes the __concat metamethod */
-  lua_pushstring(L, LUA_CONCAT_METAMETHOD_TAG);
-  lua_pushcfunction(L, &javaStringConcat);
-  lua_rawset(L, -3);
-
-  /* pushes the __len metamethod */
-  lua_pushstring(L, LUA_LEN_METAMETHOD_TAG);
-  lua_pushcfunction(L, &objectContainerSize);
-  lua_rawset(L, -3);
-
-  /* pushes the __gc metamethod */
-  lua_pushstring(L, LUAGCMETAMETHODTAG);
-  lua_pushcfunction(L, &gc);
-  lua_rawset(L, -3);
-
-  /* Is Java Object boolean */
-  lua_pushstring(L, LUAJAVAOBJECTIND);
-  lua_pushboolean(L, 1);
-  lua_rawset(L, -3);
+#ifdef LUAJAVA_FORCE_SAME_METATABLE_OBJECT
+  lua_pushstring(L, LUAJAVA_METATABLE_OBJECT);
+  lua_rawget(L, LUA_REGISTRYINDEX);
+#else
+  luajavaNewJavaObjectMetatable(L);
+#endif
 
   if (lua_setmetatable(L, -2) == 0) {
     (*javaEnv)->DeleteGlobalRef(javaEnv, globalRef);
@@ -1177,43 +1139,12 @@ int pushJavaArray(lua_State *L, jobject javaObject) {
   userData = (jobject *)lua_newuserdata(L, sizeof(jobject));
   *userData = globalRef;
 
-  /* Creates metatable */
-  lua_newtable(L);
-
-  /* pushes the __index metamethod */
-  lua_pushstring(L, LUAINDEXMETAMETHODTAG);
-  lua_pushcfunction(L, &arrayIndex);
-  lua_rawset(L, -3);
-
-  /* pushes the __newindex metamethod */
-  lua_pushstring(L, LUANEWINDEXMETAMETHODTAG);
-  lua_pushcfunction(L, &arrayNewIndex);
-  lua_rawset(L, -3);
-
-  /* pushes the __eq metamethod */
-  lua_pushstring(L, LUA_EQ_METAMETHOD_TAG);
-  lua_pushcfunction(L, &javaObjectEquals);
-  lua_rawset(L, -3);
-
-  /* pushes the __concat metamethod */
-  lua_pushstring(L, LUA_CONCAT_METAMETHOD_TAG);
-  lua_pushcfunction(L, &javaStringConcat);
-  lua_rawset(L, -3);
-
-  /* pushes the __len metamethod */
-  lua_pushstring(L, LUA_LEN_METAMETHOD_TAG);
-  lua_pushcfunction(L, &arrayLength);
-  lua_rawset(L, -3);
-
-  /* pushes the __gc metamethod */
-  lua_pushstring(L, LUAGCMETAMETHODTAG);
-  lua_pushcfunction(L, &gc);
-  lua_rawset(L, -3);
-
-  /* Is Java Object boolean */
-  lua_pushstring(L, LUAJAVAOBJECTIND);
-  lua_pushboolean(L, 1);
-  lua_rawset(L, -3);
+#ifdef LUAJAVA_FORCE_SAME_METATABLE_ARRAY
+  lua_pushstring(L, LUAJAVA_METATABLE_ARRAY);
+  lua_rawget(L, LUA_REGISTRYINDEX);
+#else
+  luajavaNewJavaArrayMetatable(L);
+#endif
 
   if (lua_setmetatable(L, -2) == 0) {
     (*javaEnv)->DeleteGlobalRef(javaEnv, globalRef);
@@ -1410,4 +1341,119 @@ const char* luajavaGetObjectFunctionCalled(lua_State *L, int objIdx) {
   methodName = lua_tostring(L, -1);
   lua_pop(L, 2);
   return methodName;
+}
+
+void luajavaNewJavaClassMetatable(lua_State *L) {
+  /* Creates metatable */
+  lua_newtable(L);
+
+  /* pushes the __index metamethod */
+  lua_pushstring(L, LUAINDEXMETAMETHODTAG);
+  lua_pushcfunction(L, &classIndex);
+  lua_rawset(L, -3);
+
+  /* pushes the __newindex metamethod */
+  lua_pushstring(L, LUANEWINDEXMETAMETHODTAG);
+  lua_pushcfunction(L, &objectNewIndex);
+  lua_rawset(L, -3);
+
+  /* pushes the __eq metamethod */
+  lua_pushstring(L, LUA_EQ_METAMETHOD_TAG);
+  lua_pushcfunction(L, &javaObjectEquals);
+  lua_rawset(L, -3);
+
+  /* pushes the __concat metamethod */
+  lua_pushstring(L, LUA_CONCAT_METAMETHOD_TAG);
+  lua_pushcfunction(L, &javaStringConcat);
+  lua_rawset(L, -3);
+
+  /* pushes the __gc metamethod */
+  lua_pushstring(L, LUAGCMETAMETHODTAG);
+  lua_pushcfunction(L, &gc);
+  lua_rawset(L, -3);
+
+  /* Is Java Object boolean */
+  lua_pushstring(L, LUAJAVAOBJECTIND);
+  lua_pushboolean(L, 1);
+  lua_rawset(L, -3);
+}
+
+void luajavaNewJavaObjectMetatable(lua_State *L) {
+  /* Creates metatable */
+  lua_newtable(L);
+
+  /* pushes the __index metamethod */
+  lua_pushstring(L, LUAINDEXMETAMETHODTAG);
+  lua_pushcfunction(L, &objectIndex);
+  lua_rawset(L, -3);
+
+  /* pushes the __newindex metamethod */
+  lua_pushstring(L, LUANEWINDEXMETAMETHODTAG);
+  lua_pushcfunction(L, &objectNewIndex);
+  lua_rawset(L, -3);
+
+  /* pushes the __eq metamethod */
+  lua_pushstring(L, LUA_EQ_METAMETHOD_TAG);
+  lua_pushcfunction(L, &javaObjectEquals);
+  lua_rawset(L, -3);
+
+  /* pushes the __concat metamethod */
+  lua_pushstring(L, LUA_CONCAT_METAMETHOD_TAG);
+  lua_pushcfunction(L, &javaStringConcat);
+  lua_rawset(L, -3);
+
+  /* pushes the __len metamethod */
+  lua_pushstring(L, LUA_LEN_METAMETHOD_TAG);
+  lua_pushcfunction(L, &objectContainerSize);
+  lua_rawset(L, -3);
+
+  /* pushes the __gc metamethod */
+  lua_pushstring(L, LUAGCMETAMETHODTAG);
+  lua_pushcfunction(L, &gc);
+  lua_rawset(L, -3);
+
+  /* Is Java Object boolean */
+  lua_pushstring(L, LUAJAVAOBJECTIND);
+  lua_pushboolean(L, 1);
+  lua_rawset(L, -3);
+}
+
+void luajavaNewJavaArrayMetatable(lua_State *L) {
+  /* Creates metatable */
+  lua_newtable(L);
+
+  /* pushes the __index metamethod */
+  lua_pushstring(L, LUAINDEXMETAMETHODTAG);
+  lua_pushcfunction(L, &arrayIndex);
+  lua_rawset(L, -3);
+
+  /* pushes the __newindex metamethod */
+  lua_pushstring(L, LUANEWINDEXMETAMETHODTAG);
+  lua_pushcfunction(L, &arrayNewIndex);
+  lua_rawset(L, -3);
+
+  /* pushes the __eq metamethod */
+  lua_pushstring(L, LUA_EQ_METAMETHOD_TAG);
+  lua_pushcfunction(L, &javaObjectEquals);
+  lua_rawset(L, -3);
+
+  /* pushes the __concat metamethod */
+  lua_pushstring(L, LUA_CONCAT_METAMETHOD_TAG);
+  lua_pushcfunction(L, &javaStringConcat);
+  lua_rawset(L, -3);
+
+  /* pushes the __len metamethod */
+  lua_pushstring(L, LUA_LEN_METAMETHOD_TAG);
+  lua_pushcfunction(L, &arrayLength);
+  lua_rawset(L, -3);
+
+  /* pushes the __gc metamethod */
+  lua_pushstring(L, LUAGCMETAMETHODTAG);
+  lua_pushcfunction(L, &gc);
+  lua_rawset(L, -3);
+
+  /* Is Java Object boolean */
+  lua_pushstring(L, LUAJAVAOBJECTIND);
+  lua_pushboolean(L, 1);
+  lua_rawset(L, -3);
 }
