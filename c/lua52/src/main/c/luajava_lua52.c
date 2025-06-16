@@ -13,6 +13,7 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1rawlen(
     JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
   lua_State *L = getStateFromCPtr(env, cptr);
   if (!L) return 0;
+  lua_absindex;
   return (jint) lua_rawlen(L, idx);
 }
 
@@ -109,4 +110,16 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1getuservalue(
   lua_State *L = getStateFromCPtr(env, cptr);
   if (!L) return;
   lua_getuservalue(L, idx);
+}
+
+/*
+ * Class:     org_keplerproject_luajava_LuaState
+ * Method:    _absindex
+ * Signature: (Lorg/keplerproject/luajava/CPtr;I)I
+ */
+JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1absindex(
+    JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
+  lua_State *L = getStateFromCPtr(env, cptr);
+  if (!L) return idx;
+  return lua_absindex(L, idx);
 }

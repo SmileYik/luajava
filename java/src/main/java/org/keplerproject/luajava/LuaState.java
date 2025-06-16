@@ -437,6 +437,7 @@ public class LuaState {
 
     private native void _setuservalue(CPtr ptr, int idx);
     private native void _getuservalue(CPtr ptr, int idx);
+    private native int _absindex(CPtr ptr, int idx);
 
     // ******************** addition since lua 5.2 stop ***********************
 
@@ -913,6 +914,10 @@ public class LuaState {
         _arith(luaState, op);
     }
 
+    /**
+     * get the target object length.
+     * @param idx target object index.
+     */
     public void len(int idx) {
         _len(luaState, idx);
     }
@@ -931,12 +936,30 @@ public class LuaState {
         return _pushthread(luaState, thread.luaState);
     }
 
+    /**
+     * set uservalue to target userdata.
+     * @apiNote the uservalue must be nil or a lua table.
+     * @param idx userdata index
+     */
     public void setUserValue(int idx) {
         _setuservalue(luaState, idx);
     }
 
+    /**
+     * get uservalue from target userdata.
+     * @param idx userdata index
+     */
     public void getUserValue(int idx) {
         _getuservalue(luaState, idx);
+    }
+
+    /**
+     * get the absolute index.
+     * @param idx idx
+     * @return index.
+     */
+    public int absIndex(int idx) {
+        return _absindex(luaState, idx);
     }
 
     // ******************** addition since lua 5.2 stop ***********************
