@@ -1,3 +1,8 @@
+-- since lua 5.3, loadstring not work anymore
+if loadstring == nil then
+    loadstring = load
+end
+
 configLib = {
     implements='org.keplerproject.luajava.test.node.IConfig',
     processConfigFile = function (filename)

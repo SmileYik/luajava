@@ -123,3 +123,16 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1absindex(
   if (!L) return idx;
   return lua_absindex(L, idx);
 }
+
+/*
+ * Class:     org_keplerproject_luajava_LuaState
+ * Method:    _openCoroutine
+ * Signature: (Lorg/keplerproject/luajava/CPtr;)V
+ */
+JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1openCoroutine(
+    JNIEnv *env, jobject jobj, jobject cptr)
+{
+  lua_State *L = getStateFromCPtr(env, cptr);
+  if (!L) return;
+  luaopen_coroutine(L);
+}
