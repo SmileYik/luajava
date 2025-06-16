@@ -15,7 +15,11 @@ covert to java array. cached reflect result.
 size of Collection/Map instance; you also can use `..` to concat string with
 java object. details example can be find in LuaJavaApiTest class.
 * 🐼 Will print lua stack when lua error
+* Lua 5.2 supported! then you can use **uservalue** not **metatable** to handle
+java object function things. You can also use same metatable for all java
+object instances.
 
+ 
 ## How to build it
 
 I still try to write script to let build it be easier. 
