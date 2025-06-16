@@ -495,6 +495,26 @@ public class LuaState {
 
     // ******************** addition since lua 5.3 stop ************************
 
+    // ******************** addition since lua 5.4 start ***********************
+
+    public int getIUserValue(int idx, int n) {
+        return _getiuservalue(luaState, idx, n);
+    }
+
+    public int setIUserValue(int idx, int n) {
+        return _setiuservalue(luaState, idx, n);
+    }
+
+    public void warning(String msg, int tocont) {
+        _warning(luaState, msg, tocont);
+    }
+
+    public int resume(LuaState threadL, int nargs, int nrets) {
+        return _resume(luaState, threadL.luaState, nargs, nrets);
+    }
+
+    // ******************** addition since lua 5.4 stop ************************
+
 
     // Java Interface -----------------------------------------------------
 
@@ -1033,6 +1053,15 @@ public class LuaState {
     }
 
     // ******************** addition since lua 5.3 stop ************************
+
+    // ******************** addition since lua 5.4 start ***********************
+
+    private native int _getiuservalue(CPtr ptr, int idx, int n);
+    private native int _setiuservalue(CPtr ptr, int idx, int n);
+    private native void _warning(CPtr ptr, String msg, int tocont);
+    private native int _resume(CPtr ptr, CPtr threadPtr, int nargs, int nrets);
+
+    // ******************** addition since lua 5.4 stop ************************
 
 
     /********************** Luajava API Library **********************/

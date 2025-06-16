@@ -317,7 +317,7 @@ class LuaMap implements Map, AutoCloseable, Closeable {
 
                 L.setTable(-3);
 
-                L.pop(2);
+                L.pop(1);
 
                 return ret;
             }).getOrThrow(LuaException.class);

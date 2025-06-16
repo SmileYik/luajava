@@ -40,7 +40,10 @@
 #define lua_setfenv( L , IDX )          0
 
 // Lua 5.2: Function lua_resume has an extra parameter, from. Pass NULL or the thread doing the call.
-#define lua_resume( L, N_ARGS )         lua_resume( L, NULL, N_ARGS )
+#ifdef LUAJAVA_ENABLE_METHOD_RESUME_LUA_51
+#undef LUAJAVA_ENABLE_METHOD_RESUME_LUA_51
+#endif
+#define LUAJAVA_ENABLE_METHOD_RESUME_LUA_52
 
 // Lua 5.2: luaL_typerror was removed. Write your own version if you need it.
 #define luaL_typerror( L, N_ARG, NAME ) 0

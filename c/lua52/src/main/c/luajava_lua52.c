@@ -57,6 +57,7 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1len(JNIEnv *env
   lua_len(L, idx);
 }
 
+#ifdef LUAJAVA_ENABLE_METHOD_RESUME_LUA_52
 /*
  * Class:     org_keplerproject_luajava_LuaState
  * Method:    _resume
@@ -72,6 +73,7 @@ Java_org_keplerproject_luajava_LuaState__1resume__Lorg_keplerproject_luajava_CPt
   
   return lua_resume(L, T, nargs);
 }
+#endif // LUAJAVA_ENABLE_METHOD_RESUME_LUA_52
 
 /*
  * Class:     org_keplerproject_luajava_LuaState
