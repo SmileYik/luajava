@@ -1,0 +1,8 @@
+#ifndef LUA_JAVA_COMPATIBLE_LUA53_HEADER
+#define LUA_JAVA_COMPATIBLE_LUA53_HEADER
+
+#include "compatible_lua52.h"
+
+#endif  // LUA_JAVA_COMPATIBLE_LUA53_HEADER
+
+
