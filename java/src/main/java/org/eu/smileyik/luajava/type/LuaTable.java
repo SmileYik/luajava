@@ -225,6 +225,59 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
     }
 
     /**
+     * put key-value entry to this table with lock.
+     * @param key   key
+     * @param value value.
+     * @return the result.
+     */
+    public Result<Void, ? extends LuaException> put(Object key, Object value) {
+        luaState.lock();
+        try {
+            return rawPut(key, value);
+        } finally {
+            luaState.unlock();
+        }
+    }
+
+    /**
+     * put key-value entry to this table without lock.
+     * @param key   key
+     * @param value value.
+     * @return the result.
+     */
+    public Result<Void, ? extends LuaException> rawPut(Object key, Object value) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
+        LuaState inner = luaState.getLuaState();
+        int top = inner.getTop();
+        try {
+            rawPush();
+            return luaState.rawPushObjectValue(key)
+                    .mapResultValue((it) -> luaState.rawPushObjectValue(value))
+                    .ifSuccessThen(it -> inner.setTable(-3));
+        } finally {
+            inner.setTop(top);
+        }
+    }
+
+    /**
+     * remove the key without lock
+     * @param key key
+     * @return result
+     */
+    public Result<Void, ? extends LuaException> rawRemove(Object key) {
+        return rawPut(key, null);
+    }
+
+    /**
+     * remove the key with lock
+     * @param key key
+     * @return result
+     */
+    public Result<Void, ? extends LuaException> remove(Object key) {
+        return put(key, null);
+    }
+
+    /**
      * Check the table is Array or not. Will traverse the table.
      * <strong>SHOULD CALL IN LuaStateFacade.lock()</strong>
      * @param L     lua state

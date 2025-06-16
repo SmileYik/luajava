@@ -135,4 +135,20 @@ class LuaTableTest extends BaseTest {
         }
     }
 
+    @Test
+    public void putTest() throws Throwable {
+        String lua = "map = {a = 1, b = 2, c = '3', d = function() print(4) end, e = {f = 5, g = 6}}\n" +
+                "map2 = {a2 = 4}; map2[2] = 4; map2[map] = 3; map2[map.d] = 4";
+        try (LuaStateFacade f = newLuaState()) {
+            f.evalString(lua).getOrThrow();
+            LuaTable table = f.getGlobal("map", LuaTable.class).getOrSneakyThrow();
+            // put string
+            table.put("f", "7").getOrThrow();
+            assertEquals(table.get("f").getOrThrow(), "7");
+            // put int
+            table.put(8, "8").getOrThrow();
+            assertEquals(table.get(8).getOrThrow(), "8");
+        }
+    }
+
 }

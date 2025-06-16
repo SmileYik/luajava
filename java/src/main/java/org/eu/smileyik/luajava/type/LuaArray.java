@@ -362,6 +362,46 @@ public class LuaArray extends LuaTable {
         return rawSet(len++, obj).ifFailureThen(it -> len -= 1);
     }
 
+    @Override
+    public Result<Void, ? extends LuaException> rawPut(Object key, Object value) {
+        throw new UnsupportedOperationException("Lua Array not support put method. please use add method");
+    }
+
+    @Override
+    public Result<Void, ? extends LuaException> rawRemove(Object key) {
+        throw new UnsupportedOperationException("Lua Array not support remove method.");
+    }
+
+    public Result<Void, ? extends LuaException> remove(int idx) {
+        return luaState.lock(it -> {
+            return rawRemove(idx);
+        });
+    }
+
+    /**
+     * remove the value without lock.
+     * @param idx index.
+     * @return the result.
+     */
+    public Result<Void, ? extends LuaException> rawRemove(int idx) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
+        if (idx < 0 || idx >= len) {
+            return Result.failure(new LuaException("out of bounds: idx=" + idx + ", len=" + len));
+        }
+
+        LuaState inner = luaState.getLuaState();
+        rawPush();
+        for (int i = idx + 1; i < len; i++) {
+            luaState.rawGetI(-1, i + 1);
+            luaState.rawSetI(-2, i);
+        }
+        inner.pushNil();
+        inner.rawSetI(-2, len);
+        len -= 1;
+        inner.pop(1);
+        return Result.success();
+    }
+
     /**
      * foreach table entry. it will stop if throws exception.
      *
