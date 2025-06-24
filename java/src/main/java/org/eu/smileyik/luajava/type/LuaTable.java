@@ -79,6 +79,31 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
         return false;
     }
 
+    /**
+     * force cast to LuaTable.
+     * @return if this instance is not LuaArray then will return itself.
+     *         otherwise return a new instance of LuaTable and close the
+     *         origin LuaArray instance.
+     */
+    public LuaTable asTable() {
+        if (this instanceof LuaArray) {
+            try {
+                return luaState.lock(it -> {
+                    try {
+                        rawPush();
+                        return new LuaTable(luaState, -1);
+                    } finally {
+                        it.pop(1);
+                    }
+                });
+            } finally {
+                close();
+            }
+        } else {
+            return this;
+        }
+    }
+
     public Result<Map<String, Object>, ? extends Exception> asDeepStringMap() {
         return asDeepMap(String.class, Object.class);
     }
