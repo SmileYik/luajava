@@ -39,11 +39,12 @@ public class LuaStateFacade implements AutoCloseable {
     private final Lock lock = new ReentrantLock();
     private final int stateId;
     private final LuaState luaState;
+    private final boolean ignoreNotPublic;
 
-
-    protected LuaStateFacade(int stateId) {
+    protected LuaStateFacade(int stateId, boolean ignoreNotPublic) {
         this.stateId = stateId;
         this.luaState = new LuaState(stateId);
+        this.ignoreNotPublic = ignoreNotPublic;
     }
 
     protected LuaStateFacade(CPtr cPtr) {
@@ -51,10 +52,15 @@ public class LuaStateFacade implements AutoCloseable {
         this.stateId = LuaStateFactory.insertLuaState(this, cPtr, existLuaState);
         this.luaState = existLuaState.isEmpty() ?
                 new LuaState(cPtr, this.stateId) : existLuaState.getParamAndClear().luaState;
+        this.ignoreNotPublic = existLuaState.isEmpty() || existLuaState.getParamAndClear().ignoreNotPublic;
     }
 
     public long getCPtrPeer() {
         return luaState.getCPtrPeer();
+    }
+
+    public boolean isIgnoreNotPublic() {
+        return ignoreNotPublic;
     }
 
     public <T> Result<T, ? extends Exception> lockThrowAll(LuaStateDangerFunction<T> function) {

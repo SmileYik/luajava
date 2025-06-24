@@ -33,8 +33,6 @@ import org.eu.smileyik.luajava.util.*;
 import java.lang.reflect.*;
 import java.util.LinkedList;
 
-import static org.eu.smileyik.luajava.reflect.ReflectUtil.existsMethodByName;
-
 /**
  * Class that contains functions accessed by lua.
  *
@@ -228,16 +226,16 @@ public final class LuaJavaAPI {
      */
     public static int objectNewIndex(int luaState, Object obj, String fieldName)
             throws LuaException {
+        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         // like a.b = 1
         Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
         Field field = ReflectUtil.findFieldByName(targetClass, fieldName,
-                false, false, obj == targetClass, false);
+                false, false, obj == targetClass, luaStateFacade.isIgnoreNotPublic());
         if (field == null) {
             throw new LuaException("Error accessing field " + fieldName);
         }
         if (!field.isAccessible()) field.setAccessible(true);
 
-        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         luaStateFacade.lockThrow(L -> {
             Class<?> type = field.getType();
             Result<Object, Object> setObjRet = compareTypes(luaStateFacade, L, type, 3);
@@ -373,7 +371,7 @@ public final class LuaJavaAPI {
         }
 
         LuaInvokedMethod<Constructor<?>> result = ReflectUtil.findConstructorByParams(
-                clazz, objs, false, false, false);
+                clazz, objs, luaStateFacade.isIgnoreNotPublic(), false, false);
 
         if (result == null) {
             throw new LuaException("Couldn't instantiate java Object");
@@ -398,13 +396,13 @@ public final class LuaJavaAPI {
      */
     public static int checkField(int luaState, Object obj, String fieldName) throws LuaException {
         if (obj == null) return 0;
+        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
         Field field = ReflectUtil.findFieldByName(targetClass, fieldName,
-                false, false, obj == targetClass, false);
+                false, false, obj == targetClass, luaStateFacade.isIgnoreNotPublic());
         if (field == null) return 0;
         try {
             Object o = field.get(obj);
-            LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
             return luaStateFacade.pushObjectValue(o).isSuccess() ? 1 : 0;
         } catch (IllegalAccessException ignore) { }
         return 0;
@@ -422,7 +420,8 @@ public final class LuaJavaAPI {
         if (obj == null) return false;
         Class<?> clazz = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
         boolean isStatic = clazz == obj;
-        return existsMethodByName(clazz, methodName, false, false, isStatic);
+        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
+        return ReflectUtil.existsMethodByName(clazz, methodName, luaStateFacade.isIgnoreNotPublic(), false, isStatic);
     }
 
     /**
@@ -479,7 +478,7 @@ public final class LuaJavaAPI {
         }
 
         LinkedList<LuaInvokedMethod<Method>> list = ReflectUtil.findMethodByParams(
-                clazz, methodName, objs, false, false, false, false);
+                clazz, methodName, objs, false, luaStateFacade.isIgnoreNotPublic(), false, false);
         if (list.isEmpty()) {
             return null;
         } else if (list.size() > 1) {

@@ -62,7 +62,16 @@ public final class LuaStateFactory {
      * @return LuaState
      */
     public synchronized static LuaStateFacade newLuaState() {
-        LuaStateFacade facade = new LuaStateFacade(COUNTER.getAndIncrement());
+        return newLuaState(true);
+    }
+
+    /**
+     * Method that creates a new instance of LuaState
+     *
+     * @return LuaState
+     */
+    public synchronized static LuaStateFacade newLuaState(boolean ignoreNotPublic) {
+        LuaStateFacade facade = new LuaStateFacade(COUNTER.getAndIncrement(), ignoreNotPublic);
         STATES.put(facade.getStateId(), facade);
         CPER_TP_STATE_ID_MAP.put(facade.getCPtrPeer(), facade.getStateId());
         return facade;
