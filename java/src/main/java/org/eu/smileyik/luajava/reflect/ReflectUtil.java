@@ -103,7 +103,7 @@ public class ReflectUtil {
         int paramsCount = params == null ? 0 : params.length;
         Class<?>[] paramTypes = new Class<?>[paramsCount];
         for (int i = 0; i < paramsCount; i++) {
-            paramTypes[i] = params[i].getClass();
+            paramTypes[i] = params[i] == null ? null : params[i].getClass();
             allowCache &= isAllowCache.apply(paramTypes[i]);
         }
         ReflectExecutableCacheKey cacheKey = null;
@@ -177,7 +177,7 @@ public class ReflectUtil {
         int paramsCount = params.length;
         Class<?>[] paramTypes = new Class<?>[paramsCount];
         for (int i = 0; i < paramsCount; i++) {
-            paramTypes[i] = params[i].getClass();
+            paramTypes[i] = params[i] == null ? null : params[i].getClass();
             allowCache &= isAllowCache.apply(paramTypes[i]);
         }
 
