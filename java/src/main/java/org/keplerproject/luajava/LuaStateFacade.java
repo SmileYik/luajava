@@ -1131,6 +1131,81 @@ public class LuaStateFacade implements AutoCloseable {
         lock(LuaState::openPackage);
     }
 
+    // ******************** addition since lua 5.2 start ***********************
+    /**
+     * added since lua 5.2
+     * @param idx
+     * @return
+     */
+    public int rawLen(int idx) {
+        return lock(it -> {
+            return it.rawLen(idx);
+        });
+    }
+
+    /**
+     * added since lua 5.2
+     * @param idx1
+     * @param idx2
+     * @param op
+     * @return
+     */
+    public boolean compare(int idx1, int idx2, int op) {
+        return lock(l -> {
+            return l.compare(idx1, idx2, op);
+        });
+    }
+
+    public void arith(int op) {
+        lock(l -> {
+            l.arith(op);
+        });
+    }
+
+    public void len(int idx) {
+        lock(l -> {
+            l.len(idx);
+        });
+    }
+
+    /**
+     * added since lua 5.2
+     * @param thread
+     * @param nargs
+     * @return
+     */
+    public int resume(LuaState thread, int nargs) {
+        return lock(l -> {
+            return l.resume(thread, nargs);
+        });
+    }
+
+    public int pushThread(LuaState thread) {
+        return lock(l -> {
+            return l.pushThread(thread);
+        });
+    }
+
+    public void setUserValue(int idx) {
+        lock(l -> {
+            l.setUserValue(idx);
+        });
+    }
+
+    public void getUserValue(int idx) {
+        lock(l -> {
+            l.getUserValue(idx);
+        });
+    }
+
+    public int absIndex(int idx) {
+        return lock(it -> {
+            return it.absIndex(idx);
+        });
+    }
+
+    // ******************** addition since lua 5.2 stop ***********************
+
     /********************** Luajava API Library **********************/
 
     public void openLibs() {

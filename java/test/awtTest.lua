@@ -1,3 +1,7 @@
+-- since lua 5.3, loadstring not work anymore
+if loadstring == nil then
+    loadstring = load
+end
 
 frame = luajava.newInstance("java.awt.Frame", "Lua Java Console")
 console = luajava.newInstance("java.awt.TextArea")

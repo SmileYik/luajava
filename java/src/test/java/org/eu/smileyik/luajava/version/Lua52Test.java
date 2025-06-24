@@ -186,4 +186,15 @@ public class Lua52Test {
             }
         }
     }
+
+    @Test
+    public void absIndexTest() {
+        try (LuaStateFacade facade = LuaStateFactory.newLuaState()) {
+            Object obj = new Object();
+            facade.newTable();
+            facade.pushNumber(1);
+            facade.pushJavaObject(obj);
+            assert facade.getLuaState().absIndex(-3) == 1;
+        }
+    }
 }

@@ -88,13 +88,22 @@ public class LuaState {
     final public static int LUA_GCSETSTEPMUL = 7;
 
     // since lua 5.2: arith
-    public static final int LUA_OPADD = 0;
-    public static final int LUA_OPSUB = 1;
-    public static final int LUA_OPMUL = 2;
-    public static final int LUA_OPDIV = 3;
-    public static final int LUA_OPMOD = 4;
-    public static final int LUA_OPPOW = 5;
-    public static final int LUA_OPUNM = 6;
+    public static final int LUA_OPADD;
+    public static final int LUA_OPSUB;
+    public static final int LUA_OPMUL;
+    public static final int LUA_OPDIV;
+    public static final int LUA_OPMOD;
+    public static final int LUA_OPPOW;
+    public static final int LUA_OPUNM;
+
+    // since lua 5.3: arith
+    public static final int LUA_OPIDI;
+    public static final int LUA_OPBAN;
+    public static final int LUA_OPBOR;
+    public static final int LUA_OPBXO;
+    public static final int LUA_OPSHL;
+    public static final int LUA_OPSHR;
+    public static final int LUA_OPBNO;
 
     // since lua 5.2: compare
     public static final int LUA_OPEQ = 0;
@@ -109,6 +118,42 @@ public class LuaState {
     static {
         // Remove
         // System.loadLibrary(LUAJAVA_LIB);
+        switch (LUA_VERSION) {
+            case "Lua 5.2":
+                LUA_OPADD = 0;
+                LUA_OPSUB = 1;
+                LUA_OPMUL = 2;
+                LUA_OPDIV = 3;
+                LUA_OPMOD = 4;
+                LUA_OPPOW = 5;
+                LUA_OPUNM = 6;
+                // ignore
+                LUA_OPIDI = 6;
+                LUA_OPBAN = 7;
+                LUA_OPBOR = 8;
+                LUA_OPBXO = 9;
+                LUA_OPSHL = 10;
+                LUA_OPSHR = 11;
+                LUA_OPBNO = 13;
+                break;
+            default:
+                // since lua 5.3
+                LUA_OPADD = 0;
+                LUA_OPSUB = 1;
+                LUA_OPMUL = 2;
+                LUA_OPMOD = 3;
+                LUA_OPPOW = 4;
+                LUA_OPDIV = 5;
+                LUA_OPIDI = 6;
+                LUA_OPBAN = 7;
+                LUA_OPBOR = 8;
+                LUA_OPBXO = 9;
+                LUA_OPSHL = 10;
+                LUA_OPSHR = 11;
+                LUA_OPUNM = 12;
+                LUA_OPBNO = 13;
+                break;
+        }
     }
 
     private CPtr luaState;
@@ -437,8 +482,38 @@ public class LuaState {
 
     private native void _setuservalue(CPtr ptr, int idx);
     private native void _getuservalue(CPtr ptr, int idx);
+    private native int _absindex(CPtr ptr, int idx);
+    private native void _openCoroutine(CPtr ptr);
 
-    // ******************** addition since lua 5.2 stop ***********************
+    // ******************** addition since lua 5.2 stop ************************
+
+    // ******************** addition since lua 5.3 start ***********************
+
+    private native void _rotate(CPtr ptr, int idx, int n);
+
+    private native void _openUtf8(CPtr ptr);
+
+    // ******************** addition since lua 5.3 stop ************************
+
+    // ******************** addition since lua 5.4 start ***********************
+
+    public int getIUserValue(int idx, int n) {
+        return _getiuservalue(luaState, idx, n);
+    }
+
+    public int setIUserValue(int idx, int n) {
+        return _setiuservalue(luaState, idx, n);
+    }
+
+    public void warning(String msg, int tocont) {
+        _warning(luaState, msg, tocont);
+    }
+
+    public int resume(LuaState threadL, int nargs, int nrets) {
+        return _resume(luaState, threadL.luaState, nargs, nrets);
+    }
+
+    // ******************** addition since lua 5.4 stop ************************
 
 
     // Java Interface -----------------------------------------------------
@@ -913,6 +988,10 @@ public class LuaState {
         _arith(luaState, op);
     }
 
+    /**
+     * get the target object length.
+     * @param idx target object index.
+     */
     public void len(int idx) {
         _len(luaState, idx);
     }
@@ -931,15 +1010,58 @@ public class LuaState {
         return _pushthread(luaState, thread.luaState);
     }
 
+    /**
+     * set uservalue to target userdata.
+     * @apiNote the uservalue must be nil or a lua table.
+     * @param idx userdata index
+     */
     public void setUserValue(int idx) {
         _setuservalue(luaState, idx);
     }
 
+    /**
+     * get uservalue from target userdata.
+     * @param idx userdata index
+     */
     public void getUserValue(int idx) {
         _getuservalue(luaState, idx);
     }
 
+    /**
+     * get the absolute index.
+     * @param idx idx
+     * @return index.
+     */
+    public int absIndex(int idx) {
+        return _absindex(luaState, idx);
+    }
+
+    public void openCoroutine() {
+        _openCoroutine(luaState);
+    }
+
     // ******************** addition since lua 5.2 stop ***********************
+
+    // ******************** addition since lua 5.3 start ***********************
+
+    public void rotate(int idx, int n) {
+        _rotate(luaState, idx, n);
+    }
+
+    public void openUtf8() {
+        _openUtf8(luaState);
+    }
+
+    // ******************** addition since lua 5.3 stop ************************
+
+    // ******************** addition since lua 5.4 start ***********************
+
+    private native int _getiuservalue(CPtr ptr, int idx, int n);
+    private native int _setiuservalue(CPtr ptr, int idx, int n);
+    private native void _warning(CPtr ptr, String msg, int tocont);
+    private native int _resume(CPtr ptr, CPtr threadPtr, int nargs, int nrets);
+
+    // ******************** addition since lua 5.4 stop ************************
 
 
     /********************** Luajava API Library **********************/

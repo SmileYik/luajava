@@ -1112,6 +1112,7 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1yield(
   return (jint)lua_yield(L, nResults);
 }
 
+#ifdef LUAJAVA_ENABLE_METHOD_RESUME_LUA_51
 /************************************************************************
  *   JNI Called function
  *      Lua Exported Function
@@ -1123,6 +1124,7 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1resume(
 
   return (jint)lua_resume(L, nArgs);
 }
+#endif // LUAJAVA_ENABLE_METHOD_RESUME_LUA_51
 
 /************************************************************************
  *   JNI Called function

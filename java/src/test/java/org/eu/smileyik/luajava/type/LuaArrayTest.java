@@ -404,6 +404,41 @@ class LuaArrayTest extends BaseTest {
         }
     }
 
+    @Test
+    public void arrayRemoveTest() throws Exception {
+        String lua = "array = {1, 2, 3, 4, 5, 6, 7, 8, 9} \n" +
+                "function print_array() \n" +
+                "  for i, v in pairs(array) do \n" +
+                "    print(i, v) \n" +
+                "  end\n" +
+                "  print('-------------')\n" +
+                "end";
+        try (LuaStateFacade facade = newLuaState()) {
+            facade.evalString(lua).justThrow();
+            LuaFunction printArray = facade.getGlobal("print_array", LuaFunction.class).getOrThrow();
+            LuaArray array = facade.getGlobal("array", LuaArray.class).getOrThrow();
+            printArray.call().getOrThrow();
+            assert array.length() == 9;
+            // remove index 0
+            array.remove(0).justThrow();
+            assert array.length() == 8;
+            assert Arrays.equals(array.toIntArray().getOrThrow(), new int[] {2, 3, 4, 5, 6, 7, 8, 9});
+            printArray.call().getOrThrow();
+            // remove latest.
+            array.remove(array.length() - 1).getOrThrow();
+            assert array.length() == 7;
+            assert Arrays.equals(array.toIntArray().getOrThrow(), new int[] {2, 3, 4, 5, 6, 7, 8});
+            printArray.call().getOrThrow();
+            // remove index 3
+            array.remove(3).getOrThrow();
+            assert array.length() == 6;
+            assert Arrays.equals(array.toIntArray().getOrThrow(), new int[] {2, 3, 4, 6, 7, 8});
+            printArray.call().getOrThrow();
+            assertThrows(LuaException.class, () -> {array.remove(-1).getOrThrow();});
+            assertThrows(LuaException.class, () -> {array.remove(array.length()).getOrThrow();});
+        }
+    }
+
     private void createAArray(LuaState L, String name) {
         A[] as = new A[] {new A(), new A(), new A(), new A(), new A()};
         createArray(L, name, as);

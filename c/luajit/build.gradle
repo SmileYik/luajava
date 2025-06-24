@@ -44,6 +44,7 @@ model {
                     exportedHeaders {
                         srcDir project(':c').layout.projectDirectory.dir('src/main/c')
                         srcDir "src/main/c"
+                        srcDir "src/main/compatible"
                         srcDir layout.buildDirectory.dir('headers')
                         srcDir "${System.properties['java.home']}/include"
                         srcDir "${System.properties['java.home']}/include/linux"
