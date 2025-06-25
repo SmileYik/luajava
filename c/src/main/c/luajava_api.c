@@ -11,10 +11,13 @@
 #define GENERATE_LUA_STATE_STACK( L, RESULT, MSG, ... ) \
   lua_Debug ar; \
   int level = 0; \
+  size_t len; \
+  size_t size = sizeof(RESULT); \
   snprintf(RESULT + strlen(RESULT), sizeof(RESULT) - strlen(RESULT), MSG, ##__VA_ARGS__); \
   while (lua_getstack(L, level++, &ar)) { \
     lua_getinfo(L, "nSl", &ar); \
-    snprintf(RESULT, sizeof(RESULT), "%s\n\tat [LuaVM] [%d] [%s] %s: %s (%s:%d)", RESULT, \
+    len = strlen(RESULT); \
+    snprintf(RESULT + len, size - len, "\n\tat [LuaVM] [%d] [%s] %s: %s (%s:%d)", \
             level - 1, ar.what ? ar.what : "(unknown what)", \
             ar.namewhat ? ar.namewhat : "(unknown namewhat)", \
             ar.name ? ar.name : "(unknown name)", \
