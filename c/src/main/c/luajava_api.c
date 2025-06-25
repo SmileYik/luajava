@@ -372,9 +372,9 @@ int objectIndex(lua_State *L) {
     return 0;
   }
 
-  luajavaSetObjectFunctionCalled(L, 1, key);
-
-  lua_pushcfunction(L, &objectIndexReturn);
+  lua_pushvalue(L, 1);
+  lua_pushstring(L, key);
+  lua_pushcclosure(L, &objectIndexReturn, 2);
   return 1;
 }
 
@@ -394,16 +394,9 @@ int objectIndexReturn(lua_State *L) {
 
   stateIndex = getLuaStateIndex(L);
 
-  /* Checks if is a valid java object */
-  if (!isJavaObject(L, 1)) {
-     THROW_LUA_ERROR(L, "Not a valid OO function call. "
-     "If you want call a java method, use 'objet:method()' not 'object.method()'");
-  }
-
-  methodName = luajavaGetObjectFunctionCalled(L, 1);
-
   /* Gets the object reference */
-  pObject = (jobject *)lua_touserdata(L, 1);
+  pObject = (jobject *)lua_touserdata(L, lua_upvalueindex(1));
+  methodName = lua_tostring(L, lua_upvalueindex(2));
 
   /* Gets the JNI Environment */
   javaEnv = getEnvFromState(L);

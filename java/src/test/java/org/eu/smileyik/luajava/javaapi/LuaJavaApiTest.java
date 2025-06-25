@@ -105,6 +105,7 @@ public class LuaJavaApiTest {
         facade.openLibs();
         facade.setGlobal("nest", new Nest()).justThrow();
         facade.evalString(lua).justThrow();
+        facade.evalString("nest:print('123' .. nest:getName() .. '456')").justThrow();
         facade.close();
     }
 }
@@ -234,5 +235,13 @@ class Nest {
 
     public int deep() {
         return i;
+    }
+
+    public String getName() {
+        return "Name";
+    }
+
+    public void print(String str) {
+        System.out.println(str);
     }
 }
