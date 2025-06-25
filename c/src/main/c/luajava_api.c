@@ -17,11 +17,13 @@
   while (lua_getstack(L, level++, &ar)) { \
     lua_getinfo(L, "nSl", &ar); \
     len = strlen(RESULT); \
-    snprintf(RESULT + len, size - len, "\n\tat [LuaVM] [%d] [%s] %s: %s (%s:%d)", \
-            level - 1, ar.what ? ar.what : "(unknown what)", \
-            ar.namewhat ? ar.namewhat : "(unknown namewhat)", \
-            ar.name ? ar.name : "(unknown name)", \
-            ar.source ? ar.source : "(unknown source)", ar.currentline); \
+    if (size > len) { \
+        snprintf(RESULT + len, size - len, "\n\tat [LuaVM] [%d] [%s] %s: %s (%s:%d)", \
+                level - 1, ar.what ? ar.what : "(unknown what)", \
+                ar.namewhat ? ar.namewhat : "(unknown namewhat)", \
+                ar.name ? ar.name : "(unknown name)", \
+                ar.source ? ar.source : "(unknown source)", ar.currentline); \
+    } \
   }
 
 /**
