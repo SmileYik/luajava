@@ -29,13 +29,20 @@ model {
         x64 {
             architecture "x86_64"
         }
+        arm64 {
+            architecture "aarch64"
+        }
     }
 }
 
 model {
     components {
         "$LUA_VERSION"(NativeLibrarySpec) {
-            targetPlatform 'x64'
+            if (IS_MACOS) {
+                targetPlatform 'arm64'
+            } else {
+                targetPlatform 'x64'
+            }
             sources {
                 c {
                     exportedHeaders {
@@ -46,7 +53,11 @@ model {
         }
 
         "luajava4${LUA_MAJOR_VERSION}"(NativeLibrarySpec) {
-            targetPlatform 'x64'
+            if (IS_MACOS) {
+                targetPlatform 'arm64'
+            } else {
+                targetPlatform 'x64'
+            }
             sources {
                 c {
                     lib library: "$LUA_VERSION", linkage: 'static'
