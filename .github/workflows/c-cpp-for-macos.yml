@@ -18,7 +18,7 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
     - name: make
-      run: make
+      run: make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew"
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4.6.2
       with:
