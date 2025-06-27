@@ -102,7 +102,6 @@ function Enter-VsDevShell {
 }
 
 Enter-VsDevShell
-Start-Sleep -Seconds 3
 
 cd $Path
 cmd
@@ -112,3 +111,6 @@ ren luac.obj luac.o
 link /DLL /IMPLIB:lua.lib /OUT:lua.dll *.obj
 link /OUT:lua.exe lua.o lua.lib
 link /OUT:luac.exe luac.o *.obj
+del /q *.obj
+del /q *.o
+del /q *.exp

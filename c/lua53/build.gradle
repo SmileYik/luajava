@@ -168,6 +168,7 @@ build {
         copy {
             // linux
             from layout.buildDirectory.file("libs/luajava4${LUA_MAJOR_VERSION}/shared/")
+            from "${LUA_SRC}/lua.dll"
 
             into rootProject.layout.buildDirectory.dir("outputs/shared/${LUA_VERSION}")
         }
