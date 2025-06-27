@@ -97,6 +97,7 @@ tasks.register('generateHeader') {
     exec {
         workingDir project(':java').layout.projectDirectory.dir("src/main/java")
         commandLine file("${System.properties['java.home']}/bin/javac"),
+                "-cp", "./",
                 "-d", "${layout.buildDirectory.dir("classes").get()}",
                 "-h", "${layout.buildDirectory.dir("generated-headers").get()}",
                 "org/keplerproject/luajava/LuaState.java"
