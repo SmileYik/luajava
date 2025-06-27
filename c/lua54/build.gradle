@@ -73,8 +73,6 @@ model {
             }
 
             binaries.all {
-//                checkedBy $.tasks.findByName("download${LUA_VERSION}")
-//                checkedBy $.tasks.findByName("build${LUA_VERSION}")
                 checkedBy $.tasks.buildLua
                 checkedBy $.tasks.generateHeader
 
@@ -82,7 +80,7 @@ model {
 
                 if (toolChain in VisualCpp) {
                     cppCompiler.define 'WIN64'
-                    linker.args "lua54.lib", "/LIBPATH:${LUA_SRC}"
+                    linker.args "lua.lib", "/LIBPATH:${LUA_SRC}"
                 } else {
                     // cCompiler.args "-g"
                     linker.args "-llua", "-L${LUA_SRC}"
@@ -116,9 +114,12 @@ tasks.register('generateHeader') {
 tasks.register("download${LUA_VERSION}") {
     group("lua")
     if (!file("${layout.buildDirectory.file("$LUA_HOME").get()}").exists()) {
-        exec {
-            workingDir layout.buildDirectory
-            commandLine 'wget', "https://www.lua.org/ftp/${LUA_VERSION}.tar.gz"
+        def fileUrl = "https://www.lua.org/ftp/${LUA_VERSION}.tar.gz"
+        def destinationFile = file("${layout.buildDirectory.get().asFile}/${LUA_VERSION}.tar.gz")
+        new URL(fileUrl).withInputStream { input ->
+            destinationFile.withOutputStream { output ->
+                output << input
+            }
         }
     }
 }
@@ -127,9 +128,16 @@ tasks.register("decompress${LUA_VERSION}Source") {
     group("lua")
     dependsOn "download${LUA_VERSION}"
     if (!file("${layout.buildDirectory.file("$LUA_HOME").get()}").exists()) {
-        exec {
-            workingDir layout.buildDirectory
-            commandLine 'tar', '-xvf', "${LUA_VERSION}.tar.gz"
+        def tarGzFile = file("${layout.buildDirectory.get().asFile}/${LUA_VERSION}.tar.gz")
+        def destinationDir = layout.buildDirectory.get().asFile
+        doFirst {
+            if (!destinationDir.exists()) {
+                destinationDir.mkdirs()
+            }
+        }
+        copy {
+            from tarTree(resources.gzip(tarGzFile))
+            into destinationDir
         }
     }
 }
@@ -139,6 +147,10 @@ tasks.register("build${LUA_VERSION}") {
     dependsOn "decompress${LUA_VERSION}Source"
     if (IS_WINDOWS) {
         // TODO WINS
+        exec {
+            workingDir project(":c").layout.projectDirectory
+            commandLine 'powershell', '-Command', '.\\build.ps1', "-Path", "${LUA_SRC}"
+        }
     } else {
         // TODO MACOS
         exec {
@@ -150,7 +162,7 @@ tasks.register("build${LUA_VERSION}") {
 
 tasks.register("buildLua") {
     group("lua")
-    dependsOn "build${LUA_VERSION}"
+    dependsOn "download${LUA_VERSION}", "decompress${LUA_VERSION}Source", "build${LUA_VERSION}"
 }
 
 build {
