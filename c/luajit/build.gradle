@@ -122,7 +122,7 @@ build {
         copy {
             // linux
             from layout.buildDirectory.file("libs/luajava4Luajit/shared/")
-            from layout.projectDirectory.file("luajit/src/*.so")
+            from layout.projectDirectory.file("luajit/src/libluajit.so")
 
             // windows
             from layout.buildDirectory.file("libs/luajava/shared/luajava.dll")
