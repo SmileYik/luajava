@@ -151,8 +151,8 @@
     \
     cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jStr, NULL); \
     \
-    char errorStack[1 << 10] = "[C Side Exception] "; \
-    strncat(errorStack, cStr, 100); \
+    char errorStack[1 << 16] = "[C Side Exception] "; \
+    strncat(errorStack, cStr, sizeof(errorStack)); \
     GENERATE_LUA_STATE_STACK(L, errorStack, ""); \
     lua_pushstring(L, errorStack); \
     \

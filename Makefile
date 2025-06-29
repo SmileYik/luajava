@@ -25,5 +25,8 @@ luajava4Lua54:
 	$(COMMAND) :c:lua54:buildlua-5.4.8
 	$(COMMAND) :c:lua54:build
 
+jar:
+	$(COMMAND) :java:build -x test
+
 clean:
 	$(COMMAND) clean
