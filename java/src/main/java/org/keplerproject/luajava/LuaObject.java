@@ -397,7 +397,7 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
      *
      * @param implem Interfaces that are implemented, separated by <code>,</code>
      */
-    public Result<Object, ? extends Exception> createProxy(String implem) throws ClassNotFoundException, LuaException {
+    public Result<Object, ? extends Exception> createProxy(String implem) throws LuaException {
         if (isClosed()) return Result.failure(new LuaException("This lua state is closed"));
         if (!isTable())
             throw new LuaException("Invalid Object. Must be Table.");

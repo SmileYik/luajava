@@ -137,7 +137,7 @@ public final class LuaJavaAPI {
 
             Object ret;
             try {
-                if (Modifier.isPublic(method.getModifiers())) {
+                if (!method.canAccess(clazz == obj ? null : obj)) {
                     method.setAccessible(true);
                 }
 
@@ -229,12 +229,16 @@ public final class LuaJavaAPI {
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         // like a.b = 1
         Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
+        boolean isStatic = targetClass == obj;
         Field field = ReflectUtil.findFieldByName(targetClass, fieldName,
-                false, false, obj == targetClass, luaStateFacade.isIgnoreNotPublic());
+                false, false, isStatic, luaStateFacade.isIgnoreNotPublic());
         if (field == null) {
             throw new LuaException("Error accessing field " + fieldName);
         }
-        if (!field.isAccessible()) field.setAccessible(true);
+        // checkField method already checked the obj can access this field or not.
+        if (!field.canAccess(isStatic ? null : obj)) {
+            field.setAccessible(true);
+        }
 
         luaStateFacade.lockThrow(L -> {
             Class<?> type = field.getType();
@@ -244,8 +248,6 @@ public final class LuaJavaAPI {
             }
             try {
                 field.set(obj, setObjRet.getValue());
-            } catch (IllegalArgumentException e) {
-                throw new LuaException("Ilegal argument to set field.", e);
             } catch (IllegalAccessException e) {
                 throw new LuaException("Field not accessible.", e);
             }
@@ -398,12 +400,22 @@ public final class LuaJavaAPI {
         if (obj == null) return 0;
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
+        boolean isStatic = targetClass == obj;
         Field field = ReflectUtil.findFieldByName(targetClass, fieldName,
-                false, false, obj == targetClass, luaStateFacade.isIgnoreNotPublic());
+                false, false, isStatic, luaStateFacade.isIgnoreNotPublic());
         if (field == null) return 0;
         try {
-            Object o = field.get(obj);
-            return luaStateFacade.pushObjectValue(o).isSuccess() ? 1 : 0;
+            Object ret;
+            if (field.canAccess(isStatic ? null : obj)) {
+                ret = field.get(obj);
+            } else if (!luaStateFacade.isIgnoreNotPublic()) {
+                field.setAccessible(true);
+                ret = field.get(obj);
+            } else {
+                return 0;
+            }
+            luaStateFacade.pushObjectValue(ret).justThrow(LuaException.class);
+            return 1;
         } catch (IllegalAccessException ignore) { }
         return 0;
     }
@@ -437,17 +449,12 @@ public final class LuaJavaAPI {
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
 
         luaStateFacade.lockThrow(L -> {
-            try {
-                if (!(L.isTable(2))) {
-                    throw new LuaException("Parameter is not a table. Can't create proxy.");
-                }
-                LuaObject luaObj = luaStateFacade.getLuaObject(2).getOrThrow(LuaException.class);
-                Object proxy = luaObj.createProxy(implem).getOrThrow(LuaException.class);
-                L.pushJavaObject(proxy);
-            } catch (Exception e) {
-                throw new LuaException(e);
+            if (!(L.isTable(2))) {
+                throw new LuaException("Parameter is not a table. Can't create proxy.");
             }
-
+            LuaObject luaObj = luaStateFacade.getLuaObject(2).getOrThrow(LuaException.class);
+            Object proxy = luaObj.createProxy(implem).getOrThrow(LuaException.class);
+            L.pushJavaObject(proxy);
         }).justThrow(LuaException.class);
         return 1;
     }

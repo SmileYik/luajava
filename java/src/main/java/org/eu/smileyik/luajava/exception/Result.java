@@ -127,6 +127,8 @@ public class Result <T, E> {
         if (isError()) {
             if (clazz.isAssignableFrom(error.getClass())) {
                 throw clazz.cast(error);
+            } else if (error instanceof RuntimeException) {
+                throw (RuntimeException) error;
             } else if (error instanceof Throwable) {
                 throw new RuntimeException(message, (Exception) error);
             } else {
