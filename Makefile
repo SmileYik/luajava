@@ -1,7 +1,7 @@
 
 COMMAND= ./gradlew
 
-all: luajava4Luajit luajava4Lua52 luajava4Lua53 luajava4Lua54
+all: jar luajava4Luajit luajava4Lua52 luajava4Lua53 luajava4Lua54
 
 luajava4Luajit:
 	$(COMMAND) :c:luajit:model
