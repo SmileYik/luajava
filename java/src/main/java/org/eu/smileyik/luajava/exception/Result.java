@@ -281,6 +281,24 @@ public class Result <T, E> {
         return ret;
     }
 
+    public interface ThrowFunction <T, R> {
+        R apply(T t) throws Exception;
+    }
+    public <RT, RE> Result<RT, RE> thenMap(ThrowFunction<T, Result<RT, RE>> function) {
+        if (isError()) {
+            return (Result<RT, RE>) this;
+        }
+        try {
+            Result<RT, RE> ret = function.apply(value);
+            if (ret != SUCCESS && ret.value == null && message == null) {
+                return success();
+            }
+            return ret;
+        } catch (Exception e) {
+            return (Result<RT, RE>) failure(e);
+        }
+    }
+
     public <RT, RE> Result<RT, RE> mapResult(Function<Result<T, E>, Result<RT, RE>> function) {
         Result<RT, RE> ret = function.apply(this);
         if (ret.value == null && error == null && message == null) {
