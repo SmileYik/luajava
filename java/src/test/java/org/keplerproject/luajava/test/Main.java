@@ -63,11 +63,7 @@ public class Main {
             p.print("TESTE 1");
 
             LuaObject o = luaState.getLuaObject("luaPrint").getOrThrow(LuaException.class);
-            try {
-                p = (Printable) o.createProxy("org.keplerproject.luajava.test.Printable").getOrThrow(LuaException.class);
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException(e);
-            }
+            p = (Printable) o.createProxy("org.keplerproject.luajava.test.Printable").getOrThrow(LuaException.class);
             p.print("Teste 2");
         });
 
