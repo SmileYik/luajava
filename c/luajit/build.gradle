@@ -20,13 +20,21 @@ model {
         x64 {
             architecture "x86_64"
         }
+        arm64 {
+            architecture "aarch64"
+        }
     }
 }
 
 model {
     components {
         luajit(NativeLibrarySpec) {
-            targetPlatform 'x64'
+            if (IS_MACOS) {
+                targetPlatform 'arm64'
+            } else {
+                targetPlatform 'x64'
+            }
+            
             sources {
                 c {
                     exportedHeaders {
@@ -37,7 +45,12 @@ model {
         }
 
         luajava4Luajit(NativeLibrarySpec) {
-            targetPlatform 'x64'
+            if (IS_MACOS) {
+                targetPlatform 'arm64'
+            } else {
+                targetPlatform 'x64'
+            }
+
             sources {
                 c {
                     lib library: 'luajit', linkage: 'static'
@@ -79,6 +92,7 @@ tasks.register('generateHeader') {
     exec {
         workingDir project(':java').layout.projectDirectory.dir("src/main/java")
         commandLine file("${System.properties['java.home']}/bin/javac"),
+                    "-cp", "./",
                     "-d", "${layout.buildDirectory.dir("classes").get()}",
                     "-h", "${layout.buildDirectory.dir("generated-headers").get()}",
                     "org/keplerproject/luajava/LuaState.java"
@@ -122,7 +136,10 @@ build {
         copy {
             // linux
             from layout.buildDirectory.file("libs/luajava4Luajit/shared/")
-            from layout.projectDirectory.file("luajit/src/*.so")
+            from layout.projectDirectory.file("luajit/src/libluajit.so")
+
+            // macos
+            from layout.projectDirectory.file("luajit/src/libluajit.dylib")
 
             // windows
             from layout.buildDirectory.file("libs/luajava/shared/luajava.dll")

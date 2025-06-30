@@ -1,0 +1,52 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+        
+    - name: Linux - Make
+      if: runner.os == 'Linux'
+      run: make
+      
+    - name: macOS - Make
+      if: runner.os == 'macOS'
+      run: make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew"
+      
+    - name: Windows - Prepare VS Shell
+      if: runner.os == 'Windows'
+      uses: egor-tensin/vs-shell@v2
+      with:
+        arch: x64
+    - name: Windows - Make
+      if: runner.os == 'Windows'
+      run: make COMMAND=.\gradlew
+      
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4.6.2
+      with:
+        # Artifact name
+        name: luajava-dynamic-libraries-${{ runner.os }}
+        path: "${{ github.workspace }}/build/outputs"
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4.3.0
+      with:
+        name: luajava-dynamic-libraries-${{ runner.os }}
+        path: "${{ github.workspace }}/build/outputs"
