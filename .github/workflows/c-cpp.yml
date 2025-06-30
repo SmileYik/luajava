@@ -48,5 +48,5 @@ jobs:
     - name: Download a Build Artifact
       uses: actions/download-artifact@v4.3.0
       with:
-        name: luajava-dynamic-libraries-${{ runner.os }}.zip
+        name: luajava-dynamic-libraries-${{ runner.os }}
         path: "${{ github.workspace }}/build/outputs"
