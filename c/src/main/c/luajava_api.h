@@ -315,6 +315,23 @@ int javaBindClass(lua_State *L);
 
 /***************************************************************************
  *
+ * $FC Function javaClass2Obj
+ *
+ * $ED Description
+ *    Implementation of lua function luajava.class2Obj
+ *
+ * $EP Function Parameters
+ *    $P L - lua State
+ *
+ * $FV Returned Value
+ *    int - Number of values to be returned by the function
+ *
+ *$. **********************************************************************/
+
+int javaClass2Obj(lua_State *L);
+
+/***************************************************************************
+ *
  * $FC Function createProxy
  *
  * $ED Description

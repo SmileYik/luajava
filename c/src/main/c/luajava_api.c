@@ -856,6 +856,32 @@ int javaBindClass(lua_State *L) {
 
 /***************************************************************************
  *
+ *  Function: javaClass2Obj
+ *  ****/
+
+int javaClass2Obj(lua_State *L) {
+  if (!isJavaObject(L, 1)) {
+    THROW_LUA_ERROR(L, "Only a java class can be cast to java object instance");
+  }
+
+  // just change metatable
+
+#ifdef LUAJAVA_FORCE_SAME_METATABLE_OBJECT
+  lua_pushstring(L, LUAJAVA_METATABLE_OBJECT);
+  lua_rawget(L, LUA_REGISTRYINDEX);
+#else
+  luajavaNewJavaObjectMetatable(L);
+#endif
+
+  if (lua_setmetatable(L, -2) == 0) {
+     THROW_LUA_ERROR(L, "Cannot create proxy to java object.");
+  }
+
+  return 1;
+}
+
+/***************************************************************************
+ *
  *  Function: createProxy
  *  ****/
 int createProxy(lua_State *L) {

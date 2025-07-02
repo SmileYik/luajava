@@ -120,6 +120,10 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState_luajava_1open(
   lua_pushcfunction(L, &javaBindClass);
   lua_settable(L, -3);
 
+  lua_pushstring(L, "class2Obj");
+  lua_pushcfunction(L, &javaClass2Obj);
+  lua_settable(L, -3);
+
   lua_pushstring(L, "new");
   lua_pushcfunction(L, &javaNew);
   lua_settable(L, -3);

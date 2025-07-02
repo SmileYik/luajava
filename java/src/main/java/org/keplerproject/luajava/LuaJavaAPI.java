@@ -125,7 +125,7 @@ public final class LuaJavaAPI {
         Object[] objs = new Object[top - 1];
         Method method = null;
 
-        Class<?> clazz = obj instanceof Class ? (Class<?>) obj : obj.getClass();
+        Class<?> clazz = obj.getClass();
         method = findMethod(luaStateFacade, clazz, methodName, objs, top);
 
         // If method is null means there isn't one receiving the given arguments
@@ -135,12 +135,13 @@ public final class LuaJavaAPI {
 
         Object ret;
         try {
-            if (!method.canAccess(clazz == obj ? null : obj)) {
+            boolean isStatic = Modifier.isStatic(method.getModifiers());
+            if (!method.canAccess(isStatic ? null : obj)) {
                 method.setAccessible(true);
             }
 
             //if (obj instanceof Class)
-            if (Modifier.isStatic(method.getModifiers())) {
+            if (isStatic) {
                 ret = method.invoke(null, objs);
             } else {
                 ret = method.invoke(obj, objs);
@@ -198,7 +199,7 @@ public final class LuaJavaAPI {
         if (res != 0) {
             return 1;
         }
-        if (checkMethod(luaState, clazz, searchName)) {
+        if (checkClassMethod(luaState, clazz, searchName)) {
             return 2;
         }
 
@@ -219,14 +220,13 @@ public final class LuaJavaAPI {
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         // like a.b = 1
         Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
-        boolean isStatic = targetClass == obj;
         Field field = ReflectUtil.findFieldByName(targetClass, fieldName,
-                false, false, isStatic, luaStateFacade.isIgnoreNotPublic());
+                false, false, false, luaStateFacade.isIgnoreNotPublic());
         if (field == null) {
             throw new LuaException("Error accessing field " + fieldName);
         }
         // checkField method already checked the obj can access this field or not.
-        if (!field.canAccess(isStatic ? null : obj)) {
+        if (!field.canAccess(Modifier.isStatic(field.getModifiers()) ? null : obj)) {
             field.setAccessible(true);
         }
 
@@ -361,7 +361,7 @@ public final class LuaJavaAPI {
         if (field == null) return 0;
         try {
             Object ret;
-            if (field.canAccess(isStatic ? null : obj)) {
+            if (field.canAccess(Modifier.isStatic(field.getModifiers()) ? null : obj)) {
                 ret = field.get(obj);
             } else if (!luaStateFacade.isIgnoreNotPublic()) {
                 field.setAccessible(true);
@@ -386,11 +386,27 @@ public final class LuaJavaAPI {
     public static boolean checkMethod(int luaState, Object obj, String methodName) {
         if (obj == null) return false;
 
-        Class<?> clazz = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
-        boolean isStatic = clazz == obj;
+        Class<?> clazz = obj.getClass();
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         return ReflectUtil.existsMethodByName(
-                clazz, methodName, luaStateFacade.isIgnoreNotPublic(), false, isStatic);
+                clazz, methodName, luaStateFacade.isIgnoreNotPublic(), false, false);
+    }
+
+    /**
+     * Checks to see if there is a static method with the given name.
+     *
+     * @param luaState   int that represents the state to be used
+     * @param obj        object to be inspected
+     * @param methodName name of the field to be inpected
+     * @return return 1 then means has method named target name
+     */
+    private static boolean checkClassMethod(int luaState, Object obj, String methodName) {
+        if (obj == null) return false;
+
+        Class<?> clazz = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
+        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
+        return ReflectUtil.existsMethodByName(
+                clazz, methodName, luaStateFacade.isIgnoreNotPublic(), false, true);
     }
 
     /**
