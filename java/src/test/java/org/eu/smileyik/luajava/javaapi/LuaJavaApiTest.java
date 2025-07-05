@@ -44,12 +44,11 @@ public class LuaJavaApiTest {
 
     @Test
     public void reflectTest() throws Exception {
-        String lua = "print(getmetatable(abc)); function findMethods(className)\n" +
+        String lua = "function findMethods(className)\n" +
                 "    print(\"----- find: \" .. className)\n" +
                 "    local class = luajava.bindClass(className)\n" +
-                "    class = luajava.class2Obj(class)\n" +
-                // "    setmetatable(class, getmetatable(abc))\n" +
                 "    while class ~= nil do\n" +
+                "    class = luajava.class2Obj(class)\n" +
                 "        print(\"find: \" .. class)\n" +
                 "        local methods = class:getDeclaredMethods()\n" +
                 "        for i=1, #methods do\n" +

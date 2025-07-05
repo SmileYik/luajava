@@ -113,9 +113,10 @@ public final class LuaJavaAPI {
      * @param luaState   int that indicates the state used
      * @param obj        Object to be indexed
      * @param methodName the name of the method
+     * @param classIndex is class static method or object method.
      * @return number of returned objects
      */
-    public static int objectIndex(int luaState, Object obj, String methodName)
+    public static int objectIndex(int luaState, Object obj, String methodName, boolean classIndex)
             throws LuaException {
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         LuaState L = luaStateFacade.getLuaState();
@@ -125,7 +126,15 @@ public final class LuaJavaAPI {
         Object[] objs = new Object[top - 1];
         Method method = null;
 
-        Class<?> clazz = obj.getClass();
+        Class<?> clazz;
+        if (classIndex) {
+            if (!(obj instanceof Class)) {
+                throw new LuaException("Object is not a class: " + obj);
+            }
+            clazz = (Class<?>) obj;
+        } else {
+            clazz = obj.getClass();
+        }
         method = findMethod(luaStateFacade, clazz, methodName, objs, top);
 
         // If method is null means there isn't one receiving the given arguments

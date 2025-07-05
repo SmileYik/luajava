@@ -200,6 +200,18 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1pushJavaObject(
  *      LuaJava API Function
  ************************************************************************/
 
+JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1pushJavaClass(
+    JNIEnv *env, jobject jobj, jobject cptr, jclass obj) {
+  lua_State *L = getStateFromCPtr(env, cptr);
+
+  pushJavaClass(L, obj);
+}
+
+/************************************************************************
+ *   JNI Called function
+ *      LuaJava API Function
+ ************************************************************************/
+
 JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1pushJavaArray(
     JNIEnv *env, jobject jobj, jobject cptr, jobject obj) {
   /* Get luastate */

@@ -210,7 +210,7 @@ void setupLuaJavaApi(JNIEnv *env) {
   BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_checkMethod, luajava_api_class, 
                           "checkMethod", "(ILjava/lang/Object;Ljava/lang/String;)Z");
   BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_objectIndex, luajava_api_class, 
-                          "objectIndex", "(ILjava/lang/Object;Ljava/lang/String;)I");
+                          "objectIndex", "(ILjava/lang/Object;Ljava/lang/String;Z)I");
   BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_classIndex, luajava_api_class, 
                           "classIndex", "(ILjava/lang/Class;Ljava/lang/String;)I");
   BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_arrayIndex, luajava_api_class, 
@@ -379,7 +379,8 @@ int objectIndex(lua_State *L) {
 
   lua_pushvalue(L, 1);
   lua_pushstring(L, key);
-  lua_pushcclosure(L, &objectIndexReturn, 2);
+  lua_pushboolean(L, 0);
+  lua_pushcclosure(L, &objectIndexReturn, 3);
   return 1;
 }
 
@@ -413,7 +414,7 @@ int objectIndexReturn(lua_State *L) {
   str = (*javaEnv)->NewStringUTF(javaEnv, methodName);
 
   ret = (*javaEnv)->CallStaticIntMethod(javaEnv, luajava_api_class, luajava_api_static_method_objectIndex,
-                                        (jint)stateIndex, *pObject, str);
+                                        (jint)stateIndex, *pObject, str, lua_toboolean(L, lua_upvalueindex(3)));
 
   exp = (*javaEnv)->ExceptionOccurred(javaEnv);
   HANDLES_JAVA_EXCEPTION(L, exp, javaEnv, {
@@ -529,13 +530,14 @@ int classIndex(lua_State *L) {
   (*javaEnv)->DeleteLocalRef(javaEnv, str);
 
   if (ret == 0) {
-     THROW_LUA_ERROR(L, "Name is not a static field or function.");
+     THROW_LUA_ERROR(L, "Indexed name is not a static field or function.");
   }
 
   if (ret == 2) {
-    luajavaSetObjectFunctionCalled(L, 1, fieldName);
-
-    lua_pushcfunction(L, &objectIndexReturn);
+    lua_pushvalue(L, 1);
+    lua_pushstring(L, fieldName);
+    lua_pushboolean(L, 1);
+    lua_pushcclosure(L, &objectIndexReturn, 3);
     return 1;
   }
 

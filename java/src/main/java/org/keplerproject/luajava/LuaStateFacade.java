@@ -421,6 +421,8 @@ public class LuaStateFacade implements AutoCloseable {
             } catch (LuaException e) {
                 return Result.failure(e);
             }
+        } else if (obj instanceof Class<?>) {
+            luaState.pushJavaClass((Class<?>) obj);
         } else {
             luaState.pushJavaObject(obj);
         }
@@ -1249,6 +1251,13 @@ public class LuaStateFacade implements AutoCloseable {
             l.pushJavaObject(obj);
         });
     }
+
+    public void pushJavaClass(Class<?> clazz) {
+        lock(l -> {
+            l.pushJavaClass(clazz);
+        });
+    }
+
 
     public void pushJavaArray(Object obj) throws LuaException {
         lockThrow(l -> {

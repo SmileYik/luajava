@@ -1105,6 +1105,14 @@ public class LuaState {
     private native void _pushJavaObject(CPtr L, Object obj);
 
     /**
+     * Pushes a Java Class into the state stack
+     *
+     * @param L
+     * @param clazz
+     */
+    private native void _pushJavaClass(CPtr L, Class<?> clazz);
+
+    /**
      * Pushes a Java Array into the state stack
      *
      * @param L
@@ -1148,6 +1156,15 @@ public class LuaState {
      */
     public boolean isObject(int idx) {
         return _isObject(luaState, idx);
+    }
+
+    /**
+     * Pushes a Java Class into the lua stack.<br>
+     *
+     * @param clazz Java Class instance to be pushed into lua
+     */
+    public void pushJavaClass(Class<?> clazz) {
+        _pushJavaClass(luaState, clazz);
     }
 
     /**
