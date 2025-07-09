@@ -76,7 +76,7 @@ model {
                     cppCompiler.define 'WIN64'
                     linker.args "lua.lib", "/LIBPATH:${LUA_SRC}"
                 } else {
-                    linker.args "-L${LUA_SRC}", '-llua', '-Wl,-rpath=\'$ORIGIN\'', '-Wl,--enable-new-dtags'
+                    linker.args "-L${LUA_SRC}", '-llua', *additionLinkerArgs
                 }
             }
         }

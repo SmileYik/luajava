@@ -11,10 +11,18 @@ repositories {
 
 def IS_WINDOWS = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win")
 def IS_MACOS = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("mac")
+def LINKER_ARGS = []
+
+if (IS_MACOS) {
+    LINKER_ARGS.addAll '-rpath', '@loader_path'
+} else if (!IS_MACOS && !IS_WINDOWS) {
+    LINKER_ARGS.add '-Wl,-rpath=\'$ORIGIN\''
+    LINKER_ARGS.add '-Wl,--enable-new-dtags'
+}
 
 ext.isWindows = IS_WINDOWS
 ext.isMacos = IS_MACOS
-
+ext.additionLinkerArgs = LINKER_ARGS
 ext.myTargetPlatform = IS_MACOS ? 'arm64' : 'x64'
 
 ext.generateCHeader = { Directory buildDir ->
