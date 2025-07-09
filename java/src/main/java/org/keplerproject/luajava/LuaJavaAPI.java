@@ -40,6 +40,10 @@ import java.util.LinkedList;
  */
 public final class LuaJavaAPI {
     private static final String METATABLE_KEY_ITERATOR = "__JavaIterator";
+    /**
+     * if index name starts with this then ignore field check.
+     */
+    private static final String FORCE_ACCESS_METHOD_PREFIX = "_m_";
     private LuaJavaAPI() {
     }
 
@@ -118,6 +122,12 @@ public final class LuaJavaAPI {
      */
     public static int objectIndex(int luaState, Object obj, String methodName, boolean classIndex)
             throws LuaException {
+        // remove method prefix
+        if (methodName != null && methodName.startsWith(FORCE_ACCESS_METHOD_PREFIX)) {
+            methodName = methodName.substring(FORCE_ACCESS_METHOD_PREFIX.length());
+            if (methodName.isEmpty())  return 0;
+        }
+
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         LuaState L = luaStateFacade.getLuaState();
 
@@ -362,6 +372,9 @@ public final class LuaJavaAPI {
      */
     public static int checkField(int luaState, Object obj, String fieldName) throws LuaException {
         if (obj == null) return 0;
+        // if it has force access method prefix then ignore check field.
+        if (fieldName == null || fieldName.startsWith(FORCE_ACCESS_METHOD_PREFIX)) return 0;
+
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
         boolean isStatic = targetClass == obj;
@@ -394,6 +407,11 @@ public final class LuaJavaAPI {
      */
     public static boolean checkMethod(int luaState, Object obj, String methodName) {
         if (obj == null) return false;
+        // remove method prefix
+        if (methodName != null && methodName.startsWith(FORCE_ACCESS_METHOD_PREFIX)) {
+            methodName = methodName.substring(FORCE_ACCESS_METHOD_PREFIX.length());
+            if (methodName.isEmpty())  return false;
+        }
 
         Class<?> clazz = obj.getClass();
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
