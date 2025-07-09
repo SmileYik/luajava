@@ -79,9 +79,13 @@ ext.doBuildLua = { Directory luaSrc ->
             workingDir "${luaSrc}"
             commandLine 'make', 'MYCFLAGS=-fPIC -DLUA_USE_POSIX -DLUA_USE_DLOPEN', 'liblua.a'
         }
+        def outputFiles = fileTree(luaSrc.asFile) {
+            include "*.o"
+            exclude 'luac.o', 'lua.o'
+        }.collect { it.name }
         exec {
             workingDir "${luaSrc}"
-            commandLine 'gcc', '-shared', '-Wl,-E', '-ldl', '-o', "liblua.${lastName}", '*.o'
+            commandLine 'gcc', '-shared', '-Wl,-E', '-ldl', '-lm', '-o', "liblua.${lastName}", *outputFiles
         }
     }
 }
