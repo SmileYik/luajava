@@ -75,6 +75,10 @@ ext.doBuildLua = { Directory luaSrc ->
         }
     } else {
         def lastName = IS_MACOS ? "dylib" : "so"
+        def addition = []
+        if (!IS_MACOS) {
+            addition.add '-Wl,-E'
+        }
         exec {
             workingDir "${luaSrc}"
             commandLine 'make', 'MYCFLAGS=-fPIC -DLUA_USE_POSIX -DLUA_USE_DLOPEN', 'liblua.a'
@@ -85,17 +89,21 @@ ext.doBuildLua = { Directory luaSrc ->
         }.collect { it.name }
         exec {
             workingDir "${luaSrc}"
-            commandLine 'gcc', '-shared', '-Wl,-E', '-ldl', '-lm', '-o', "liblua.${lastName}", *outputFiles
+            commandLine 'gcc', '-shared', *addition, '-ldl', '-lm', '-o', "liblua.${lastName}", *outputFiles
         }
     }
 }
 
 ext.copyOutput = { String luaMajorVersion, String luaVersion, Directory luaSrc ->
-    def pathPrefix = "libs/luajava4${luaMajorVersion}/shared/luajava4${luaMajorVersion}"
+    def pathPrefix = "${luaSrc}/../../libs/luajava4${luaMajorVersion}/shared/luajava4${luaMajorVersion}"
+    def pathPrefixWithLib = "${luaSrc}/../../libs/luajava4${luaMajorVersion}/shared/libluajava4${luaMajorVersion}"
     copy {
         from layout.buildDirectory.file("${pathPrefix}.dll")
         from layout.buildDirectory.file("${pathPrefix}.so")
         from layout.buildDirectory.file("${pathPrefix}.dylib")
+        from layout.buildDirectory.file("${pathPrefixWithLib}.dll")
+        from layout.buildDirectory.file("${pathPrefixWithLib}.so")
+        from layout.buildDirectory.file("${pathPrefixWithLib}.dylib")
         from "${luaSrc}/liblua.so"
         from "${luaSrc}/liblua.dylib"
         from "${luaSrc}/lua.dll"
