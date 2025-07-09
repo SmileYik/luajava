@@ -10,9 +10,6 @@ def LUA_VERSION = "lua-5.4.8"
 def LUA_HOME = layout.buildDirectory.dir("$LUA_VERSION").getOrNull()
 def LUA_SRC = layout.buildDirectory.dir("$LUA_VERSION/src").getOrNull()
 
-def IS_WINDOWS = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win")
-def IS_MACOS = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("mac")
-
 if (!layout.buildDirectory.asFile.get().exists()) {
     layout.buildDirectory.asFile.get().mkdir()
 }
@@ -38,11 +35,7 @@ model {
 model {
     components {
         "$LUA_VERSION"(NativeLibrarySpec) {
-            if (IS_MACOS) {
-                targetPlatform 'arm64'
-            } else {
-                targetPlatform 'x64'
-            }
+            targetPlatform myTargetPlatform
             sources {
                 c {
                     exportedHeaders {
@@ -53,11 +46,7 @@ model {
         }
 
         "luajava4${LUA_MAJOR_VERSION}"(NativeLibrarySpec) {
-            if (IS_MACOS) {
-                targetPlatform 'arm64'
-            } else {
-                targetPlatform 'x64'
-            }
+            targetPlatform myTargetPlatform
             sources {
                 c {
                     lib library: "$LUA_VERSION", linkage: 'static'
@@ -87,14 +76,11 @@ model {
                 checkedBy $.tasks.buildLua
                 checkedBy $.tasks.generateHeader
 
-                // cCompiler.define "LUAJAVA_$LUA_MAJOR_VERSION"
-
                 if (toolChain in VisualCpp) {
                     cppCompiler.define 'WIN64'
                     linker.args "lua.lib", "/LIBPATH:${LUA_SRC}"
                 } else {
-                    // cCompiler.args "-g"
-                    linker.args "-llua", "-L${LUA_SRC}"
+                    linker.args "-L${LUA_SRC}", '-llua', '-Wl,-rpath=\'$ORIGIN\'', '-Wl,--enable-new-dtags'
                 }
             }
         }
@@ -103,86 +89,18 @@ model {
 
 tasks.register('generateHeader') {
     group("luajava")
-    exec {
-        workingDir project(':java').layout.projectDirectory.dir("src/main/java")
-        commandLine file("${System.properties['java.home']}/bin/javac"),
-                "-cp", "./",
-                "-d", "${layout.buildDirectory.dir("classes").get()}",
-                "-h", "${layout.buildDirectory.dir("generated-headers").get()}",
-                "org/keplerproject/luajava/LuaState.java"
-    }
-    copy {
-        from layout.buildDirectory.dir("generated-headers")
-        into layout.buildDirectory.dir("headers")
-        rename 'org_keplerproject_luajava_LuaState.h', 'luajava.h'
-    }
-    copy {
-        from "${System.properties['java.home']}/include"
-        into layout.buildDirectory.dir("headers")
-    }
-}
-
-tasks.register("download${LUA_VERSION}") {
-    group("lua")
-    if (!file("${layout.buildDirectory.file("$LUA_HOME").get()}").exists()) {
-        def fileUrl = "https://www.lua.org/ftp/${LUA_VERSION}.tar.gz"
-        def destinationFile = file("${layout.buildDirectory.get().asFile}/${LUA_VERSION}.tar.gz")
-        new URL(fileUrl).withInputStream { input ->
-            destinationFile.withOutputStream { output ->
-                output << input
-            }
-        }
-    }
-}
-
-tasks.register("decompress${LUA_VERSION}Source") {
-    group("lua")
-    dependsOn "download${LUA_VERSION}"
-    if (!file("${layout.buildDirectory.file("$LUA_HOME").get()}").exists()) {
-        def tarGzFile = file("${layout.buildDirectory.get().asFile}/${LUA_VERSION}.tar.gz")
-        def destinationDir = layout.buildDirectory.get().asFile
-        doFirst {
-            if (!destinationDir.exists()) {
-                destinationDir.mkdirs()
-            }
-        }
-        copy {
-            from tarTree(resources.gzip(tarGzFile))
-            into destinationDir
-        }
-    }
-}
-
-tasks.register("build${LUA_VERSION}") {
-    group("lua")
-    dependsOn "decompress${LUA_VERSION}Source"
-    if (IS_WINDOWS) {
-        // TODO WINS
-        exec {
-            workingDir project(":c").layout.projectDirectory
-            commandLine 'powershell', '-Command', '.\\build.ps1', "-Path", "${LUA_SRC}"
-        }
-    } else {
-        // TODO MACOS
-        exec {
-            workingDir "${LUA_SRC}"
-            commandLine 'make', 'MYCFLAGS="-fPIC"', 'liblua.a'
-        }
-    }
+    generateCHeader(layout.buildDirectory.get())
 }
 
 tasks.register("buildLua") {
     group("lua")
-    dependsOn "download${LUA_VERSION}", "decompress${LUA_VERSION}Source", "build${LUA_VERSION}"
+    downloadLua(LUA_VERSION, layout.buildDirectory.get())
+    decompressLuaSource(LUA_VERSION, layout.buildDirectory.get(), LUA_HOME)
+    doBuildLua(LUA_SRC)
 }
 
 build {
     doLast {
-        copy {
-            // linux
-            from layout.buildDirectory.file("libs/luajava4${LUA_MAJOR_VERSION}/shared/")
-            from "${LUA_SRC}/lua.dll"
-            into rootProject.layout.buildDirectory.dir("outputs/shared/${LUA_VERSION}")
-        }
+        copyOutput(LUA_MAJOR_VERSION, LUA_VERSION, LUA_SRC)
     }
 }

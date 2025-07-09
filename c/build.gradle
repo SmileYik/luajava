@@ -8,3 +8,103 @@ version = '1.0-SNAPSHOT'
 repositories {
     mavenCentral()
 }
+
+def IS_WINDOWS = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win")
+def IS_MACOS = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("mac")
+
+ext.isWindows = IS_WINDOWS
+ext.isMacos = IS_MACOS
+
+ext.myTargetPlatform = IS_MACOS ? 'arm64' : 'x64'
+
+ext.generateCHeader = { Directory buildDir ->
+    def headerDir = buildDir.dir("headers")
+    def classesFile = buildDir.dir("classes").asFile
+    def generatedHeadersFile = buildDir.dir("generated-headers").asFile
+
+    exec {
+        workingDir project(':java').layout.projectDirectory.dir("src/main/java")
+        commandLine file("${System.properties['java.home']}/bin/javac"),
+                "-cp", "./",
+                "-d", "${classesFile}",
+                "-h", "${generatedHeadersFile}",
+                "org/keplerproject/luajava/LuaState.java"
+    }
+    copy {
+        from generatedHeadersFile
+        into headerDir
+        rename 'org_keplerproject_luajava_LuaState.h', 'luajava.h'
+    }
+    copy {
+        from "${System.properties['java.home']}/include"
+        into headerDir
+    }
+}
+
+ext.downloadLua = { String luaVersion, Directory buildDir  ->
+    def destinationFile = buildDir.file("${luaVersion}.tar.gz").asFile
+    if (!destinationFile.exists()) {
+        def fileUrl = "https://www.lua.org/ftp/${luaVersion}.tar.gz"
+        new URL(fileUrl).withInputStream { input ->
+            destinationFile.withOutputStream { output ->
+                output << input
+            }
+        }
+    }
+}
+
+ext.decompressLuaSource = { String luaVersion, Directory buildDir, Directory luaHome ->
+    if (!buildDir.file("$luaHome").asFile.exists()) {
+        def tarGzFile = buildDir.file("${luaVersion}.tar.gz").asFile
+        def destinationDir = buildDir.asFile
+        if (!destinationDir.exists()) {
+            destinationDir.mkdirs()
+        }
+        copy {
+            from tarTree(resources.gzip(tarGzFile))
+            into destinationDir
+        }
+    }
+}
+
+ext.doBuildLua = { Directory luaSrc ->
+    if (IS_WINDOWS) {
+        exec {
+            workingDir layout.projectDirectory
+            commandLine 'powershell', '-Command', '.\\build.ps1', "-Path", "${luaSrc}"
+        }
+    } else {
+        def lastName = IS_MACOS ? "dylib" : "so"
+        exec {
+            workingDir "${luaSrc}"
+            commandLine 'make', 'MYCFLAGS=-fPIC -DLUA_USE_POSIX -DLUA_USE_DLOPEN', 'liblua.a'
+        }
+        exec {
+            workingDir "${luaSrc}"
+            commandLine 'gcc', '-shared', '-Wl,-E', '-ldl', '-o', "liblua.${lastName}", '*.o'
+        }
+    }
+}
+
+ext.copyOutput = { String luaMajorVersion, String luaVersion, Directory luaSrc ->
+    def pathPrefix = "libs/luajava4${luaMajorVersion}/shared/luajava4${luaMajorVersion}"
+    copy {
+        from layout.buildDirectory.file("${pathPrefix}.dll")
+        from layout.buildDirectory.file("${pathPrefix}.so")
+        from layout.buildDirectory.file("${pathPrefix}.dylib")
+        from "${luaSrc}/liblua.so"
+        from "${luaSrc}/liblua.dylib"
+        from "${luaSrc}/lua.dll"
+        into rootProject.layout.buildDirectory.dir("outputs/shared/${luaVersion}")
+    }
+
+    // copy libs
+    copy {
+        from layout.buildDirectory.file("${pathPrefix}.exp")
+        from layout.buildDirectory.file("${pathPrefix}.lib")
+        from "${luaSrc}/liblua.a"
+        from "${luaSrc}/lua.lib"
+        from "${luaSrc}/lua.exp"
+        into rootProject.layout.buildDirectory.dir("outputs/libs/${luaVersion}")
+    }
+}

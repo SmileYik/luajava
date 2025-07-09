@@ -105,12 +105,12 @@ Enter-VsDevShell
 
 cd $Path
 cmd
-cl /MD /O2 /c /DLUA_BUILD_AS_DLL *.c
+cl /MD /O2 /c /DLUA_BUILD_AS_DLL /DLUA_USE_WINDOWS *.c
 ren lua.obj lua.o
 ren luac.obj luac.o
 link /DLL /IMPLIB:lua.lib /OUT:lua.dll *.obj
 link /OUT:lua.exe lua.o lua.lib
 link /OUT:luac.exe luac.o *.obj
-del /q *.obj
-del /q *.o
-del /q *.exp
+# del /q *.obj
+# del /q *.o
+# del /q *.exp
