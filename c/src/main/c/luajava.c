@@ -140,6 +140,10 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState_luajava_1open(
   lua_pushcfunction(L, &createProxy);
   lua_settable(L, -3);
 
+  lua_pushstring(L, "env");
+  lua_pushcfunction(L, &getJNIEnv);
+  lua_settable(L, -3);
+
   lua_pop(L, 1);
   pushJNIEnv(env, L);
 }

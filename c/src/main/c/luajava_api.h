@@ -352,6 +352,25 @@ int createProxy(lua_State *L);
 
 /***************************************************************************
  *
+ * $FC Function getJNIEnv
+ *
+ * $ED Description
+ *    Return current JNI environment
+ *  of interfaces
+ *
+ * $EP Function Parameters
+ *    $P L - lua State
+ *    $P Stack - Parameters will be received by the stack
+ *
+ * $FV Returned Value
+ *    int - Number of values to be returned by the function
+ *
+ *$. **********************************************************************/
+
+int getJNIEnv(lua_State *L);
+
+/***************************************************************************
+ *
  * $FC Function javaNew
  *
  * $ED Description

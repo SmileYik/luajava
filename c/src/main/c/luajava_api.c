@@ -1114,6 +1114,20 @@ int pushJavaClass(lua_State *L, jobject javaObject) {
 
 /***************************************************************************
  *
+ *  Function: getJNIEnv
+ *  ****/
+
+int getJNIEnv(lua_State *L) {
+  JNIEnv *javaEnv = getEnvFromState(L);
+  if (javaEnv == NULL) {
+     THROW_LUA_ERROR(L, "Invalid JNI Environment.");
+  }
+  lua_pushlightuserdata(L, javaEnv);
+  return 1;
+}
+
+/***************************************************************************
+ *
  *  Function: pushJavaObject
  *  ****/
 
