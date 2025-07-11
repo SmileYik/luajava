@@ -66,6 +66,22 @@ public class LuaJavaApiTest {
         facade.evalString(lua).justThrow();
     }
 
+    @Test
+    public void sameFieldAndMethodTest() throws Exception {
+        String lua = "print(a.a); print(pcall(a, 'a')); a:_m_a()";
+        class A {
+            public String a;
+            public void a() {
+                System.out.println("Abc");
+            }
+        }
+        A a = new A();
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.setGlobal("a", a);
+        facade.openLibs();
+        facade.evalString(lua).justThrow();
+    }
+
     public static void main(String[] args) throws Exception {
         LuaStateFacade facade = LuaStateFactory.newLuaState();
         facade.openLibs();
