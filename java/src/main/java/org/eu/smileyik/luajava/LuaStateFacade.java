@@ -23,6 +23,7 @@
 
 package org.eu.smileyik.luajava;
 
+import org.eu.smileyik.luajava.debug.LuaDebug;
 import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.type.IInnerLuaObject;
 import org.eu.smileyik.luajava.type.ILuaCallable;
@@ -31,6 +32,7 @@ import org.eu.smileyik.luajava.util.ParamRef;
 import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
 
 import static org.eu.smileyik.luajava.LuaState.*;
 
@@ -63,6 +65,7 @@ public class LuaStateFacade implements AutoCloseable {
     private final int stateId;
     private final LuaState luaState;
     private final boolean ignoreNotPublic;
+    private BiConsumer<LuaStateFacade, LuaDebug> debugHook = null;
 
     protected LuaStateFacade(int stateId, boolean ignoreNotPublic) {
         this.stateId = stateId;
@@ -84,6 +87,18 @@ public class LuaStateFacade implements AutoCloseable {
 
     public boolean isIgnoreNotPublic() {
         return ignoreNotPublic;
+    }
+
+    public void setDebugHook(BiConsumer<LuaStateFacade, LuaDebug> debugHook) {
+        lock(it -> {
+            this.debugHook = debugHook;
+        });
+    }
+
+    protected void debugHook(LuaDebug ar) {
+        if (debugHook != null) {
+            debugHook.accept(this, ar);
+        }
     }
 
     public <T> Result<T, ? extends Exception> lockThrowAll(LuaStateDangerFunction<T> function) {

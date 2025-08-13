@@ -47,6 +47,8 @@
 
 package org.eu.smileyik.luajava;
 
+import org.eu.smileyik.luajava.debug.LuaDebug;
+
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -109,6 +111,27 @@ public class LuaState {
     final public static int LUA_GCSTEP = 5;
     final public static int LUA_GCSETPAUSE = 6;
     final public static int LUA_GCSETSTEPMUL = 7;
+
+    // ******* debug constexpr start ********
+
+    /*
+    ** Event codes
+    */
+    final public static int LUA_HOOKCALL     = 0;
+    final public static int LUA_HOOKRET      = 1;
+    final public static int LUA_HOOKLINE     = 2;
+    final public static int LUA_HOOKCOUNT    = 3;
+    final public static int LUA_HOOKTAILCALL = 4;
+
+    /*
+    ** Event masks
+    */
+    final public static int LUA_MASKCALL  = 1 << LUA_HOOKCALL;
+    final public static int LUA_MASKRET   = 1 << LUA_HOOKRET;
+    final public static int LUA_MASKLINE  = 1 << LUA_HOOKLINE;
+    final public static int LUA_MASKCOUNT = 1 << LUA_HOOKCOUNT;
+
+    // ******* debug constexpr stop  ********
 
     // since lua 5.2: arith
     public static final int LUA_OPADD;
@@ -468,6 +491,54 @@ public class LuaState {
     private native void _openDebug(CPtr ptr);
 
     private native void _openPackage(CPtr ptr);
+
+    // ************************* debug method start ****************************
+
+    private native void _setHook(CPtr ptr, int mask, int count);
+
+    private native int _getHookMask(CPtr ptr);
+
+    private native int _getHookCount(CPtr ptr);
+
+    /**
+     * need manual free LuaDebug.
+     */
+    private native LuaDebug _getStack(CPtr ptr, int level);
+
+    /**
+     * need manual free LuaDebug.
+     */
+    private native LuaDebug _getInfo(CPtr ptr, long arPtr, String what);
+
+    /**
+     * return local variable to lua state stack top
+     * @param ar lua debug pointer
+     * @return local variable name or null
+     */
+    private native String _getLocal(CPtr ptr, long ar, int n);
+
+    /**
+     * pop the lua state stack top and set to target local variable
+     * @param ar lua debug pointer
+     * @return local variable name or null
+     */
+    private native String _setLocal(CPtr ptr, long ar, int n);
+
+    /**
+     * get closure up value and set to stack top.
+     * @return the up value name or null
+     */
+    private native String _getUpValue(CPtr ptr, int funcIndex, int n);
+
+    /**
+     * pop the value of stack top and set
+     * @return the up value name or null
+     */
+    private native String _setUpValue(CPtr ptr, int funcIndex, int n);
+
+    private native void _freeLuaDebug(long arPtr);
+
+    // ************************* debug method stop  ****************************
 
     // ******************** addition since lua 5.2 start ***********************
     /**
@@ -985,6 +1056,76 @@ public class LuaState {
     public void openPackage() {
         _openPackage(luaState);
     }
+
+    // ************************* debug method start ****************************
+
+    public void setHook(int mask, int count) {
+        _setHook(luaState, mask, count);
+    }
+
+    public int getHookMask() {
+        return _getHookMask(luaState);
+    }
+
+    public int getHookCount() {
+        return _getHookCount(luaState);
+    }
+
+    /**
+     * need manual free LuaDebug.
+     * @return nullable
+     */
+    public LuaDebug getStack(int level) {
+        return _getStack(luaState, level);
+    }
+
+    /**
+     * need manual free LuaDebug.
+     * @return nullable
+     */
+    public LuaDebug getInfo(LuaDebug ar, String what) {
+        return _getInfo(luaState, ar.getPtr(), what);
+    }
+
+    /**
+     * return local variable to lua state stack top
+     * @param ar lua debug pointer
+     * @return local variable name or null
+     */
+    public String getLocal(LuaDebug ar, int n) {
+        return _getLocal(luaState, ar.getPtr(), n);
+    }
+
+    /**
+     * pop the lua state stack top and set to target local variable
+     * @param ar lua debug pointer
+     * @return local variable name or null
+     */
+    public String setLocal(LuaDebug ar, int n) {
+        return _setLocal(luaState, ar.getPtr(), n);
+    }
+
+    /**
+     * get closure up value and set to stack top.
+     * @return the up value name or null
+     */
+    public String getUpValue(int funcIndex, int n) {
+        return _getUpValue(luaState, funcIndex, n);
+    }
+
+    /**
+     * pop the value of stack top and set
+     * @return the up value name or null
+     */
+    public String setUpValue(int funcIndex, int n) {
+        return _setUpValue(luaState, funcIndex, n);
+    }
+
+    public void freeLuaDebug(LuaDebug ar) {
+        _freeLuaDebug(ar.getPtr());
+    }
+
+    // ************************* debug method stop  ****************************
 
     // ******************** addition since lua 5.2 start ***********************
     /**

@@ -709,4 +709,41 @@ inline void luajavaNewJavaObjectMetatable(lua_State *L);
 
 inline void luajavaNewJavaArrayMetatable(lua_State *L);
 
+/***************************************************************************
+ *
+ * $FC luajavaLuaHook
+ *
+ * $ED Description
+ *    lua hook function
+ *
+ * $EP Function Parameters
+ *    $P L - lua State
+ *    $P ar - lua Debug
+ *
+ * $FV Returned Value
+ *    void
+ *
+ *$. **********************************************************************/
+
+void luajavaLuaHook(lua_State *L, lua_Debug *ar);
+
+/***************************************************************************
+ *
+ * $FC luajavaNewLuaDebug
+ *
+ * $ED Description
+ *    new instance of LuaDebug class
+ *
+ * $EP Function Parameters
+ *    $P L - lua State
+ *    $P env - JNIEnv
+ *    $P ar - lua debug
+ *
+ * $FV Returned Value
+ *    jobject: LuaDebug
+ *
+ *$. **********************************************************************/
+
+jobject luajavaNewLuaDebug(lua_State *L, JNIEnv *env, const lua_Debug *ar, const char* arWhat);
+
 #endif // LUAJAVA_LUAJAVA_API_H

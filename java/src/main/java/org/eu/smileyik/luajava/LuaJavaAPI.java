@@ -47,6 +47,7 @@
 
 package org.eu.smileyik.luajava;
 
+import org.eu.smileyik.luajava.debug.LuaDebug;
 import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.reflect.ConvertablePriority;
 import org.eu.smileyik.luajava.reflect.LuaInvokedMethod;
@@ -54,6 +55,7 @@ import org.eu.smileyik.luajava.reflect.ReflectUtil;
 import org.eu.smileyik.luajava.util.*;
 
 import java.lang.reflect.*;
+import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
 /**
@@ -550,6 +552,22 @@ public final class LuaJavaAPI {
         invokedMethod.getOverwriteParams().forEach((idx, obj) -> objs[idx] = obj);
         System.arraycopy(objs, 0, retObjs, 0, objs.length);
         return invokedMethod.getExecutable();
+    }
+
+    // **************** Debug API ****************
+
+    public static void debugLuaHook(int luaState, LuaDebug luaDebug) {
+        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
+        luaStateFacade.debugHook(luaDebug);
+    }
+
+    //  public static LuaDebug newLuaDebug(long ptr, int event, String name, String nameWhat, String what, String source, long srcLen, int currentLine, int lineDefine, int lastLineDefine, short nUps, short nParams, byte isVarArg, byte isTailCall, int fTransfer, int nTransfer, String shortSrc) {
+    //      return new LuaDebug(ptr, event, name, nameWhat, what, source, srcLen, currentLine, lineDefine, lastLineDefine, nUps, nParams, isVarArg, isTailCall, fTransfer, nTransfer, shortSrc);
+    //  }
+
+    public static LuaDebug newLuaDebug(long ptr, ByteBuffer buffer, int longLen,
+                                       String name, String nameWhat, String what, String source) {
+        return LuaDebug.newInstance(ptr, buffer, longLen, name, nameWhat, what, source);
     }
 }
  
