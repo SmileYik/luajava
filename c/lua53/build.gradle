@@ -76,8 +76,10 @@ model {
 
                 if (toolChain in VisualCpp) {
                     cppCompiler.define 'WIN64'
+                    cppCompiler.define "LUAJAVA_VERSION", "\"$LUAJAVA_VERSION\""
                     linker.args "lua.lib", "/LIBPATH:${LUA_SRC}"
                 } else {
+                    cCompiler.define "LUAJAVA_VERSION", "\"$LUAJAVA_VERSION\""
                     linker.args "-L${LUA_SRC}", '-llua', *additionLinkerArgs
                 }
             }

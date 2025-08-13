@@ -44,9 +44,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava.test.node;
+package org.eu.smileyik.luajava.test.node;
 
-import org.keplerproject.luajava.*;
+import org.eu.smileyik.luajava.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -100,7 +100,7 @@ public class LuaNode {
             });
             configLib = (IConfig) facade.getLuaObject("configLib")
                     .getOrThrow(LuaException.class)
-                    .createProxy("org.keplerproject.luajava.test.node.IConfig")
+                    .createProxy("org.eu.smileyik.luajava.test.node.IConfig")
                     .getOrThrow(LuaException.class);
 
         }

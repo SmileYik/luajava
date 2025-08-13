@@ -21,12 +21,12 @@
  * SOFTWARE.
  */
 
-package org.keplerproject.luajava.test;
+package org.eu.smileyik.luajava.test;
 
-import org.keplerproject.luajava.JavaFunction;
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaState;
-import org.keplerproject.luajava.LuaStateFacade;
+import org.eu.smileyik.luajava.JavaFunction;
+import org.eu.smileyik.luajava.LuaException;
+import org.eu.smileyik.luajava.LuaState;
+import org.eu.smileyik.luajava.LuaStateFacade;
 
 import java.util.Date;
 

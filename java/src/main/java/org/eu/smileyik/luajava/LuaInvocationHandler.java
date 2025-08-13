@@ -45,7 +45,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava;
+package org.eu.smileyik.luajava;
 
 import org.eu.smileyik.luajava.type.ILuaCallable;
 import org.eu.smileyik.luajava.type.ILuaFieldGettable;

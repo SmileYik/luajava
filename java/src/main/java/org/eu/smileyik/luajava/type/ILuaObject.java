@@ -23,7 +23,7 @@
 
 package org.eu.smileyik.luajava.type;
 
-import org.keplerproject.luajava.LuaStateFacade;
+import org.eu.smileyik.luajava.LuaStateFacade;
 
 public interface ILuaObject {
     /**

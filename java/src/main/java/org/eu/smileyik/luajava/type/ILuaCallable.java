@@ -23,8 +23,8 @@
 
 package org.eu.smileyik.luajava.type;
 
+import org.eu.smileyik.luajava.LuaException;
 import org.eu.smileyik.luajava.exception.Result;
-import org.keplerproject.luajava.LuaException;
 
 public interface ILuaCallable extends ILuaObject {
     /**

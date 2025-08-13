@@ -21,7 +21,7 @@
  * SOFTWARE.
  */
 
-package org.keplerproject.luajava;
+package org.eu.smileyik.luajava;
 
 import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.type.IInnerLuaObject;
@@ -32,7 +32,7 @@ import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.keplerproject.luajava.LuaState.*;
+import static org.eu.smileyik.luajava.LuaState.*;
 
 public class LuaStateFacade implements AutoCloseable {
     public interface LuaStateFunction<T> {

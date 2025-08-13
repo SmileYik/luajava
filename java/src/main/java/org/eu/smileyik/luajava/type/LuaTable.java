@@ -23,11 +23,11 @@
 
 package org.eu.smileyik.luajava.type;
 
+import org.eu.smileyik.luajava.LuaException;
+import org.eu.smileyik.luajava.LuaObject;
+import org.eu.smileyik.luajava.LuaState;
+import org.eu.smileyik.luajava.LuaStateFacade;
 import org.eu.smileyik.luajava.exception.Result;
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaObject;
-import org.keplerproject.luajava.LuaState;
-import org.keplerproject.luajava.LuaStateFacade;
 
 import java.util.HashMap;
 import java.util.Map;

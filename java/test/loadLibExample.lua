@@ -1,3 +1,3 @@
-luajava.loadLib("org.keplerproject.luajava.test.LoadLibExample", "open")
+luajava.loadLib("org.eu.smileyik.luajava.test.LoadLibExample", "open")
 
 eg.example(3)

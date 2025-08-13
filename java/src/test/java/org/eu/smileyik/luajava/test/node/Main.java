@@ -1,5 +1,5 @@
 /*
- * Printable.java, SmileYik, 2025-8-10
+ * Main.java, SmileYik, 2025-8-10
  * Copyright (c) 2025 Smile Yik
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -44,11 +44,50 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava.test;
+package org.eu.smileyik.luajava.test.node;
 
-public interface Printable {
-    void print(String str);
+import org.eu.smileyik.luajava.LoadLibrary;
+import org.eu.smileyik.luajava.LuaException;
+import org.junit.jupiter.api.Test;
 
-    void print(String str, int i);
+import java.util.Iterator;
+import java.util.List;
 
+
+/**
+ * Uses the node example with a file that is a representation of a
+ * hibernate configuration XML file.
+ *
+ * @author thiago
+ */
+public class Main {
+
+    static {
+        LoadLibrary.load();
+    }
+
+    @Test
+    public void test() throws LuaException {
+        LuaNode node = LuaNode.proccessFile("test/hibernateConfig.lua");
+
+        System.out.println(node.getName());
+        System.out.println(node.getAttribute("name"));
+        System.out.println(node.getAttribute("table"));
+
+        List list = node.getChildren("property");
+
+        for (Iterator iter = list.iterator(); iter.hasNext(); ) {
+            LuaNode elem = (LuaNode) iter.next();
+            System.out.println(elem.getName());
+            System.out.println(elem.getAttribute("type"));
+        }
+
+        list = node.getChild("many-to-one").getChildren();
+
+        for (Iterator iter = list.iterator(); iter.hasNext(); ) {
+            LuaNode elem = (LuaNode) iter.next();
+            System.out.println(elem.getName());
+            System.out.println(elem.getValue());
+        }
+    }
 }

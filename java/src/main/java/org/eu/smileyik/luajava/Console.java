@@ -1,5 +1,5 @@
 /*
- * TestClass.java, SmileYik, 2025-8-10
+ * Console.java, SmileYik, 2025-8-10
  * Copyright (c) 2025 Smile Yik
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,6 +22,7 @@
  */
 
 /*
+ * $Id: Console.java,v 1.8 2007-09-17 19:28:40 thiago Exp $
  * Copyright (C) 2003-2007 Kepler Project.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -44,49 +45,72 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+package org.eu.smileyik.luajava;
 
-package org.keplerproject.luajava.test;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
-import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.*;
+/**
+ * Simple LuaJava console.
+ * This is also an example on how to use the Java side of LuaJava and how to startup
+ * a LuaJava application.
+ *
+ * @author Thiago Ponte
+ */
+public class Console {
 
-public class TestClass {
+    /**
+     * Creates a console for user interaction.
+     *
+     * @param args names of the lua files to be executed
+     */
+    public static void main(String[] args) {
+        try (LuaStateFacade luaState = LuaStateFactory.newLuaState();) {
+            luaState.lockThrow(L -> {
+                L.openLibs();
 
-    static {
-        LoadLibrary.load();
-    }
+                if (args.length > 0) {
+                    for (int i = 0; i < args.length; i++) {
+                        int res = L.LloadFile(args[i]);
+                        if (res == 0) {
+                            res = L.pcall(0, 0, 0);
+                        }
+                        if (res != 0) {
+                            throw new LuaException("Error on file: " + args[i] + ". " + L.toString(-1));
+                        }
+                    }
 
-    @Test
-    public void test() throws LuaException {
-        LuaStateFacade luaState = LuaStateFactory.newLuaState();
-        luaState.lockThrow(L -> {
-            L.openBase();
-
-            TestClassInner test = new TestClassInner(luaState);
-
-            test.jf.register("javaFuncTest");
-
-            test.Lf.lock(it -> { it.LdoString(" f=javaFuncTest(); print(f) "); });
-        });
-        luaState.close();
-    }
-
-
-    public static class TestClassInner {
-        public final LuaStateFacade Lf;
-
-        public JavaFunction jf;
-
-        public TestClassInner(LuaStateFacade L) {
-            this.Lf = L;
-
-            jf = new JavaFunction(L) {
-                public int execute() {
-                    this.L.lock(it -> { it.pushString("Returned String"); });
-                    System.out.println("Printing from Java Function");
-                    return 1;
+                    return;
                 }
-            };
+
+                System.out.println("API Lua Java - console mode.");
+
+                BufferedReader inp = new BufferedReader(new InputStreamReader(System.in));
+
+                String line;
+
+                System.out.print("> ");
+                try {
+                    while ((line = inp.readLine()) != null && !line.equals("exit")) {
+                        int ret = L.LloadBuffer(line.getBytes(), "from console");
+                        if (ret == 0) {
+                            ret = L.pcall(0, 0, 0);
+                        }
+                        if (ret != 0) {
+                            System.err.println("Error on line: " + line);
+                            System.err.println(L.toString(-1));
+                        }
+                        System.out.print("> ");
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
     }
 }

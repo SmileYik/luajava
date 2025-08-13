@@ -1,5 +1,5 @@
 /*
- * Main.java, SmileYik, 2025-8-10
+ * TestClass.java, SmileYik, 2025-8-10
  * Copyright (c) 2025 Smile Yik
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -44,52 +44,49 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava.test;
 
-import org.eu.smileyik.luajava.type.ILuaCallable;
+package org.eu.smileyik.luajava.test;
+
+import org.eu.smileyik.luajava.*;
 import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.*;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-
-public class Main {
+public class TestClass {
 
     static {
         LoadLibrary.load();
     }
 
-    static String str = "a = 'campo a';" +
-            "b = 'campo b';" +
-            "c = 'campo c';" +
-            "tab= { a='tab a'; b='tab b'; c='tab c', d={ e='tab d e'} } ;" +
-            "function imprime (str)	print(str);	return 'joao', 1	end;" +
-            "luaPrint={implements='org.keplerproject.luajava.test.Printable', print=function(str)print('Printing from lua :'..str)end  }";
-
-
     @Test
-    public void test() throws LuaException, ClassNotFoundException {
+    public void test() throws LuaException {
         LuaStateFacade luaState = LuaStateFactory.newLuaState();
         luaState.lockThrow(L -> {
             L.openBase();
 
-            L.LdoString(str);
+            TestClassInner test = new TestClassInner(luaState);
 
-            LuaObject func = luaState.getLuaObject("imprime").getOrThrow(LuaException.class);
-            assertTrue(func.isCallable());
-            Object[] teste = ((ILuaCallable) func).call(2, new Object[]{"TESTANDO"}).getOrThrow(LuaException.class);
-            System.out.println(teste[0]);
-            System.out.println(teste[1]);
+            test.jf.register("javaFuncTest");
 
-            System.out.println("PROXY TEST :");
-            Printable p = new ObjPrint();
-            p.print("TESTE 1");
-
-            LuaObject o = luaState.getLuaObject("luaPrint").getOrThrow(LuaException.class);
-            p = (Printable) o.createProxy("org.keplerproject.luajava.test.Printable").getOrThrow(LuaException.class);
-            p.print("Teste 2");
+            test.Lf.lock(it -> { it.LdoString(" f=javaFuncTest(); print(f) "); });
         });
-
         luaState.close();
+    }
+
+
+    public static class TestClassInner {
+        public final LuaStateFacade Lf;
+
+        public JavaFunction jf;
+
+        public TestClassInner(LuaStateFacade L) {
+            this.Lf = L;
+
+            jf = new JavaFunction(L) {
+                public int execute() {
+                    this.L.lock(it -> { it.pushString("Returned String"); });
+                    System.out.println("Printing from Java Function");
+                    return 1;
+                }
+            };
+        }
     }
 }

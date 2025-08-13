@@ -78,8 +78,10 @@ model {
                 def luajit_src = file('luajit/src')
                 if (toolChain in VisualCpp) {
                     cppCompiler.define 'WIN64'
+                    cppCompiler.define "LUAJAVA_VERSION", "\"$LUAJAVA_VERSION\""
                     linker.args "lua51.lib", "/LIBPATH:${luajit_src}"
                 } else {
+                    cCompiler.define "LUAJAVA_VERSION", "\"$LUAJAVA_VERSION\""
                     linker.args "-lluajit", "-L${luajit_src}"
                 }
             }
@@ -95,12 +97,12 @@ tasks.register('generateHeader') {
                     "-cp", "./",
                     "-d", "${layout.buildDirectory.dir("classes").get()}",
                     "-h", "${layout.buildDirectory.dir("generated-headers").get()}",
-                    "org/keplerproject/luajava/LuaState.java"
+                    "org/eu/smileyik/luajava/LuaState.java"
     }
     copy {
         from layout.buildDirectory.dir("generated-headers")
         into layout.buildDirectory.dir("headers")
-        rename 'org_keplerproject_luajava_LuaState.h', 'luajava.h'
+        rename 'org_eu_smileyik_luajava_LuaState.h', 'luajava.h'
     }
 }
 

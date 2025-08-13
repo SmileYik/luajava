@@ -251,7 +251,7 @@ void setupLuaJavaApi(JNIEnv *env) {
   BIND_JAVA_NORMAL_METHOD(env, java_object_method_toString, java_object_class, 
                           "toString", "()Ljava/lang/String;");
 
-  BIND_JAVA_CLASS(tempClass, env, luajava_api_class, "org/keplerproject/luajava/LuaJavaAPI");
+  BIND_JAVA_CLASS(tempClass, env, luajava_api_class, "org/eu/smileyik/luajava/LuaJavaAPI");
   BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_checkField, luajava_api_class, 
                           "checkField", "(ILjava/lang/Object;Ljava/lang/String;)I");
   BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_checkMethod, luajava_api_class, 
@@ -275,7 +275,7 @@ void setupLuaJavaApi(JNIEnv *env) {
   BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_javaLoadLib, luajava_api_class, 
                           "javaLoadLib", "(ILjava/lang/String;Ljava/lang/String;)I");   
 
-  BIND_JAVA_CLASS(tempClass, env, java_function_class, "org/keplerproject/luajava/JavaFunction");
+  BIND_JAVA_CLASS(tempClass, env, java_function_class, "org/eu/smileyik/luajava/JavaFunction");
   BIND_JAVA_NORMAL_METHOD(env, java_function_method, java_function_class, 
                           "execute", "()I");
 
@@ -287,7 +287,7 @@ void setupLuaJavaApi(JNIEnv *env) {
   BIND_JAVA_STATIC_METHOD(env, java_lang_class_static_method_forName, java_lang_class, 
                           "forName", "(Ljava/lang/String;)Ljava/lang/Class;");
 
-  BIND_JAVA_CLASS(tempClass, env, cptr_class, "org/keplerproject/luajava/CPtr");
+  BIND_JAVA_CLASS(tempClass, env, cptr_class, "org/eu/smileyik/luajava/CPtr");
   BIND_JAVA_NORMAL_FIELD(env, cptr_field_peer, cptr_class, "peer", "J");
 }
 

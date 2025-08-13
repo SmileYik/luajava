@@ -21,7 +21,7 @@
  * SOFTWARE.
  */
 
-package org.keplerproject.luajava;
+package org.eu.smileyik.luajava;
 
 import java.io.File;
 import java.nio.file.Paths;

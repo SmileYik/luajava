@@ -21,11 +21,11 @@
  * SOFTWARE.
  */
 
-package org.keplerproject.luajava.test;
+package org.eu.smileyik.luajava.test;
 
 import org.eu.smileyik.luajava.BaseTest;
+import org.eu.smileyik.luajava.LuaStateFacade;
 import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.LuaStateFacade;
 
 public class SwingTest extends BaseTest {
 

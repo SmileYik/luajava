@@ -23,13 +23,9 @@
 
 package org.eu.smileyik.luajava.type;
 
-import org.eu.smileyik.luajava.BaseTest;
+import org.eu.smileyik.luajava.*;
 import org.eu.smileyik.luajava.exception.Result;
 import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaObject;
-import org.keplerproject.luajava.LuaStateFacade;
-import org.keplerproject.luajava.LuaStateFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

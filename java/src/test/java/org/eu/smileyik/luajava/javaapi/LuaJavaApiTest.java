@@ -23,15 +23,15 @@
 
 package org.eu.smileyik.luajava.javaapi;
 
+import org.eu.smileyik.luajava.LoadLibrary;
+import org.eu.smileyik.luajava.LuaException;
+import org.eu.smileyik.luajava.LuaStateFacade;
+import org.eu.smileyik.luajava.LuaStateFactory;
 import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.LoadLibrary;
-import org.keplerproject.luajava.LuaStateFacade;
-import org.keplerproject.luajava.LuaStateFactory;
 
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class LuaJavaApiTest {
     static {
@@ -82,7 +82,7 @@ public class LuaJavaApiTest {
                 "    end\n" +
                 "end\n" +
                 "\n" +
-                "findMethods(\"org.keplerproject.luajava.LuaJavaAPI\")";
+                "findMethods(\"org.eu.smileyik.luajava.LuaJavaAPI\")";
         LuaStateFacade facade = LuaStateFactory.newLuaState();
         facade.setGlobal("abc", new Object());
         facade.openLibs();
@@ -129,11 +129,15 @@ public class LuaJavaApiTest {
         facade.setGlobal("f", fieldEntity).justThrow();
         facade.setGlobal("cf", FieldEntity.class);
         facade.setGlobal("field", newField);
-        facade.evalFile("test/fieldEntityTest.lua").justThrow();
+        assertThrows(LuaException.class, () -> {
+            facade.evalFile("test/fieldEntityTest.lua").justThrow();
+        });
         facade.evalString("f.pf = 1000; f.psf = 2000").justThrow();
         assertEquals(1000d, fieldEntity.pf);
         assertEquals(2000d, FieldEntity.psf);
-        facade.evalString("print(cf.f)").justThrow();
+        assertThrows(LuaException.class, () -> {
+            facade.evalString("print(cf.f)").justThrow();
+        });
         System.out.println(fieldEntity);
         FieldEntity.AField pj = fieldEntity.pj;
         facade.evalString("f.pj=nil").justThrow();
@@ -142,8 +146,10 @@ public class LuaJavaApiTest {
         facade.evalString("f.pj=field").justThrow();
         assertEquals(newField, fieldEntity.pj);
         facade.evalString("print(f.pj:toString())").justThrow();
-        facade.evalString("f.j=field").justThrow();
-        facade.evalString("print(f.j:toString())").justThrow();
+        assertThrows(LuaException.class, () -> {
+            facade.evalString("f.j=field").justThrow();
+            facade.evalString("print(f.j:toString())").justThrow();
+        });
         facade.close();
     }
 
@@ -152,7 +158,9 @@ public class LuaJavaApiTest {
         LuaStateFacade facade = LuaStateFactory.newLuaState();
         facade.openLibs();
         facade.setGlobal("a", A.class).justThrow();
-        facade.evalFile("test/findMethodTest.lua").justThrow();
+        assertThrows(LuaException.class, () -> {
+            facade.evalFile("test/findMethodTest.lua").justThrow();
+        });
         facade.evalString("print(a:a(1))").justThrow();
         facade.close();
     }

@@ -1,5 +1,5 @@
 /*
- * LuaException.java, SmileYik, 2025-8-10
+ * JavaFunction.java, SmileYik, 2025-8-10
  * Copyright (c) 2025 Smile Yik
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,7 +22,7 @@
  */
 
 /*
- * $Id: LuaException.java,v 1.7 2007-04-17 23:47:50 thiago Exp $
+ * $Id: JavaFunction.java,v 1.6 2006-12-22 14:06:40 thiago Exp $
  * Copyright (C) 2003-2007 Kepler Project.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -45,33 +45,64 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava;
+package org.eu.smileyik.luajava;
 
 /**
- * LuaJava exception
- *
- * @author Thiago Ponte
+ * JavaFunction is a class that can be used to implement a Lua function in Java.
+ * JavaFunction is an abstract class, so in order to use it you must extend this
+ * class and implement the <code>execute</code> method. This <code>execute</code>
+ * method is the method that will be called when you call the function from Lua.
+ * To register the JavaFunction in Lua use the method <code>register(String name)</code>.
  */
-public class LuaException extends Exception {
+public abstract class JavaFunction {
+
     /**
+     * This is the state in which this function will exist.
+     */
+    protected final LuaStateFacade L;
+
+    /**
+     * Constructor that receives a LuaState.
      *
+     * @param L LuaState object associated with this JavaFunction object
      */
-    private static final long serialVersionUID = 1L;
-
-    public LuaException(String str) {
-        super(str);
+    public JavaFunction(LuaStateFacade L) {
+        this.L = L;
     }
 
     /**
-     * Will work only on Java 1.4 or later.
-     * To work with Java 1.3, comment the first line and uncomment the second one.
+     * This method is called from Lua. Any parameters can be taken with
+     * <code>getParam</code>. A reference to the JavaFunctionWrapper itself is
+     * always the first parameter received. Values passed back as results
+     * of the function must be pushed onto the stack.
+     *
+     * @return The number of values pushed onto the stack.
      */
-    public LuaException(Exception e) {
-        super((e.getCause() != null) ? e.getCause() : e);
-        //super(e.getMessage());
+    public abstract int execute() throws LuaException;
+
+    /**
+     * Returns a parameter received from Lua. Parameters are numbered from 1.
+     * A reference to the JavaFunction itself is always the first parameter
+     * received (the same as <code>this</code>).
+     *
+     * @param idx Index of the parameter.
+     * @return Reference to parameter.
+     * @see LuaObject
+     */
+    public LuaObject getParam(int idx) {
+        return L.getLuaObject(idx).getValue();
     }
 
-    public LuaException(String str, Exception e) {
-        super(str, e);
+    /**
+     * Register a JavaFunction with a given name. This method registers in a
+     * global variable the JavaFunction specified.
+     *
+     * @param name name of the function.
+     */
+    public void register(String name) throws LuaException {
+        L.lockThrow(L -> {
+            L.pushJavaFunction(this);
+            L.setGlobal(name);
+        });
     }
-} 
+}

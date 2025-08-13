@@ -28,11 +28,11 @@
 #include <lualib.h>
 
 /*
- * Class:     org_keplerproject_luajava_LuaState
+ * Class:     org_eu_smileyik_luajava_LuaState
  * Method:    _rawlen
- * Signature: (Lorg/keplerproject/luajava/CPtr;I)I
+ * Signature: (Lorg/eu/smileyik/luajava/CPtr;I)I
  */
-JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1rawlen(
+JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1rawlen(
     JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
   lua_State *L = getStateFromCPtr(env, cptr);
   if (!L) return 0;
@@ -41,11 +41,11 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1rawlen(
 }
 
 /*
- * Class:     org_keplerproject_luajava_LuaState
+ * Class:     org_eu_smileyik_luajava_LuaState
  * Method:    _compare
- * Signature: (Lorg/keplerproject/luajava/CPtr;III)I
+ * Signature: (Lorg/eu/smileyik/luajava/CPtr;III)I
  */
-JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1compare(
+JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1compare(
     JNIEnv *env, jobject jobj, jobject cptr, jint idx1, jint idx2, jint op) {
   lua_State *L = getStateFromCPtr(env, cptr);
   if (!L) return 0;
@@ -53,11 +53,11 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1compare(
 }
 
 /*
- * Class:     org_keplerproject_luajava_LuaState
+ * Class:     org_eu_smileyik_luajava_LuaState
  * Method:    _arith
- * Signature: (Lorg/keplerproject/luajava/CPtr;I)V
+ * Signature: (Lorg/eu/smileyik/luajava/CPtr;I)V
  */
-JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1arith(JNIEnv *env,
+JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1arith(JNIEnv *env,
                                                                        jobject jobj,
                                                                        jobject cptr,
                                                                        jint op) {
@@ -67,11 +67,11 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1arith(JNIEnv *e
 }
 
 /*
- * Class:     org_keplerproject_luajava_LuaState
+ * Class:     org_eu_smileyik_luajava_LuaState
  * Method:    _len
- * Signature: (Lorg/keplerproject/luajava/CPtr;I)V
+ * Signature: (Lorg/eu/smileyik/luajava/CPtr;I)V
  */
-JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1len(JNIEnv *env,
+JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1len(JNIEnv *env,
                                                                      jobject jobj,
                                                                      jobject cptr,
                                                                      jint idx) {
@@ -82,13 +82,13 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1len(JNIEnv *env
 
 #ifdef LUAJAVA_ENABLE_METHOD_RESUME_LUA_52
 /*
- * Class:     org_keplerproject_luajava_LuaState
+ * Class:     org_eu_smileyik_luajava_LuaState
  * Method:    _resume
  * Signature:
- * (Lorg/keplerproject/luajava/CPtr;Lorg/keplerproject/luajava/CPtr;I)I
+ * (Lorg/eu/smileyik/luajava/CPtr;Lorg/eu/smileyik/luajava/CPtr;I)I
  */
 JNIEXPORT jint JNICALL
-Java_org_keplerproject_luajava_LuaState__1resume__Lorg_keplerproject_luajava_CPtr_2Lorg_keplerproject_luajava_CPtr_2I(
+Java_org_eu_smileyik_luajava_LuaState__1resume__Lorg_eu_smileyik_luajava_CPtr_2Lorg_eu_smileyik_luajava_CPtr_2I(
     JNIEnv * env, jobject jobj, jobject cptr, jobject threadCptr, jint nargs) {
   lua_State *L = getStateFromCPtr(env, cptr);
   lua_State *T = getStateFromCPtr(env, threadCptr);
@@ -99,12 +99,12 @@ Java_org_keplerproject_luajava_LuaState__1resume__Lorg_keplerproject_luajava_CPt
 #endif // LUAJAVA_ENABLE_METHOD_RESUME_LUA_52
 
 /*
- * Class:     org_keplerproject_luajava_LuaState
+ * Class:     org_eu_smileyik_luajava_LuaState
  * Method:    _pushthread
  * Signature:
- * (Lorg/keplerproject/luajava/CPtr;Lorg/keplerproject/luajava/CPtr;)I
+ * (Lorg/eu/smileyik/luajava/CPtr;Lorg/eu/smileyik/luajava/CPtr;)I
  */
-JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1pushthread(
+JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1pushthread(
     JNIEnv *env, jobject jobj, jobject cptr, jobject threadCptr) {
   // lua_State *L = getStateFromCPtr(env, cptr);
   lua_State *T = getStateFromCPtr(env, threadCptr);
@@ -114,11 +114,11 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1pushthread(
 }
 
 /*
- * Class:     org_keplerproject_luajava_LuaState
+ * Class:     org_eu_smileyik_luajava_LuaState
  * Method:    _setuservalue
- * Signature: (Lorg/keplerproject/luajava/CPtr;I)V
+ * Signature: (Lorg/eu/smileyik/luajava/CPtr;I)V
  */
-JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1setuservalue(
+JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1setuservalue(
     JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
   lua_State *L = getStateFromCPtr(env, cptr);
   if (!L) return;
@@ -126,11 +126,11 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1setuservalue(
 }
 
 /*
- * Class:     org_keplerproject_luajava_LuaState
+ * Class:     org_eu_smileyik_luajava_LuaState
  * Method:    _getuservalue
- * Signature: (Lorg/keplerproject/luajava/CPtr;I)V
+ * Signature: (Lorg/eu/smileyik/luajava/CPtr;I)V
  */
-JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1getuservalue(
+JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1getuservalue(
   JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
   lua_State *L = getStateFromCPtr(env, cptr);
   if (!L) return;
@@ -138,11 +138,11 @@ JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1getuservalue(
 }
 
 /*
- * Class:     org_keplerproject_luajava_LuaState
+ * Class:     org_eu_smileyik_luajava_LuaState
  * Method:    _absindex
- * Signature: (Lorg/keplerproject/luajava/CPtr;I)I
+ * Signature: (Lorg/eu/smileyik/luajava/CPtr;I)I
  */
-JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1absindex(
+JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1absindex(
     JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
   lua_State *L = getStateFromCPtr(env, cptr);
   if (!L) return idx;
@@ -150,11 +150,11 @@ JNIEXPORT jint JNICALL Java_org_keplerproject_luajava_LuaState__1absindex(
 }
 
 /*
- * Class:     org_keplerproject_luajava_LuaState
+ * Class:     org_eu_smileyik_luajava_LuaState
  * Method:    _openCoroutine
- * Signature: (Lorg/keplerproject/luajava/CPtr;)V
+ * Signature: (Lorg/eu/smileyik/luajava/CPtr;)V
  */
-JNIEXPORT void JNICALL Java_org_keplerproject_luajava_LuaState__1openCoroutine(
+JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1openCoroutine(
     JNIEnv *env, jobject jobj, jobject cptr)
 {
   lua_State *L = getStateFromCPtr(env, cptr);

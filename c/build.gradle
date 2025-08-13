@@ -24,6 +24,7 @@ ext.isWindows = IS_WINDOWS
 ext.isMacos = IS_MACOS
 ext.additionLinkerArgs = LINKER_ARGS
 ext.myTargetPlatform = IS_MACOS ? 'arm64' : 'x64'
+ext.LUAJAVA_VERSION = version
 
 ext.generateCHeader = { Directory buildDir ->
     def headerDir = buildDir.dir("headers")
@@ -36,12 +37,12 @@ ext.generateCHeader = { Directory buildDir ->
                 "-cp", "./",
                 "-d", "${classesFile}",
                 "-h", "${generatedHeadersFile}",
-                "org/keplerproject/luajava/LuaState.java"
+                "org/eu/smileyik/luajava/LuaState.java"
     }
     copy {
         from generatedHeadersFile
         into headerDir
-        rename 'org_keplerproject_luajava_LuaState.h', 'luajava.h'
+        rename 'org_eu_smileyik_luajava_LuaState.h', 'luajava.h'
     }
     copy {
         from "${System.properties['java.home']}/include"

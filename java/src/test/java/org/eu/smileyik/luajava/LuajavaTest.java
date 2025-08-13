@@ -21,7 +21,7 @@
  * SOFTWARE.
  */
 
-package org.keplerproject.luajava;
+package org.eu.smileyik.luajava;
 
 import org.eu.smileyik.luajava.type.ILuaFieldGettable;
 import org.junit.jupiter.api.Test;

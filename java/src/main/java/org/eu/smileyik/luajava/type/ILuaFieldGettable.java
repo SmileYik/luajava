@@ -23,9 +23,9 @@
 
 package org.eu.smileyik.luajava.type;
 
+import org.eu.smileyik.luajava.LuaException;
+import org.eu.smileyik.luajava.LuaObject;
 import org.eu.smileyik.luajava.exception.Result;
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaObject;
 
 public interface ILuaFieldGettable extends ILuaObject {
     /**

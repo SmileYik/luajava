@@ -45,7 +45,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava;
+package org.eu.smileyik.luajava;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;

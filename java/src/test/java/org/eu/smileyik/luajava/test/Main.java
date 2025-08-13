@@ -44,50 +44,52 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava.test.node;
+package org.eu.smileyik.luajava.test;
 
+import org.eu.smileyik.luajava.*;
+import org.eu.smileyik.luajava.type.ILuaCallable;
 import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.LoadLibrary;
-import org.keplerproject.luajava.LuaException;
 
-import java.util.Iterator;
-import java.util.List;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
-/**
- * Uses the node example with a file that is a representation of a
- * hibernate configuration XML file.
- *
- * @author thiago
- */
 public class Main {
 
     static {
         LoadLibrary.load();
     }
 
+    static String str = "a = 'campo a';" +
+            "b = 'campo b';" +
+            "c = 'campo c';" +
+            "tab= { a='tab a'; b='tab b'; c='tab c', d={ e='tab d e'} } ;" +
+            "function imprime (str)	print(str);	return 'joao', 1	end;" +
+            "luaPrint={implements='org.keplerproject.luajava.test.Printable', print=function(str)print('Printing from lua :'..str)end  }";
+
+
     @Test
-    public void test() throws LuaException {
-        LuaNode node = LuaNode.proccessFile("test/hibernateConfig.lua");
+    public void test() throws LuaException, ClassNotFoundException {
+        LuaStateFacade luaState = LuaStateFactory.newLuaState();
+        luaState.lockThrow(L -> {
+            L.openBase();
 
-        System.out.println(node.getName());
-        System.out.println(node.getAttribute("name"));
-        System.out.println(node.getAttribute("table"));
+            L.LdoString(str);
 
-        List list = node.getChildren("property");
+            LuaObject func = luaState.getLuaObject("imprime").getOrThrow(LuaException.class);
+            assertTrue(func.isCallable());
+            Object[] teste = ((ILuaCallable) func).call(2, new Object[]{"TESTANDO"}).getOrThrow(LuaException.class);
+            System.out.println(teste[0]);
+            System.out.println(teste[1]);
 
-        for (Iterator iter = list.iterator(); iter.hasNext(); ) {
-            LuaNode elem = (LuaNode) iter.next();
-            System.out.println(elem.getName());
-            System.out.println(elem.getAttribute("type"));
-        }
+            System.out.println("PROXY TEST :");
+            Printable p = new ObjPrint();
+            p.print("TESTE 1");
 
-        list = node.getChild("many-to-one").getChildren();
+            LuaObject o = luaState.getLuaObject("luaPrint").getOrThrow(LuaException.class);
+            p = (Printable) o.createProxy("org.eu.smileyik.luajava.test.Printable").getOrThrow(LuaException.class);
+            p.print("Teste 2");
+        });
 
-        for (Iterator iter = list.iterator(); iter.hasNext(); ) {
-            LuaNode elem = (LuaNode) iter.next();
-            System.out.println(elem.getName());
-            System.out.println(elem.getValue());
-        }
+        luaState.close();
     }
 }

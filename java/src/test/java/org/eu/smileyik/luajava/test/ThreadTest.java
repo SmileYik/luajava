@@ -1,17 +1,17 @@
 /*
- * IConfig.java, SmileYik, 2025-8-10
+ * ThreadTest.java, SmileYik, 2025-8-10
  * Copyright (c) 2025 Smile Yik
- *
+ * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * 
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- *
+ * 
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -44,27 +44,55 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava.test.node;
+package org.eu.smileyik.luajava.test;
 
-import org.keplerproject.luajava.LuaObject;
+import org.eu.smileyik.luajava.LoadLibrary;
+import org.eu.smileyik.luajava.LuaObject;
+import org.eu.smileyik.luajava.LuaStateFacade;
+import org.eu.smileyik.luajava.LuaStateFactory;
+import org.junit.jupiter.api.Test;
 
 /**
- * Interface that is implemented in Lua.
+ * Tests LuaJava running as a multithreaded application.<br>
+ * The objective of the test is to see that LuaJava behaves
+ * properly when being executed from diferent threads.
  *
  * @author thiago
  */
-interface IConfig {
-    LuaObject processConfigFile(String fileName);
+public class ThreadTest {
 
-    String getName(LuaObject t);
+    static {
+        LoadLibrary.load();
+    }
 
-    LuaObject getChild(LuaObject t, String childName);
+    private static final String lua = "function run() io.write('test\\n');" +
+            "io.stdout:flush();" +
+            "luajava.bindClass('java.lang.Thread'):sleep(100);" +
+            " end;tb={run=run}";
 
-    LuaObject getChildren(LuaObject t);
+    @Test
+    public void test() throws Exception {
+        LuaStateFacade facade = LuaStateFactory.newLuaState();
+        facade.lockThrow(L -> {
+            try {
+                L.openBase();
+                L.openIo();
+                //L.openLibs();
 
-    LuaObject getChildren(LuaObject t, String childName);
+                L.LdoString(lua);
 
-    String getAttribute(LuaObject t, String attributeName);
+                for (int i = 0; i < 100; i++) {
+                    LuaObject obj = facade.getLuaObject("tb").getOrThrow();
+                    Object runnable = obj.createProxy("java.lang.Runnable").getOrThrow();
+                    Thread thread = new Thread((Runnable) runnable);
+                    thread.start();
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
 
-    String getValue(LuaObject t);
+        System.out.println("end main");
+        Thread.sleep(10000);
+    }
 }

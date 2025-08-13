@@ -44,7 +44,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava.test;
+package org.eu.smileyik.luajava.test;
 
 /**
  *

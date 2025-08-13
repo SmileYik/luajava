@@ -23,7 +23,7 @@
 
 package org.eu.smileyik.luajava.type;
 
-import org.keplerproject.luajava.LuaState;
+import org.eu.smileyik.luajava.LuaState;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -23,12 +23,8 @@
 
 package org.eu.smileyik.luajava.type;
 
-import org.eu.smileyik.luajava.BaseTest;
+import org.eu.smileyik.luajava.*;
 import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaObject;
-import org.keplerproject.luajava.LuaState;
-import org.keplerproject.luajava.LuaStateFacade;
 
 import java.util.Arrays;
 import java.util.Objects;

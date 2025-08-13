@@ -44,10 +44,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava.test;
+package org.eu.smileyik.luajava.test;
 
+import org.eu.smileyik.luajava.*;
 import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.*;
 
 import java.io.Closeable;
 import java.io.IOException;

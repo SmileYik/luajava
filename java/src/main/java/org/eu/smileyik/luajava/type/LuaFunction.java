@@ -23,8 +23,8 @@
 
 package org.eu.smileyik.luajava.type;
 
-import org.keplerproject.luajava.LuaObject;
-import org.keplerproject.luajava.LuaStateFacade;
+import org.eu.smileyik.luajava.LuaObject;
+import org.eu.smileyik.luajava.LuaStateFacade;
 
 public class LuaFunction extends LuaObject implements ILuaCallable {
     public static final String TYPE_NAME = LuaType.typeName(LuaType.FUNCTION);

@@ -1,5 +1,5 @@
 /*
- * Console.java, SmileYik, 2025-8-10
+ * LuaException.java, SmileYik, 2025-8-10
  * Copyright (c) 2025 Smile Yik
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,7 +22,7 @@
  */
 
 /*
- * $Id: Console.java,v 1.8 2007-09-17 19:28:40 thiago Exp $
+ * $Id: LuaException.java,v 1.7 2007-04-17 23:47:50 thiago Exp $
  * Copyright (C) 2003-2007 Kepler Project.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -45,72 +45,33 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+package org.eu.smileyik.luajava;
 
 /**
- * Simple LuaJava console.
- * This is also an example on how to use the Java side of LuaJava and how to startup
- * a LuaJava application.
+ * LuaJava exception
  *
  * @author Thiago Ponte
  */
-public class Console {
+public class LuaException extends Exception {
+    /**
+     *
+     */
+    private static final long serialVersionUID = 1L;
+
+    public LuaException(String str) {
+        super(str);
+    }
 
     /**
-     * Creates a console for user interaction.
-     *
-     * @param args names of the lua files to be executed
+     * Will work only on Java 1.4 or later.
+     * To work with Java 1.3, comment the first line and uncomment the second one.
      */
-    public static void main(String[] args) {
-        try (LuaStateFacade luaState = LuaStateFactory.newLuaState();) {
-            luaState.lockThrow(L -> {
-                L.openLibs();
-
-                if (args.length > 0) {
-                    for (int i = 0; i < args.length; i++) {
-                        int res = L.LloadFile(args[i]);
-                        if (res == 0) {
-                            res = L.pcall(0, 0, 0);
-                        }
-                        if (res != 0) {
-                            throw new LuaException("Error on file: " + args[i] + ". " + L.toString(-1));
-                        }
-                    }
-
-                    return;
-                }
-
-                System.out.println("API Lua Java - console mode.");
-
-                BufferedReader inp = new BufferedReader(new InputStreamReader(System.in));
-
-                String line;
-
-                System.out.print("> ");
-                try {
-                    while ((line = inp.readLine()) != null && !line.equals("exit")) {
-                        int ret = L.LloadBuffer(line.getBytes(), "from console");
-                        if (ret == 0) {
-                            ret = L.pcall(0, 0, 0);
-                        }
-                        if (ret != 0) {
-                            System.err.println("Error on line: " + line);
-                            System.err.println(L.toString(-1));
-                        }
-                        System.out.print("> ");
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            });
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+    public LuaException(Exception e) {
+        super((e.getCause() != null) ? e.getCause() : e);
+        //super(e.getMessage());
     }
-}
+
+    public LuaException(String str, Exception e) {
+        super(str, e);
+    }
+} 

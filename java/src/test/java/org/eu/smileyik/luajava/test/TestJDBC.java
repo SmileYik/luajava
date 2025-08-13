@@ -1,5 +1,5 @@
 /*
- * ThreadTest.java, SmileYik, 2025-8-10
+ * TestJDBC.java, SmileYik, 2025-8-10
  * Copyright (c) 2025 Smile Yik
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -44,55 +44,80 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava.test;
+package org.eu.smileyik.luajava.test;
 
-import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.LoadLibrary;
-import org.keplerproject.luajava.LuaObject;
-import org.keplerproject.luajava.LuaStateFacade;
-import org.keplerproject.luajava.LuaStateFactory;
+import org.eu.smileyik.luajava.LuaException;
+import org.eu.smileyik.luajava.LuaStateFacade;
+import org.eu.smileyik.luajava.LuaStateFactory;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
+
 
 /**
- * Tests LuaJava running as a multithreaded application.<br>
- * The objective of the test is to see that LuaJava behaves
- * properly when being executed from diferent threads.
+ * Uses JDBC statement to execute queries inside Lua.
+ * Uses hsqldb.
  *
  * @author thiago
  */
-public class ThreadTest {
+public class TestJDBC {
 
-    static {
-        LoadLibrary.load();
-    }
+    public static void main(String[] args) throws Exception {
+        // gets a java.sql.Connection and creates a Statement
+        Class.forName("org.hsqldb.jdbcDriver");
+        Connection con = DriverManager.getConnection("jdbc:hsqldb:hsql://localhost:9002", "sa", "");
+        Statement st = con.createStatement();
 
-    private static final String lua = "function run() io.write('test\\n');" +
-            "io.stdout:flush();" +
-            "luajava.bindClass('java.lang.Thread'):sleep(100);" +
-            " end;tb={run=run}";
+        try {
+            st.execute("DROP TABLE luatest");
+        } catch (Exception ignore) {
+        }
 
-    @Test
-    public void test() throws Exception {
+        st.execute("CREATE TABLE luatest (id int not null primary key, str varchar, number double)");
+
+        for (int i = 0; i < 10; i++) {
+            st.executeUpdate("INSERT INTO luatest (id, str, number) values(" + i + ", '" + 2 * i + "', " + System.currentTimeMillis() + ")");
+        }
+
         LuaStateFacade facade = LuaStateFactory.newLuaState();
         facade.lockThrow(L -> {
-            try {
-                L.openBase();
-                L.openIo();
-                //L.openLibs();
+            L.openLibs();
 
-                L.LdoString(lua);
+            //L.pushString("st");
+            facade.pushObjectValue(st).justThrow(LuaException.class);;
+            //L.setTable(LuaState.LUA_GLOBALSINDEX.intValue());
+            L.setGlobal("st");
 
-                for (int i = 0; i < 100; i++) {
-                    LuaObject obj = facade.getLuaObject("tb").getOrThrow();
-                    Object runnable = obj.createProxy("java.lang.Runnable").getOrThrow();
-                    Thread thread = new Thread((Runnable) runnable);
-                    thread.start();
+            int err = L.LdoFile("test/testJDBC.lua");
+            if (err != 0) {
+                switch (err) {
+                    case 1:
+                        System.out.println("Runtime error. " + L.toString(-1));
+                        break;
+
+                    case 2:
+                        System.out.println("File not found. " + L.toString(-1));
+                        break;
+
+                    case 3:
+                        System.out.println("Syntax error. " + L.toString(-1));
+                        break;
+
+                    case 4:
+                        System.out.println("Memory error. " + L.toString(-1));
+                        break;
+
+                    default:
+                        System.out.println("Error. " + L.toString(-1));
+                        break;
                 }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
             }
+
         });
 
-        System.out.println("end main");
-        Thread.sleep(10000);
+        facade.close();
+        st.close();
+        con.close();
     }
 }

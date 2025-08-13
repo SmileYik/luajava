@@ -1,5 +1,5 @@
 /*
- * AwtTest.java, SmileYik, 2025-8-10
+ * ConsoleTest.java, SmileYik, 2025-8-10
  * Copyright (c) 2025 Smile Yik
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,25 +21,13 @@
  * SOFTWARE.
  */
 
-package org.keplerproject.luajava.test;
+package org.eu.smileyik.luajava;
 
-import org.eu.smileyik.luajava.BaseTest;
-import org.junit.jupiter.api.Test;
-import org.keplerproject.luajava.LuaStateFacade;
-
-public class AwtTest extends BaseTest {
-
-    @Test
-    public void test() throws Exception {
-        try (LuaStateFacade facade = newLuaState()) {
-            facade.evalFile("test/awtTest.lua").getOrThrow();
-            Thread.sleep(10000);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+public class ConsoleTest {
+    static {
+        LoadLibrary.load();
     }
-
-    public static void main(String[] args) throws Exception {
-        newLuaState().evalFile("java/test/awtTest.lua").justThrow();
+    public static void main(String[] args) {
+        Console.main(args);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * JavaFunction.java, SmileYik, 2025-8-10
+ * CPtr.java, SmileYik, 2025-8-10
  * Copyright (c) 2025 Smile Yik
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,7 +22,7 @@
  */
 
 /*
- * $Id: JavaFunction.java,v 1.6 2006-12-22 14:06:40 thiago Exp $
+ * $Id: CPtr.java,v 1.4 2006-12-22 14:06:40 thiago Exp $
  * Copyright (C) 2003-2007 Kepler Project.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -45,64 +45,56 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.keplerproject.luajava;
+package org.eu.smileyik.luajava;
+
+import java.util.Objects;
 
 /**
- * JavaFunction is a class that can be used to implement a Lua function in Java.
- * JavaFunction is an abstract class, so in order to use it you must extend this
- * class and implement the <code>execute</code> method. This <code>execute</code>
- * method is the method that will be called when you call the function from Lua.
- * To register the JavaFunction in Lua use the method <code>register(String name)</code>.
+ * An abstraction for a C pointer data type.  A CPtr instance represents, on
+ * the Java side, a C pointer.  The C pointer could be any <em>type</em> of C
+ * pointer.
  */
-public abstract class JavaFunction {
+public class CPtr {
 
-    /**
-     * This is the state in which this function will exist.
-     */
-    protected final LuaStateFacade L;
+    /* Pointer value of the real C pointer. Use long to be 64-bit safe. */
+    private long peer;
 
-    /**
-     * Constructor that receives a LuaState.
-     *
-     * @param L LuaState object associated with this JavaFunction object
-     */
-    public JavaFunction(LuaStateFacade L) {
-        this.L = L;
+
+    /* No-args constructor. */
+    CPtr() {
     }
 
     /**
-     * This method is called from Lua. Any parameters can be taken with
-     * <code>getParam</code>. A reference to the JavaFunctionWrapper itself is
-     * always the first parameter received. Values passed back as results
-     * of the function must be pushed onto the stack.
+     * Compares this <code>CPtr</code> to the specified object.
      *
-     * @return The number of values pushed onto the stack.
+     * @param other a <code>CPtr</code>
+     * @return true if the class of this <code>CPtr</code> object and the
+     * class of <code>other</code> are exactly equal, and the C
+     * pointers being pointed to by these objects are also
+     * equal. Returns false otherwise.
      */
-    public abstract int execute() throws LuaException;
+    public boolean equals(Object other) {
+        if (other == null)
+            return false;
+        if (other == this)
+            return true;
+        if (CPtr.class != other.getClass())
+            return false;
+        return peer == ((CPtr) other).peer;
+    }
 
-    /**
-     * Returns a parameter received from Lua. Parameters are numbered from 1.
-     * A reference to the JavaFunction itself is always the first parameter
-     * received (the same as <code>this</code>).
-     *
-     * @param idx Index of the parameter.
-     * @return Reference to parameter.
-     * @see LuaObject
-     */
-    public LuaObject getParam(int idx) {
-        return L.getLuaObject(idx).getValue();
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(peer);
     }
 
     /**
-     * Register a JavaFunction with a given name. This method registers in a
-     * global variable the JavaFunction specified.
+     * Gets the value of the C pointer abstraction
      *
-     * @param name name of the function.
+     * @return long
      */
-    public void register(String name) throws LuaException {
-        L.lockThrow(L -> {
-            L.pushJavaFunction(this);
-            L.setGlobal(name);
-        });
+    protected long getPeer() {
+        return peer;
     }
+
 }

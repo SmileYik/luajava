@@ -4,7 +4,7 @@ if loadstring == nil then
 end
 
 configLib = {
-    implements='org.keplerproject.luajava.test.node.IConfig',
+    implements='org.eu.smileyik.luajava.test.node.IConfig',
     processConfigFile = function (filename)
         file = io.open(filename)
         ret = file:read("*a")
