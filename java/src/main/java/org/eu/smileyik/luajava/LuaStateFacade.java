@@ -796,7 +796,13 @@ public class LuaStateFacade implements AutoCloseable {
         });
     }
 
-    private Result<Void, LuaException> doPcall(int nArgs, int nResults, int errFunc) {
+    /**
+     * unlocked version pcall.
+     * <strong>This method is not safe!</strong>
+     * 
+     * @see LuaStateFacade#pcall(int, int, int)
+     */
+    public Result<Void, LuaException> doPcall(int nArgs, int nResults, int errFunc) {
         int exp = luaState.pcall(nArgs, nResults, errFunc);
         if (exp != 0) {
             String err = getErrorMessage(exp);
@@ -845,7 +851,7 @@ public class LuaStateFacade implements AutoCloseable {
      *              Number of objects returned
      * @return Object[] - Returned Objects
      */
-    protected Result<Object[], ? extends LuaException> doPcall(ILuaCallable callable, Object[] args, int _nres) {
+    public Result<Object[], ? extends LuaException> doPcall(ILuaCallable callable, Object[] args, int _nres) {
         IInnerLuaObject innerObject = (IInnerLuaObject) callable;
         final int top = luaState.getTop();
         int nargs = 0;
