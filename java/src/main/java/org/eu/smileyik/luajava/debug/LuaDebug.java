@@ -1,50 +1,75 @@
 package org.eu.smileyik.luajava.debug;
 
+import org.eu.smileyik.luajava.LuaState;
+
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 
 public class LuaDebug {
-    //int event;
-    //const char *name;	/* (n) */
-    //const char *namewhat;	/* (n) 'global', 'local', 'field', 'method' */
-    //const char *what;	/* (S) 'Lua', 'C', 'main', 'tail' */
-    //const char *source;	/* (S) */
-    //size_t srclen;	/* (S) */
-    //int currentline;	/* (l) */
-    //int linedefined;	/* (S) */
-    //int lastlinedefined;	/* (S) */
-    //unsigned char nups;	/* (u) number of upvalues */
-    //unsigned char nparams;/* (u) number of parameters */
-    //char isvararg;        /* (u) */
-    //char istailcall;	/* (t) */
-    //unsigned short ftransfer;   /* (r) index of first value transferred */
-    //unsigned short ntransfer;   /* (r) number of transferred values */
-    //char short_src[LUA_IDSIZE]; /* (S) */
-    private long ptr;
+    // int event;
+    // const char *name;	/* (n) */
+    // const char *namewhat;	/* (n) 'global', 'local', 'field', 'method' */
+    // const char *what;	/* (S) 'Lua', 'C', 'main', 'tail' */
+    // const char *source;	/* (S) */
+    // size_t srclen;	/* (S) */
+    // int currentline;	/* (l) */
+    // int linedefined;	/* (S) */
+    // int lastlinedefined;	/* (S) */
+    // unsigned char nups;	/* (u) number of upvalues */
+    // unsigned char nparams;/* (u) number of parameters */
+    // char isvararg;        /* (u) */
+    // char istailcall;	/* (t) */
+    // unsigned short ftransfer;   /* (r) index of first value transferred */
+    // unsigned short ntransfer;   /* (r) number of transferred values */
+    // char short_src[LUA_IDSIZE]; /* (S) */
 
-    private int event;
-    private String name;
-    private String nameWhat;
-    private String what;
-    private String source;
-    private long srcLen;
-    private int currentLine;
-    private int lineDefine;
-    private int lastLineDefine;
-    private short nUps;
-    private short nParams;
-    private byte isVarArg;
-    private byte isTailCall;
-    private int fTransfer;
-    private int nTransfer;
-    private String shortSrc;
+    private static final LuaDebugReader LUA_DEBUG_READER;
 
-    private LuaDebug() {
-
+    static {
+        LuaDebugReader reader = null;
+        switch (LuaState.LUA_VERSION) {
+            case "Lua 5.1":
+                reader = new LuaDebugReaderLua51();
+                break;
+            case "Lua 5.2":
+            case "Lua 5.3":
+                reader = new LuaDebugReaderLua52();
+                break;
+            case "Lua 5.4":
+            default:
+                reader = new LuaDebugReaderLua54();
+                break;
+        }
+        LUA_DEBUG_READER = reader;
     }
 
-    public LuaDebug(long ptr, int event, String name, String nameWhat, String what, String source, long srcLen, int currentLine, int lineDefine, int lastLineDefine, short nUps, short nParams, byte isVarArg, byte isTailCall, int fTransfer, int nTransfer, String shortSrc) {
+    private final long ptr;
+
+    private final int event;
+    private final String name;
+    private final String nameWhat;
+    private final String what;
+    private final String source;
+    private final long srcLen;
+    private final int currentLine;
+    private final int lineDefine;
+    private final int lastLineDefine;
+    private final int nUps;
+    private final short nParams;
+    private final byte isVarArg;
+    private final byte isTailCall;
+    private final int fTransfer;
+    private final int nTransfer;
+    private final String shortSrc;
+
+    public LuaDebug(long ptr) {
+        this(ptr, 0, (String) null, (String) null, (String) null, (String) null,
+                0L, 0, 0, 0, 0,
+                (short) 0, (byte) 0, (byte) 0, 0, 0, (String) null);
+    }
+
+    public LuaDebug(long ptr, int event, String name, String nameWhat, String what, String source,
+                    long srcLen, int currentLine, int lineDefine, int lastLineDefine, int nUps,
+                    short nParams, byte isVarArg, byte isTailCall, int fTransfer, int nTransfer, String shortSrc) {
         this.ptr = ptr;
         this.event = event;
         this.name = name;
@@ -64,38 +89,9 @@ public class LuaDebug {
         this.shortSrc = shortSrc;
     }
 
-    public static LuaDebug newInstance(long ptr, ByteBuffer luaDebug, int longLen,
+    public static LuaDebug newInstance(long ptr, ByteBuffer buffer,
                                        String name, String nameWhat, String what, String source) {
-        LuaDebug debug = new LuaDebug();
-        luaDebug.order(ByteOrder.nativeOrder());
-        debug.ptr = ptr;
-        debug.event = luaDebug.getInt(); luaDebug.getInt();
-        debug.name = name;         luaDebug.getLong();
-        debug.nameWhat = nameWhat; luaDebug.getLong();
-        debug.what = what;         luaDebug.getLong();
-        debug.source = source;     luaDebug.getLong();
-        if (longLen == 8) {
-            debug.srcLen = luaDebug.getLong();
-        } else {
-            debug.srcLen = luaDebug.getInt();
-        }
-        debug.currentLine = luaDebug.getInt();
-        debug.lineDefine = luaDebug.getInt();
-        debug.lastLineDefine = luaDebug.getInt();
-        debug.nUps = (short) Byte.toUnsignedInt(luaDebug.get());
-        debug.nParams = (short) Byte.toUnsignedInt(luaDebug.get());
-        debug.isVarArg = luaDebug.get();
-        debug.isTailCall = luaDebug.get();
-        debug.fTransfer = Short.toUnsignedInt(luaDebug.getShort());
-        debug.nTransfer = Short.toUnsignedInt(luaDebug.getShort());
-        byte[] shortSrc = new byte[luaDebug.remaining() - 8 - longLen];
-        luaDebug.get(shortSrc);
-        int len = 0;
-        while (len < shortSrc.length && shortSrc[len] != 0) {
-            len++;
-        }
-        debug.shortSrc = new String(shortSrc, 0, len, StandardCharsets.UTF_8);
-        return debug;
+        return LUA_DEBUG_READER.read(ptr, buffer, name, nameWhat, what, source);
     }
 
     public long getPtr() {
@@ -138,7 +134,7 @@ public class LuaDebug {
         return lastLineDefine;
     }
 
-    public short getnUps() {
+    public int getnUps() {
         return nUps;
     }
 

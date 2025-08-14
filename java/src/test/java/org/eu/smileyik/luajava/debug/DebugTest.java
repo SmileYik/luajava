@@ -18,6 +18,7 @@ public class DebugTest extends BaseTest {
                 "hello()";
 
         LuaStateFacade luaStateFacade = newLuaState();
+        System.out.println(LuaState.LUA_VERSION);
         luaStateFacade.setDebugHook((fade, luaDebug) -> {
             System.out.println("------------");
             System.out.println(luaDebug.toString().replace("\n", "\\n"));

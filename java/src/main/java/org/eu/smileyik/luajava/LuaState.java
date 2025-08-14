@@ -61,6 +61,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author Thiago Ponte
  */
 public class LuaState {
+    /**
+     * long size in c/cpp
+     */
+    final public static int LONG_SIZE = _longSize();
     final public static String LUA_VERSION = _luaVersion();
 
     final public static int LUA_GLOBALSINDEX = _luaGlobalsIndex();
@@ -155,8 +159,6 @@ public class LuaState {
     public static final int LUA_OPEQ = 0;
     public static final int LUA_OPLT = 1;
     public static final int LUA_OPLE = 2;
-
-    private final static String LUAJAVA_LIB = "luajava-1.1";
 
     /**
      * Opens the library containing the luajava API
@@ -272,6 +274,7 @@ public class LuaState {
     private static native String _luaVersion();
     private static native int _luaRegistryIndex();
     private static native int _luaGlobalsIndex();
+    private static native int _longSize();
 
     private native CPtr _open();
 

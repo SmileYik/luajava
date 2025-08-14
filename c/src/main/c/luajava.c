@@ -1877,3 +1877,13 @@ Java_org_eu_smileyik_luajava_LuaState__1freeLuaDebug(JNIEnv *env, jobject jobj, 
   lua_Debug *ar = (lua_Debug *) ((jbyte *) arPtr);
   free(ar);
 }
+
+/*
+ * Class:     org_eu_smileyik_luajava_LuaState
+ * Method:    _longSize
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL
+Java_org_eu_smileyik_luajava_LuaState__1longSize(JNIEnv *env, jclass jobj) {
+  return sizeof(long);
+}

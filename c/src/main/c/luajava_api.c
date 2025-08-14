@@ -281,7 +281,7 @@ void setupLuaJavaApi(JNIEnv *env) {
   BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_debugLuaHook, luajava_api_class, 
                           "debugLuaHook", "(ILorg/eu/smileyik/luajava/debug/LuaDebug;)V");   
   BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_newLuaDebug, luajava_api_class, 
-                          "newLuaDebug", "(JLjava/nio/ByteBuffer;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lorg/eu/smileyik/luajava/debug/LuaDebug;");   
+                          "newLuaDebug", "(JLjava/nio/ByteBuffer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lorg/eu/smileyik/luajava/debug/LuaDebug;");   
 
   BIND_JAVA_CLASS(tempClass, env, java_function_class, "org/eu/smileyik/luajava/JavaFunction");
   BIND_JAVA_NORMAL_METHOD(env, java_function_method, java_function_class, 
@@ -1605,25 +1605,9 @@ jobject luajavaNewLuaDebug(lua_State *L, JNIEnv *env, const lua_Debug *ar, const
     shortSrc = (*env)->NewStringUTF(env, ar->short_src);
   }
 
-  // printf("%ld, %d, %s, %s, %s, %s, %ld, %d, %d, %d, %d, %d, %d, %d, %d, %d, %s\n", 
-  //         (jlong) ar, ar->event, 
-  //         name ? ar->name : "", 
-  //         nameWhat ? ar->namewhat : "", 
-  //         what ? ar->what : "", 
-  //         source ? ar->source : "", 
-  //         ar->srclen, ar->currentline, ar->linedefined, ar->lastlinedefined, 
-  //         ar->nups, ar->nparams, ar->isvararg, ar->istailcall, ar->ftransfer, 
-  //         ar->ntransfer, shortSrc ? ar->short_src : "");
-  //         fflush(stdout);
-
-  // jobject result = (*env)->CallStaticObjectMethod(env, luajava_api_class, luajava_api_static_method_newLuaDebug,
-  //                                                   (jlong) ar, (jint) ar->event, name, nameWhat, what, source, 
-  //                                                   (size_t) ar->srclen, ar->currentline, ar->linedefined, ar->lastlinedefined, 
-  //                                                   ar->nups, ar->nparams, ar->isvararg, ar->istailcall, ar->ftransfer, 
-  //                                                   ar->ntransfer, shortSrc);
   jobject byteBuffer = (*env)->NewDirectByteBuffer(env, ar, sizeof(lua_Debug));
   jobject result = (*env)->CallStaticObjectMethod(env, luajava_api_class, luajava_api_static_method_newLuaDebug,
-                                                    (jlong) ar, byteBuffer, sizeof(size_t), name, nameWhat, what, source);
+                                                    (jlong) ar, byteBuffer, name, nameWhat, what, source);
 
   jthrowable exp = (*env)->ExceptionOccurred(env);  
   HANDLES_JAVA_EXCEPTION(L, exp, env, {

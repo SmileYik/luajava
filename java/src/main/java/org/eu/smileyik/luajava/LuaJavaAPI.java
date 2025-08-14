@@ -561,13 +561,9 @@ public final class LuaJavaAPI {
         luaStateFacade.debugHook(luaDebug);
     }
 
-    //  public static LuaDebug newLuaDebug(long ptr, int event, String name, String nameWhat, String what, String source, long srcLen, int currentLine, int lineDefine, int lastLineDefine, short nUps, short nParams, byte isVarArg, byte isTailCall, int fTransfer, int nTransfer, String shortSrc) {
-    //      return new LuaDebug(ptr, event, name, nameWhat, what, source, srcLen, currentLine, lineDefine, lastLineDefine, nUps, nParams, isVarArg, isTailCall, fTransfer, nTransfer, shortSrc);
-    //  }
-
-    public static LuaDebug newLuaDebug(long ptr, ByteBuffer buffer, int longLen,
+    public static LuaDebug newLuaDebug(long ptr, ByteBuffer buffer,
                                        String name, String nameWhat, String what, String source) {
-        return LuaDebug.newInstance(ptr, buffer, longLen, name, nameWhat, what, source);
+        return LuaDebug.newInstance(ptr, buffer, name, nameWhat, what, source);
     }
 }
  
