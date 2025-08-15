@@ -65,3 +65,15 @@ JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1getGcCount(
 
   return (jint)lua_getgccount(L);
 }
+
+/*
+ * Class:     org_eu_smileyik_luajava_LuaState
+ * Method:    _getGlobalTable
+ * Signature: (Lorg/eu/smileyik/luajava/CPtr;)V
+ */
+JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1getGlobalTable(
+    JNIEnv *env, jobject jobj, jobject cptr) {
+  lua_State *L = getStateFromCPtr(env, cptr);
+  if (!L) return;
+  lua_pushvalue(L, LUA_GLOBALSINDEX);
+}

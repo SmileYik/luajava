@@ -544,6 +544,9 @@ public class LuaState {
     // ************************* debug method stop  ****************************
 
     // ******************** addition since lua 5.2 start ***********************
+
+    private native void _getGlobalTable(CPtr ptr);
+
     /**
      * added since lua 5.2
      * @param ptr
@@ -1131,6 +1134,11 @@ public class LuaState {
     // ************************* debug method stop  ****************************
 
     // ******************** addition since lua 5.2 start ***********************
+
+    public void pushGlobalTable() {
+        _getGlobalTable(luaState);
+    }
+
     /**
      * added since lua 5.2
      * @param idx

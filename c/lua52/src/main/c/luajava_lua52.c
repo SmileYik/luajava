@@ -161,3 +161,15 @@ JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1openCoroutine(
   if (!L) return;
   luaopen_coroutine(L);
 }
+
+/*
+ * Class:     org_eu_smileyik_luajava_LuaState
+ * Method:    _getGlobalTable
+ * Signature: (Lorg/eu/smileyik/luajava/CPtr;)V
+ */
+JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1getGlobalTable(
+    JNIEnv *env, jobject jobj, jobject cptr) {
+  lua_State *L = getStateFromCPtr(env, cptr);
+  if (!L) return;
+  lua_pushglobaltable(L);
+}

@@ -565,5 +565,11 @@ public final class LuaJavaAPI {
                                        String name, String nameWhat, String what, String source) {
         return LuaDebug.newInstance(ptr, buffer, name, nameWhat, what, source);
     }
+
+    // **************** Stream API ****************
+
+    public static void luaWrite(int luaState, ByteBuffer buffer, Object obj) {
+
+    }
 }
  

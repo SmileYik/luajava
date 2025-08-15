@@ -60,7 +60,9 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
 
     @Override
     public String toString() {
-        return asDeepMap().replaceErrorString(it -> "[Cannot Transform this LuaTable to Map]").toString();
+        Result<Map<Object, Object>, ? extends Exception> deepMap = asDeepMap();
+        return deepMap.isError() ?
+                "[Cannot Transform this LuaTable to Map]" : deepMap.getValue().toString();
     }
 
     @Override
