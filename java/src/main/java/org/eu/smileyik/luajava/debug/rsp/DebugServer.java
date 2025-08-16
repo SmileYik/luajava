@@ -40,14 +40,4 @@ public interface DebugServer extends AutoCloseable {
     void removeBreakPoint(BreakPoint breakPoint);
 
     LuaStateFacade getLuaStateFacade();
-
-    public static String variableToString(Object variable) {
-        if (variable == null) {
-            return "nil";
-        } else if (variable instanceof String) {
-            return String.format("\"%s\"", variable);
-        } else {
-            return variable.toString();
-        }
-    }
 }

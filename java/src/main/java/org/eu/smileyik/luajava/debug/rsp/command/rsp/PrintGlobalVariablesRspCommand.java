@@ -1,9 +1,9 @@
 package org.eu.smileyik.luajava.debug.rsp.command.rsp;
 
 import org.eu.smileyik.luajava.debug.rsp.RspDebugServer;
+import org.eu.smileyik.luajava.debug.rsp.command.hook.PrintVariableCommand;
 
 import java.io.IOException;
-import java.util.Map;
 
 public class PrintGlobalVariablesRspCommand extends PrintRspCommand {
     @Override
@@ -15,15 +15,14 @@ public class PrintGlobalVariablesRspCommand extends PrintRspCommand {
 
     @Override
     public String handle(RspDebugServer debugServer, String command, String[] args) throws IOException {
-        String message = "";
-        Map<String, String> variables = debugServer.getStringGlobalVariables();
-        if (args.length > 1) {
-            String name = args[1];
-            message = buildVariableMessage(variables, "global", name);
-        } else {
-            message = buildVariableMessage(variables, "global");
+        debugServer.addCommand(new PrintVariableCommand(
+                PrintVariableCommand.SCOPE_GLOBAL,
+                args.length > 1 ? args[1] : null
+        ));
+        try {
+            debugServer.waitFillMessage();
+        } catch (InterruptedException ignored) {
         }
-        debugServer.sendMessage(message);
         return "OK";
     }
 }

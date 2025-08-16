@@ -1,23 +1,13 @@
-package org.eu.smileyik.luajava.debug;
+package org.eu.smileyik.luajava.debug.util;
 
 import org.eu.smileyik.luajava.LuaState;
 import org.eu.smileyik.luajava.LuaStateFacade;
+import org.eu.smileyik.luajava.debug.LuaDebug;
 import org.eu.smileyik.luajava.type.LuaTable;
 
 import java.util.*;
 
 public class DebugUtils {
-    private static Set<String> GLOBAL_VARIABLE_BLACKLIST = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "next", "select", "string", "utf8", "xpcall",
-            "_G", "luajava", "error", "type", "getmetatable",
-            "pairs", "load", "ipairs", "pcall", "assert",
-            "rawequal", "collectgarbage", "table", "package",
-            "debug", "os", "io", "coroutine", "_VERSION",
-            "require", "loadfile", "rawset", "tonumber",
-            "warn", "print", "setmetatable", "dofile",
-            "rawget", "rawlen", "math", "tostring"
-    )));
-
     public static Map<String, Object> getLocalVariable(LuaStateFacade facade, LuaDebug ar) {
         if (ar == null) {
             return Collections.emptyMap();
@@ -53,7 +43,7 @@ public class DebugUtils {
         if (o instanceof LuaTable) {
             Map<String, Object> map = new HashMap<>();
             ((LuaTable) o).forEach((k, v) -> {
-                if (k instanceof String && !GLOBAL_VARIABLE_BLACKLIST.contains(k)) {
+                if (k instanceof String) {
                     map.put((String) k, v);
                 }
             });
@@ -79,5 +69,58 @@ public class DebugUtils {
             luaState.pop(1);
         }
         return map;
+    }
+
+    public static String variableToString(Object variable) {
+        if (variable == null) {
+            return "nil";
+        } else if (variable instanceof String) {
+            return String.format("\"%s\"", variable);
+        } else if (variable instanceof LuaTable) {
+            try {
+                return variableToString(new HashSet<>(), (LuaTable) variable);
+            } catch (Exception e) {
+                return "[Lua Table]";
+            }
+        } else {
+            return variable.toString();
+        }
+    }
+
+    public static String variableToString(Set<Object> checked, LuaTable variable) {
+        if (variable == null) {
+            return "nil";
+        }
+
+        checked.add(variable);
+        Map<Object, Object> map = new HashMap<>();
+        variable.forEach((key, value) -> {
+            if (value instanceof LuaTable) {
+                if (!checked.add(value)) {
+                    return;
+                }
+            }
+            map.put(key, value);
+        });
+        List<String> list = new ArrayList<>();
+        map.forEach((key, value) -> {
+            String keyString = "nil";
+            String valueString = "nil";
+
+            if (value instanceof LuaTable) {
+                valueString = variableToString(checked, (LuaTable) value);
+            } else {
+                valueString = variableToString(value);
+            }
+            if (key instanceof LuaTable) {
+                keyString = variableToString(checked, (LuaTable) key);
+            } else {
+                keyString = variableToString(key);
+            }
+
+            list.add(String.format("[%s]=%s", keyString, valueString));
+        });
+
+        return String.format("{%s}", String.join(", ", list));
     }
 }

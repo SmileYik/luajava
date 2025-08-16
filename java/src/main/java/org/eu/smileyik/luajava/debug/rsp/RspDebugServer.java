@@ -35,6 +35,45 @@ public interface RspDebugServer extends DebugServer {
      */
     void sendResponse(String payload) throws IOException;
 
+    /**
+     * set current `c` command action of gdb.
+     * @param continueType
+     */
+    void setContinueType(Command continueType);
+
+    /**
+     * get current `c` command action of gdb.
+     * @return
+     */
+    Command getContinueType();
+
+    /**
+     * Wait other thread fill message queue,
+     * and when it's done then send message to client.
+     * @throws InterruptedException
+     * @throws IOException
+     * @see RspDebugServer#fillMessageQueue(String)
+     * @see RspDebugServer#finishedFillMessage()
+     * @see RspDebugServer#waitFillMessage()
+     */
+    void waitFillMessage() throws InterruptedException, IOException;
+
+    /**
+     * awake the thread which called `waitFillMessage` method.
+     * @see RspDebugServer#fillMessageQueue(String)
+     * @see RspDebugServer#finishedFillMessage()
+     * @see RspDebugServer#waitFillMessage()
+     */
+    void finishedFillMessage();
+
+    /**
+     * add a message to queue.
+     * @param message message need send to client.
+     * @see RspDebugServer#fillMessageQueue(String)
+     * @see RspDebugServer#finishedFillMessage()
+     * @see RspDebugServer#waitFillMessage()
+     */
+    void fillMessageQueue(String message);
 
     // ************ Utilities *****************
 
@@ -75,15 +114,4 @@ public interface RspDebugServer extends DebugServer {
         return result.toString();
     }
 
-    Map<String, Object> getLocalVariables();
-
-    Map<String, Object> getGlobalVariables();
-
-    Map<String, String> getStringGlobalVariables();
-
-    Map<String, String> getStringLocalVariables();
-
-    void setContinueType(Command continueType);
-
-    Command getContinueType();
 }

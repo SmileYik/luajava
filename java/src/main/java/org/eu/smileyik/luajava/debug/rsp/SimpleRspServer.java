@@ -2,12 +2,12 @@ package org.eu.smileyik.luajava.debug.rsp;
 
 import org.eu.smileyik.luajava.LuaState;
 import org.eu.smileyik.luajava.LuaStateFacade;
-import org.eu.smileyik.luajava.debug.DebugUtils;
 import org.eu.smileyik.luajava.debug.LuaDebug;
 import org.eu.smileyik.luajava.debug.rsp.breakPoint.BreakPoint;
 import org.eu.smileyik.luajava.debug.rsp.command.hook.Command;
 import org.eu.smileyik.luajava.debug.rsp.command.hook.ContinueCommand;
 import org.eu.smileyik.luajava.debug.rsp.command.rsp.RspCommand;
+import org.eu.smileyik.luajava.debug.util.AnsiMessageBuilder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,24 +17,31 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, RspDebugServer {
-    private static final boolean DEBUG_FLAG = false;
+    private static final boolean DEBUG_FLAG = true;
     private static final Logger LOG = Logger.getLogger(SimpleRspServer.class.getName());
 
     private final int port;
     private final LuaStateFacade luaStateFacade;
     private final Set<BreakPoint> breakPoints = Collections.synchronizedSet(new HashSet<>());
+    private final Lock commandLock = new ReentrantLock();
     private final LinkedList<Command> commands = new LinkedList<>();
-    private final Lock lock = new ReentrantLock();
-    private final Condition commandReceive = lock.newCondition();
+    private final Condition commandReceive = commandLock.newCondition();
+    private final Lock messageLock = new ReentrantLock();
+    private final LinkedList<String> messageQueue = new LinkedList<>();
+    private final Condition messageCondition = messageLock.newCondition();
     private final ExecutorService serverThread = Executors.newSingleThreadExecutor();
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
@@ -42,12 +49,6 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
     private boolean step = true;
     private Command continueType = ContinueCommand.INSTANCE;
     private LuaDebug currentDebugInfo;
-    private Map<String, Object> localVariables = Collections.emptyMap();
-    private Map<String, String> stringLocalVariables = Collections.emptyMap();
-    private Map<String, Object> globalVariables = Collections.emptyMap();
-    private Map<String, String> stringGlobalVariables = Collections.emptyMap();
-    private Map<String, Object> upValues = Collections.emptyMap();
-    private Map<String, Object> stringUpValues = Collections.emptyMap();
 
     private SimpleRspServer(int port, LuaStateFacade luaStateFacade) {
         this.port = port;
@@ -111,18 +112,14 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
         }
     }
 
-    private CompletableFuture<Void> sendResponseAsync(String response) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
+    private void sendResponseAsync(String response) {
         executor.execute(() -> {
             try {
                 sendResponse(out, response);
             } catch (IOException e) {
                 e.printStackTrace();
-            } finally {
-                future.complete(null);
             }
         });
-        return future;
     }
 
     private synchronized void sendResponse(OutputStream out, String response) throws IOException {
@@ -183,9 +180,13 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
     }
 
     private String message(String message) {
-        if (!message.startsWith("\u001b")) {
+        if (!message.replace(AnsiMessageBuilder.ANSI_RESET, "").endsWith("\n")) {
+            message = message + "\n";
+        }
+        if (!message.trim().startsWith(AnsiMessageBuilder.ANSI_START)) {
             message = "\u001b[34m" + message + "\u001b[0m";
         }
+
         StringBuilder messageBuilder = new StringBuilder("O");
         message.chars().forEach(c -> messageBuilder.append(String.format("%02x", c)));
         return messageBuilder.toString();
@@ -220,14 +221,13 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
         if (flag) {
             synchronized (this) {
                 this.currentDebugInfo = luaDebug;
-                this.collectVariables(luaDebug);
                 sendMessageAsync(getSourceLine(luaDebug));
             }
             sendResponseAsync("T05");
         }
         while (flag) {
             Command command = null;
-            lock.lock();
+            commandLock.lock();
             try {
                 if (commands.isEmpty()) {
                     commandReceive.await();
@@ -236,7 +236,7 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             } finally {
-                lock.unlock();
+                commandLock.unlock();
             }
             flag = command == null || !command.handle(this, luaStateFacade, luaDebug);
         }
@@ -249,49 +249,55 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
         }
     }
 
-    private void collectVariables(LuaDebug debug) {
-        localVariables = DebugUtils.getLocalVariable(luaStateFacade, debug);
-        stringLocalVariables = variablesToString(localVariables);
-        globalVariables = DebugUtils.getGlobalVariable(luaStateFacade, debug);
-        stringGlobalVariables = variablesToString(globalVariables);
-    }
-
-    private Map<String, String> variablesToString(Map<String, Object> variables) {
-        Map<String, String> map = new HashMap<>();
-        for (Map.Entry<String, Object> entry : variables.entrySet()) {
-            map.put(entry.getKey(), DebugServer.variableToString(entry.getValue()));
-        }
-        return Collections.unmodifiableMap(map);
-    }
-
     private String getSourceLine(LuaDebug ar) {
-        String sourceLine = "No debug info or no source info.\n";
-        if (ar == null || ar.getSource() == null) return sourceLine;
+        if (ar == null || ar.getSource() == null) {
+            return AnsiMessageBuilder.builder()
+                    .red("No debug info or no source info.")
+                    .toMessage();
+        }
+        String message = AnsiMessageBuilder.builder()
+                .green("line ")
+                .bold().append(ar.getCurrentLine()).resetColor()
+                .green(": ")
+                .red("Could not find target source line.")
+                .newLine()
+                .toMessage();
         String source = ar.getSource();
         int idx = ar.getCurrentLine() - 1;
-        sourceLine = String.format("line %d: Could not find target source line.", ar.getCurrentLine());
         if (idx < 0) {
-            return sourceLine;
+            return message;
         }
 
+        boolean flag = false;
         if (source.startsWith("@")) {
-            try {
-                sourceLine = Files.lines(Paths.get(source.substring(1)))
+            try (Stream<String> lines = Files.lines(Paths.get(source.substring(1)))) {
+                source = lines
                         .skip(idx)
                         .findFirst()
-                        .orElse(sourceLine);
-                sourceLine = String.format("\u001b[32mline %d: %s\u001b[0m", ar.getCurrentLine(), sourceLine);
+                        .orElse(message);
+                flag = true;
             } catch (IOException e) {
                 e.printStackTrace();
             }
         } else {
             String[] split = source.split("\n");
             if (split.length > idx) {
-                sourceLine = split[idx];
-                sourceLine = String.format("\u001b[32mline %d: %s\u001b[0m", ar.getCurrentLine(), sourceLine);
+                source = split[idx];
+                flag = true;
             }
         }
-        return sourceLine;
+
+        if (flag) {
+            message = AnsiMessageBuilder.builder()
+                    .green("line ")
+                    .bold().append(ar.getCurrentLine()).resetColor()
+                    .green(": ")
+                    .bold().append(source)
+                    .resetColor()
+                    .newLine()
+                    .toMessage();
+        }
+        return message;
     }
 
     // ************** RSP Debug Server **************
@@ -303,18 +309,18 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
 
     @Override
     public void addCommand(Command command) {
-        lock.lock();
+        commandLock.lock();
         try {
             commands.addLast(command);
             commandReceive.signalAll();
         } finally {
-            lock.unlock();
+            commandLock.unlock();
         }
     }
 
     @Override
     public void sendMessage(String message) throws IOException {
-        sendResponse(message(message + "\n"));
+        sendResponse(message(message));
     }
 
     @Override
@@ -328,26 +334,6 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
     }
 
     @Override
-    public Map<String, Object> getLocalVariables() {
-        return localVariables;
-    }
-
-    @Override
-    public Map<String, Object> getGlobalVariables() {
-        return globalVariables;
-    }
-
-    @Override
-    public Map<String, String> getStringGlobalVariables() {
-        return stringGlobalVariables;
-    }
-
-    @Override
-    public Map<String, String> getStringLocalVariables() {
-        return stringLocalVariables;
-    }
-
-    @Override
     public void setContinueType(Command continueType) {
         this.continueType = continueType;
     }
@@ -355,6 +341,34 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
     @Override
     public Command getContinueType() {
         return continueType;
+    }
+
+    @Override
+    public void waitFillMessage() throws InterruptedException, IOException {
+        messageLock.lock();
+        try {
+            messageCondition.await();
+            while (!messageQueue.isEmpty()) {
+                sendMessage(messageQueue.removeFirst());
+            }
+        } finally {
+            messageLock.unlock();
+        }
+    }
+
+    @Override
+    public void finishedFillMessage() {
+        messageLock.lock();
+        try {
+            messageCondition.signalAll();
+        } finally {
+            messageLock.unlock();
+        }
+    }
+
+    @Override
+    public void fillMessageQueue(String message) {
+        this.messageQueue.addLast(message);
     }
 
     // ************** Debug Server **************
@@ -366,11 +380,11 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
 
     @Override
     public DebugServer waitConnection() throws InterruptedException {
-        lock.lock();
+        commandLock.lock();
         try {
             commandReceive.await();
         } finally {
-            lock.unlock();
+            commandLock.unlock();
         }
         return this;
     }
