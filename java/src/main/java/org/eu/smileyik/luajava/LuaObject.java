@@ -112,6 +112,8 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
     }
 
     protected Integer ref;
+    protected long luaPointer;
+    protected boolean gotLuaPointer = false;
 
     protected final LuaStateFacade luaState;
     private final CleanTask cleanTask;
@@ -391,18 +393,48 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
     public boolean equals(Object object) {
         if (isClosed()) return false;
         if (this == object) return true;
-        if (object == null || getClass() != object.getClass()) return false;
+        if (!(object instanceof LuaObject)) return false;
         LuaObject luaObject = (LuaObject) object;
-        return Objects.equals(luaState, luaObject.luaState) &&
-                (Objects.equals(ref, luaObject.ref) || isRawEqualInLua((LuaObject) object));
+        if (!Objects.equals(luaState.getCPtrPeer(), luaObject.luaState.getCPtrPeer())) return false;
+        if (isLuaPointerObject() && luaObject.isLuaPointerObject()) {
+            return Objects.equals(getLuaPointer(), luaObject.getLuaPointer());
+        }
+        return isRawEqualInLua(luaObject);
+    }
+
+    public boolean isLuaPointerObject() {
+        switch (type()) {
+            case LuaType.FUNCTION:
+            case LuaType.TABLE:
+            case LuaType.USERDATA:
+            case LuaType.THREAD:
+                return true;
+        }
+        return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(ref, luaState);
+        return Objects.hash(getLuaPointer(), luaState);
     }
 
-    private boolean isRawEqualInLua(LuaObject other) {
+    public synchronized long getLuaPointer() {
+        if (isClosed()) return 0;
+        if (!gotLuaPointer) {
+            luaPointer = luaState.lock(l -> {
+                try {
+                    rawPush();
+                    return l.toPointer(-1);
+                }  finally {
+                    luaState.pop(1);
+                }
+            });
+            gotLuaPointer = true;
+        }
+        return luaPointer;
+    }
+
+    public boolean isRawEqualInLua(LuaObject other) {
         if (isClosed()) return false;
         return luaState.lock(l -> {
             try {

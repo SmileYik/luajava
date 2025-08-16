@@ -826,6 +826,17 @@ JNIEXPORT jstring JNICALL Java_org_eu_smileyik_luajava_LuaState__1toString(
  *      Lua Exported Function
  ************************************************************************/
 
+JNIEXPORT jlong JNICALL Java_org_eu_smileyik_luajava_LuaState__1toPointer(
+    JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
+  lua_State *L = getStateFromCPtr(env, cptr);
+  return (jlong) lua_topointer(L, idx);
+}
+
+/************************************************************************
+ *   JNI Called function
+ *      Lua Exported Function
+ ************************************************************************/
+
 JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1strlen(
     JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
   lua_State *L = getStateFromCPtr(env, cptr);

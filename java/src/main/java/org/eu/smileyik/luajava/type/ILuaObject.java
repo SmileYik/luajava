@@ -23,6 +23,7 @@
 
 package org.eu.smileyik.luajava.type;
 
+import org.eu.smileyik.luajava.LuaObject;
 import org.eu.smileyik.luajava.LuaStateFacade;
 
 public interface ILuaObject {
@@ -48,6 +49,14 @@ public interface ILuaObject {
      * @return
      */
     public int type();
+
+    /**
+     * get this object pointer in lua. it's a way to figure out two lua object is same or not.
+     * @return if return 0 then means this object is not a reference type object.
+     */
+    public long getLuaPointer();
+
+    public boolean isRawEqualInLua(LuaObject obj);
 
     public default boolean isBoolean() {
         return type() == LuaType.BOOLEAN;

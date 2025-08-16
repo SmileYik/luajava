@@ -1627,3 +1627,11 @@ jobject luajavaNewLuaDebug(lua_State *L, JNIEnv *env, const lua_Debug *ar, const
 
   return result;
 }
+
+int luajavaLuaReader(lua_State *L, const void *p, size_t sz, void *ud) {
+  
+}
+
+const char* luajavaLuaWriter(lua_State *L, void *ud, size_t *size) {
+  jobject obj = (jobject) ud;
+}

@@ -326,6 +326,8 @@ public class LuaState {
 
     private native String _toString(CPtr ptr, int idx);
 
+    private native long _toPointer(CPtr ptr, int idx);
+
     private native int _objlen(CPtr ptr, int idx);
 
     private native CPtr _toThread(CPtr ptr, int idx);
@@ -738,6 +740,10 @@ public class LuaState {
 
     public String toString(int idx) {
         return _toString(luaState, idx);
+    }
+
+    public long toPointer(int idx) {
+        return _toPointer(luaState, idx);
     }
 
     public int strLen(int idx) {
