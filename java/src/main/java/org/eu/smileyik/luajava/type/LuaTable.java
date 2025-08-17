@@ -29,9 +29,7 @@ import org.eu.smileyik.luajava.LuaState;
 import org.eu.smileyik.luajava.LuaStateFacade;
 import org.eu.smileyik.luajava.exception.Result;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiConsumer;
 
 public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettable {
@@ -151,23 +149,44 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
      * @throws Exception throw any exception
      */
     public <K, V> Result<Map<K, V>, ? extends Exception> asDeepMap(Class<K> kClass, Class<V> vClass) {
+        return asDeepMap(new HashSet<>(List.of(this)), kClass, vClass);
+    }
+
+    protected <K, V> Result<Map<K, V>, ? extends Exception> asDeepMap(
+            Set<LuaTable> checked,  Class<K> kClass, Class<V> vClass) {
         Map<K, V> map = new HashMap<>();
         return forEach(kClass, vClass, (k, v) -> {
-            Object realK = k, realV = v;
+            Object key = k;
+            Object value = v;
             if (k instanceof LuaTable) {
-                if (equals(k)) {
-                    throw new RuntimeException("Cannot call asDeepMap because this map also as key element in this map");
+                if (!checked.add((LuaTable) k)) {
+                    // key = ((LuaTable) k).getLuaPointer();
+                    return;
                 }
-                realK = ((LuaTable) k).asDeepMap(kClass, vClass).getOrSneakyThrow();
             }
             if (v instanceof LuaTable) {
-                if (equals(v)) {
-                    throw new RuntimeException("Cannot call asDeepMap because this map also as value element in this map");
+                if (!checked.add((LuaTable) v)) {
+                    // value = ((LuaTable) v).getLuaPointer();
+                    return;
                 }
-                realV = ((LuaTable) v).asDeepMap(kClass, vClass).getOrSneakyThrow();
             }
-            map.put((K) realK, (V) realV);
-        }).replaceValue(map);
+
+            map.put((K) key, (V) value);
+        }).mapValue(it -> {
+            Map<K, V> result = new HashMap<>();
+            map.forEach((k, v) -> {
+                Object key = k;
+                Object value = v;
+                if (key instanceof LuaTable) {
+                    key = ((LuaTable) key).asDeepMap(checked, kClass, vClass);
+                }
+                if (value instanceof LuaTable) {
+                    value = ((LuaTable) value).asDeepMap(checked, kClass, vClass);
+                }
+                result.put((K) key, (V) value);
+            });
+            return result;
+        });
     }
 
     public Result<Map<Object, Object>, ? extends Exception> asMap() {

@@ -17,10 +17,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -217,7 +214,7 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
             }
         }
 
-        debug("----" + luaDebug.toString().replace("\n", "\\n"));
+        debug("----" + Objects.toString(luaDebug).replace("\n", "\\n"));
         if (flag) {
             synchronized (this) {
                 this.currentDebugInfo = luaDebug;

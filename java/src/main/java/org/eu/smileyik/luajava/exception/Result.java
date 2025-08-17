@@ -214,7 +214,7 @@ public class Result <T, E> {
 
     private <RT, RE> Result<RT, RE> justReplaceValue(RT newValue) {
         if (newValue == value) return (Result<RT, RE>) this;
-        return (this == SUCCESS || newValue == null) ? success() : Result.success(newValue, message);
+        return (newValue == null) ? success() : Result.success(newValue, message);
     }
 
     /**
