@@ -1,17 +1,20 @@
 package org.eu.smileyik.luajava.debug.rsp.command.hook;
 
+import org.eu.smileyik.luajava.LuaState;
 import org.eu.smileyik.luajava.LuaStateFacade;
 import org.eu.smileyik.luajava.debug.LuaDebug;
 import org.eu.smileyik.luajava.debug.rsp.RspDebugServer;
 import org.eu.smileyik.luajava.debug.util.AnsiMessageBuilder;
 import org.eu.smileyik.luajava.debug.util.DebugUtils;
 
+import java.util.Collections;
 import java.util.Map;
 
 public class PrintVariableCommand implements Command {
 
     public static final String SCOPE_GLOBAL = "global";
     public static final String SCOPE_LOCAL = "local";
+    public static final String SCOPE_UPVALUE = "upvalue";
 
     private final String scope;
     private final String variableName;
@@ -40,6 +43,21 @@ public class PrintVariableCommand implements Command {
                     case SCOPE_LOCAL:
                         variables = DebugUtils.getLocalVariable(facade, ar);
                         break;
+                    case SCOPE_UPVALUE: {
+                        LuaState luaState = facade.getLuaState();
+                        LuaDebug newAr = luaState.getInfo(ar, "f");
+                        if (newAr != null) {
+                            try {
+                                variables  = DebugUtils.getUpValues(facade, newAr);
+                            } finally {
+                                luaState.pop(1);
+                            }
+                        } else {
+                            variables = Collections.emptyMap();
+                            debugServer.fillMessageQueue(AnsiMessageBuilder.builder().red("Not in a closure!").toMessage());
+                        }
+                        break;
+                    }
                     default:
                         break;
                 }

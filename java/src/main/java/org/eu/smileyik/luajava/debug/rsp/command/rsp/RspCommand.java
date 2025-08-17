@@ -25,6 +25,7 @@ public interface RspCommand {
 
             new PrintLocalVariablesRspCommand(),
             new PrintGlobalVariablesRspCommand(),
+            new PrintUpvalueVariablesRspCommand(),
             new PrintDebugInfoRspCommand()
     };
 

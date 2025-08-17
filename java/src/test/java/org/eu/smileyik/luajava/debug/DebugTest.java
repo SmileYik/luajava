@@ -55,7 +55,15 @@ public class DebugTest extends BaseTest {
                         "end\n" +
                         "local a = 1\n" +
                         "print(a)\n" +
-                        "hello()";
+                        "hello()\n" +
+                        "local h = function(name)\n" +
+                        "    local newName = 'hello ' .. name\n" +
+                        "    return function ()\n" +
+                        "        print(newName)\n" +
+                        "    end\n" +
+                        "end\n" +
+                        "hFunc = h('abc')\n" +
+                        "hFunc()";
 
         LuaStateFacade luaStateFacade = newLuaState();
         System.out.println(LuaState.LUA_VERSION);
