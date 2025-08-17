@@ -1740,6 +1740,31 @@ JNIEXPORT jstring JNICALL Java_org_eu_smileyik_luajava_LuaState__1LfindTable(
 }
 #endif // LUAJAVA_ENABLE_METHOD_FINDTABLE
 
+/*
+ * Class:     org_eu_smileyik_luajava_LuaState
+ * Method:    _luaDump
+ * Signature:
+ * (Lorg/eu/smileyik/luajava/CPtr;Lorg/eu/smileyik/luajava/ILuaReadWriteEntity;I)I
+ */
+JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1luaDump(
+    JNIEnv *env, jobject jobj, jobject cptr, jobject userdata, jint strip) {
+  // TODO
+  return -1;
+}
+
+/*
+ * Class:     org_eu_smileyik_luajava_LuaState
+ * Method:    _luaLoad
+ * Signature:
+ * (Lorg/eu/smileyik/luajava/CPtr;Lorg/eu/smileyik/luajava/ILuaReadWriteEntity;Ljava/lang/String;Ljava/lang/String;)I
+ */
+JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1luaLoad(
+    JNIEnv *env, jobject jobj, jobject cptr, jobject userdata,
+    jstring chunkName, jstring mode) {
+  // TODO
+  return -1;
+}
+
 // ********************** Debug API ***********************
 
 /*

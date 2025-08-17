@@ -497,6 +497,10 @@ public class LuaState {
 
     private native void _openPackage(CPtr ptr);
 
+    private native int _luaDump(CPtr ptr, ILuaReadWriteEntity userdata, int strip);
+
+    private native int _luaLoad(CPtr ptr, ILuaReadWriteEntity userdata, String chunkName, String mode);
+
     // ************************* debug method start ****************************
 
     private native void _setHook(CPtr ptr, int mask, int count);
@@ -1067,6 +1071,14 @@ public class LuaState {
 
     public void openPackage() {
         _openPackage(luaState);
+    }
+
+    public int luaDump(ILuaReadWriteEntity userdata, boolean strip) {
+        return _luaDump(luaState, userdata, strip ? 1 : 0);
+    }
+
+    public int luaLoad(ILuaReadWriteEntity userdata, String chunkName, String mode) {
+        return _luaLoad(luaState, userdata, chunkName, mode);
     }
 
     // ************************* debug method start ****************************

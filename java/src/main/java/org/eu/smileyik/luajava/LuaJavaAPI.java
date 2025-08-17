@@ -568,8 +568,27 @@ public final class LuaJavaAPI {
 
     // **************** Stream API ****************
 
-    public static void luaWrite(int luaState, ByteBuffer buffer, Object obj) {
+    /**
+     * dump from lua
+     * @param luaState lua state
+     * @param in c allocate bytebuffer, read bytes from here.
+     * @param entity user data
+     */
+    public static void luaWrite(int luaState, ByteBuffer in, ILuaReadWriteEntity entity) {
+        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
+        entity.luaWrite(luaStateFacade, in);
+    }
 
+    /**
+     * load to lua
+     * @param luaState
+     * @param out c allocate bytebuffer, write bytes to here.
+     * @param entity user data
+     * @return written bytes
+     */
+    public static int luaRead(int luaState, ByteBuffer out, ILuaReadWriteEntity entity) {
+        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
+        return entity.luaRead(luaStateFacade, out);
     }
 }
  
