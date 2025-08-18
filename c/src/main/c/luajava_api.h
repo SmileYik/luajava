@@ -746,4 +746,42 @@ void luajavaLuaHook(lua_State *L, lua_Debug *ar);
 
 jobject luajavaNewLuaDebug(lua_State *L, JNIEnv *env, const lua_Debug *ar, const char* arWhat);
 
+/***************************************************************************
+ *
+ * $FC luajavaNewLuaDebug
+ *
+ * $ED Description
+ *     from lua state write to  userdata
+ *
+ * $EP Function Parameters
+ *    $P L - lua State
+ *    $P env - JNIEnv
+ *    $P ar - lua debug
+ *
+ * $FV Returned Value
+ *    jobject: LuaDebug
+ *
+ *$. **********************************************************************/
+
+int luajavaLuaWriter(lua_State *L, const void *p, size_t sz, void *ud);
+
+/***************************************************************************
+ *
+ * $FC luajavaNewLuaDebug
+ *
+ * $ED Description
+ *    read data into lua state
+ *
+ * $EP Function Parameters
+ *    $P L - lua State
+ *    $P ud - userdata pointer
+ *    $P size - return the size read.
+ *
+ * $FV Returned Value
+ *    jobject: LuaDebug
+ *
+ *$. **********************************************************************/
+
+const char* luajavaLuaReader(lua_State *L, void *ud, size_t *size);
+
 #endif // LUAJAVA_LUAJAVA_API_H

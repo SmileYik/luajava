@@ -54,6 +54,7 @@ import org.eu.smileyik.luajava.reflect.LuaInvokedMethod;
 import org.eu.smileyik.luajava.reflect.ReflectUtil;
 import org.eu.smileyik.luajava.util.*;
 
+import java.io.IOException;
 import java.lang.reflect.*;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
@@ -574,7 +575,7 @@ public final class LuaJavaAPI {
      * @param in c allocate bytebuffer, read bytes from here.
      * @param entity user data
      */
-    public static void luaWrite(int luaState, ByteBuffer in, ILuaReadWriteEntity entity) {
+    public static void luaWrite(int luaState, ByteBuffer in, ILuaReadWriteEntity entity) throws IOException {
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         entity.luaWrite(luaStateFacade, in);
     }
@@ -586,7 +587,7 @@ public final class LuaJavaAPI {
      * @param entity user data
      * @return written bytes
      */
-    public static int luaRead(int luaState, ByteBuffer out, ILuaReadWriteEntity entity) {
+    public static int luaRead(int luaState, ByteBuffer out, ILuaReadWriteEntity entity) throws IOException {
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         return entity.luaRead(luaStateFacade, out);
     }

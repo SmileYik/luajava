@@ -1748,8 +1748,8 @@ JNIEXPORT jstring JNICALL Java_org_eu_smileyik_luajava_LuaState__1LfindTable(
  */
 JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1luaDump(
     JNIEnv *env, jobject jobj, jobject cptr, jobject userdata, jint strip) {
-  // TODO
-  return -1;
+  lua_State *L = getStateFromCPtr(env, cptr);
+  return (jint) LUA_DUMP(L, luajavaLuaWriter, userdata, strip);
 }
 
 /*
@@ -1761,8 +1761,13 @@ JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1luaDump(
 JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1luaLoad(
     JNIEnv *env, jobject jobj, jobject cptr, jobject userdata,
     jstring chunkName, jstring mode) {
-  // TODO
-  return -1;
+  lua_State *L = getStateFromCPtr(env, cptr);
+  const char* chunkNameStr = (*env)->GetStringUTFChars(env, chunkName, NULL);
+  const char* modeStr = (*env)->GetStringUTFChars(env, mode, NULL);
+  int result = LUA_LOAD(L, luajavaLuaReader, userdata, chunkNameStr, modeStr);
+  (*env)->ReleaseStringUTFChars(env, chunkName, chunkNameStr);
+  (*env)->ReleaseStringUTFChars(env, mode, modeStr);
+  return (jint) result;
 }
 
 // ********************** Debug API ***********************

@@ -26,6 +26,7 @@ package org.eu.smileyik.luajava;
 public class BaseTest {
     static {
         LoadLibrary.load();
+        System.out.println(LuaState.LUA_VERSION);
     }
 
     protected static LuaStateFacade newLuaState() {

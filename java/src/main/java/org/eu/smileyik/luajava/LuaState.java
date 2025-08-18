@@ -89,6 +89,7 @@ public class LuaState {
     /*
      * error codes for `lua_load' and `lua_pcall'
      */
+    final public static int LUA_OK = 0;
     /**
      * a runtime error.
      */
@@ -1073,11 +1074,11 @@ public class LuaState {
         _openPackage(luaState);
     }
 
-    public int luaDump(ILuaReadWriteEntity userdata, boolean strip) {
+    public int dump(ILuaReadWriteEntity userdata, boolean strip) {
         return _luaDump(luaState, userdata, strip ? 1 : 0);
     }
 
-    public int luaLoad(ILuaReadWriteEntity userdata, String chunkName, String mode) {
+    public int load(ILuaReadWriteEntity userdata, String chunkName, String mode) {
         return _luaLoad(luaState, userdata, chunkName, mode);
     }
 

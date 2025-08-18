@@ -234,6 +234,13 @@ static jmethodID luajava_api_static_method_javaNewInstance  = NULL;
 static jmethodID luajava_api_static_method_javaLoadLib      = NULL;
 static jmethodID luajava_api_static_method_debugLuaHook     = NULL;
 static jmethodID luajava_api_static_method_newLuaDebug      = NULL;
+static jmethodID luajava_api_static_method_luaWrite         = NULL;
+static jmethodID luajava_api_static_method_luaRead          = NULL;
+
+static jclass    luajava_rw_entity_class                    = NULL;
+static jmethodID luajava_rw_entity_method_bufferSize        = NULL;
+static jmethodID luajava_rw_entity_method_setDataPtr        = NULL;
+static jmethodID luajava_rw_entity_method_getDataPtr        = NULL;
 
 static jclass    cptr_class = NULL;
 static jfieldID  cptr_field_peer = NULL;
@@ -282,6 +289,10 @@ void setupLuaJavaApi(JNIEnv *env) {
                           "debugLuaHook", "(ILorg/eu/smileyik/luajava/debug/LuaDebug;)V");   
   BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_newLuaDebug, luajava_api_class, 
                           "newLuaDebug", "(JLjava/nio/ByteBuffer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lorg/eu/smileyik/luajava/debug/LuaDebug;");   
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_luaWrite, luajava_api_class, 
+                          "luaWrite", "(ILjava/nio/ByteBuffer;Lorg/eu/smileyik/luajava/ILuaReadWriteEntity;)V");   
+  BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_luaRead, luajava_api_class, 
+                          "luaRead", "(ILjava/nio/ByteBuffer;Lorg/eu/smileyik/luajava/ILuaReadWriteEntity;)I"); 
 
   BIND_JAVA_CLASS(tempClass, env, java_function_class, "org/eu/smileyik/luajava/JavaFunction");
   BIND_JAVA_NORMAL_METHOD(env, java_function_method, java_function_class, 
@@ -297,6 +308,14 @@ void setupLuaJavaApi(JNIEnv *env) {
 
   BIND_JAVA_CLASS(tempClass, env, cptr_class, "org/eu/smileyik/luajava/CPtr");
   BIND_JAVA_NORMAL_FIELD(env, cptr_field_peer, cptr_class, "peer", "J");
+
+  BIND_JAVA_CLASS(tempClass, env, luajava_rw_entity_class, "org/eu/smileyik/luajava/ILuaReadWriteEntity");
+  BIND_JAVA_NORMAL_METHOD(env, luajava_rw_entity_method_bufferSize, luajava_rw_entity_class,
+                          "bufferSize", "()I");
+  BIND_JAVA_NORMAL_METHOD(env, luajava_rw_entity_method_setDataPtr, luajava_rw_entity_class,
+                          "setDataPtr", "(J)V");
+  BIND_JAVA_NORMAL_METHOD(env, luajava_rw_entity_method_getDataPtr, luajava_rw_entity_class,
+                          "getDataPtr", "()J");
 }
 
 /***************************************************************************
@@ -1628,12 +1647,72 @@ jobject luajavaNewLuaDebug(lua_State *L, JNIEnv *env, const lua_Debug *ar, const
   return result;
 }
 
+/***************************************************************************
+ *
+ *  Function: luajavaLuaWriter
+ *  ****/
+
 int luajavaLuaWriter(lua_State *L, const void *p, size_t sz, void *ud) {
-  jobject obj = (jobject) ud;
-  // TODO
+  // read from lua / write to userdata
+  JNIEnv *env = getEnvFromState(L);
+  lua_Number stateIdx = getLuaStateIndex(L);
+  jobject byteBuffer = (*env)->NewDirectByteBuffer(env, p, sz);
+  (*env)->CallStaticVoidMethod(env, luajava_api_class, luajava_api_static_method_luaWrite,
+                                (jint) stateIdx, byteBuffer, (jobject) ud);
+  jthrowable exp = (*env)->ExceptionOccurred(env);  
+  HANDLES_JAVA_EXCEPTION(L, exp, env, {
+    return 1;
+  });
+  return 0;
 }
 
+/***************************************************************************
+ *
+ *  Function: luajavaLuaReader
+ *  ****/
+
 const char* luajavaLuaReader(lua_State *L, void *ud, size_t *size) {
-  jobject obj = (jobject) ud;
-  // TODO
+  // write into lua / read from userdata
+  JNIEnv *env = getEnvFromState(L);
+  lua_Number stateIdx = getLuaStateIndex(L);
+  char* buffer = NULL;
+  jint bufferSize = (*env)->CallIntMethod(env, (jobject) ud, luajava_rw_entity_method_bufferSize);
+
+  jthrowable exp = (*env)->ExceptionOccurred(env);  
+  HANDLES_JAVA_EXCEPTION(L, exp, env, {
+    return NULL;
+  });
+
+  buffer = (char *) ((jbyte*) (*env)->CallLongMethod(env, (jobject) ud, luajava_rw_entity_method_getDataPtr));
+  exp = (*env)->ExceptionOccurred(env);  
+  HANDLES_JAVA_EXCEPTION(L, exp, env, {
+    return NULL;
+  });
+
+  if (buffer == NULL) {
+    buffer = (char *) malloc(sizeof(char) * (int) bufferSize);
+    (*env)->CallVoidMethod(env, (jobject) ud, luajava_rw_entity_method_setDataPtr, (jlong) buffer);
+    exp = (*env)->ExceptionOccurred(env);  
+    HANDLES_JAVA_EXCEPTION(L, exp, env, {
+      free(buffer);
+      return NULL;
+    });
+  }
+
+  jobject byteBuffer = (*env)->NewDirectByteBuffer(env, buffer, bufferSize);
+  jint len = (*env)->CallStaticIntMethod(env, luajava_api_class, luajava_api_static_method_luaRead,
+                                          (jint) stateIdx, byteBuffer, (jobject) ud);
+  exp = (*env)->ExceptionOccurred(env);
+  HANDLES_JAVA_EXCEPTION(L, exp, env, {
+    free(buffer);
+    return NULL;
+  });
+  if (len == 0) {
+    if (buffer) {
+      free(buffer);
+    }
+    return NULL;
+  }
+  *size = len;
+  return buffer;
 }
