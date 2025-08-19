@@ -53,6 +53,7 @@
 #include <lauxlib.h>
 #include "luajava_api.h"
 #include "compatible.h"
+#include "hashmap.h"
 
 /**
  * Generate lua stack.
@@ -1715,4 +1716,149 @@ const char* luajavaLuaReader(lua_State *L, void *ud, size_t *size) {
   }
   *size = len;
   return buffer;
+}
+
+int luajavaCopyLuaFunctionWriter(lua_State *L, const void *p, size_t sz, void *ud) {
+  struct LuaCopyData *buffer = ud;
+  if (sz + buffer->tail > buffer->size) {
+    size_t newSize = buffer->size;
+    do {
+      newSize <<= 1;
+    } while(sz + buffer->tail > newSize);
+
+    char *data = (char *) malloc(sizeof(char) * newSize);
+    memcpy(data, buffer->data, buffer->tail);
+    free(buffer->data);
+    buffer->data = data;
+    buffer->size = newSize;
+  }
+
+  memcpy(buffer->data + buffer->tail, p, sz);
+  buffer->tail += sz;
+  return 0;
+}
+
+const char* luajavaCopyLuaFunctionReader(lua_State *L, void *ud, size_t *size) {
+  struct LuaCopyData *buffer = ud;
+  if (buffer->tail >= buffer->head) {
+    return NULL;
+  }
+  *size = buffer->tail - buffer->head;
+  buffer->head = buffer->tail;
+  return buffer->data;
+}
+
+int luajavaCopyLuaFunction(lua_State *srcL, lua_State *destL, HashMap map) {
+  struct LuaCopyData *buffer = (struct LuaCopyData *) malloc(sizeof(struct LuaCopyData));
+  buffer->size = 8192;
+  buffer->head = 0;
+  buffer->tail = 0;
+  buffer->data = (char *) malloc(sizeof(char) * buffer->size);
+
+  // dump from src
+  int ret = lua_dump(srcL, luajavaCopyLuaFunctionWriter, buffer, 1);
+  if (ret != LUA_OK) {
+    free(buffer->data);
+    free(buffer);
+    return 0;
+  }
+
+  // load to dest
+  ret = lua_load(destL, luajavaCopyLuaFunctionReader, buffer, "CopiedClosure", "bt");
+  free(buffer->data);
+  free(buffer);
+  if (ret != LUA_OK) return 0;
+
+  // copy upvalues
+  int n = 1;
+  const char *name = NULL;
+  while ((name = lua_getupvalue(srcL, -1, n)) != NULL) {
+    if (!luajavaCopyLuaTop(srcL, destL, map)) {
+      lua_pop(srcL, 1);
+      lua_pop(destL, 1);
+      return 0;
+    }
+    lua_setupvalue(destL, -2, n);
+    lua_pop(srcL, 1);
+  }
+
+  return 1;
+}
+
+int luajavaCopyLuaTable(lua_State *srcL, lua_State *destL, HashMap map) {
+  lua_pushnil(srcL);
+  lua_newtable(destL);
+  size_t srcPtr = (size_t) lua_topointer(srcL, -1);
+  size_t destRef = luaL_ref(destL, LUA_REGISTRYINDEX);
+  hashMap_put(map, srcPtr, destRef);
+
+  while (lua_next(srcL, -2) != 0) {
+    if (!luajavaCopyLuaTop(srcL, destL, map)) {
+      lua_pop(srcL, 2);
+      return 0;
+    }
+    lua_pop(srcL, 1);
+
+    if (!luajavaCopyLuaTop(srcL, destL, map)) {
+      lua_pop(srcL, 1);
+      lua_pop(destL, 1);
+      return 0;
+    }
+    lua_pop(srcL, 1);
+
+    lua_settable(destL, -3);
+  }
+}
+
+int luajavaCopyLuaTop(lua_State *srcL, lua_State *destL, HashMap map) {
+  // copy top
+  switch(lua_type(srcL, -1)) {
+    case LUA_TNIL:
+      lua_pushnil(destL);
+      return 1;
+    case LUA_TBOOLEAN:
+      lua_pushboolean(destL, lua_toboolean(srcL, -1));
+      return 1;
+    case LUA_TLIGHTUSERDATA:
+      lua_pushlightuserdata(destL, lua_touserdata(srcL, -1));
+      return 1;
+    case LUA_TNUMBER:
+      lua_pushnumber(destL, lua_tonumber(srcL, -1));
+      return 1;
+    case LUA_TSTRING:
+      lua_pushstring(destL, lua_tostring(srcL, -1));
+      return 1;
+    case LUA_TUSERDATA: {
+      if (isJavaObject(srcL, -1)) {
+        jobject *objPtr = (jobject *) lua_touserdata(srcL, 1);
+        pushJavaObject(destL, *objPtr);
+        return 1;
+      }
+      break;
+    }
+    case LUA_TFUNCTION: {
+      size_t ptr = (size_t) lua_topointer(srcL, -1);
+      if (hashMap_get(map, ptr, &ptr)) {
+        lua_rawgeti(destL, LUA_REGISTRYINDEX, ptr);
+        return 1;
+      }
+      return luajavaCopyLuaFunction(srcL, destL, map);
+    }
+    case LUA_TTABLE: {
+      size_t ptr = (size_t) lua_topointer(srcL, -1);
+      if (hashMap_get(map, ptr, &ptr)) {
+        lua_rawgeti(destL, LUA_REGISTRYINDEX, ptr);
+        return 1;
+      }
+      return luajavaCopyLuaTable(srcL, destL, map);
+    }
+  }
+  return 0;
+}
+
+int luajavaCopyLuaTopWrapper(lua_State *srcL, lua_State *destL) {
+  HashMap map = hashMap_new(32);
+  int ret = luajavaCopyLuaTop(srcL, destL, map);
+  hashMap_free(map);
+  return ret;
 }

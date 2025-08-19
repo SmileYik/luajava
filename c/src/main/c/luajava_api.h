@@ -50,6 +50,7 @@
 
 #include <jni.h>
 #include <lua.h>
+#include "hashmap.h"
 
 /* Constant that is used to index the JNI Environment */
 #define LUAJAVAJNIENVTAG          "__JNIEnv"
@@ -783,5 +784,24 @@ int luajavaLuaWriter(lua_State *L, const void *p, size_t sz, void *ud);
  *$. **********************************************************************/
 
 const char* luajavaLuaReader(lua_State *L, void *ud, size_t *size);
+
+int luajavaCopyLuaTopWrapper(lua_State *srcL, lua_State *destL);
+
+int luajavaCopyLuaTop(lua_State *srcL, lua_State *destL, HashMap map);
+
+int luajavaCopyLuaTable(lua_State *srcL, lua_State *destL, HashMap map);
+
+int luajavaCopyLuaFunction(lua_State *srcL, lua_State *destL, HashMap map);
+
+struct LuaCopyData {
+  char *data;
+  size_t size;
+  size_t head;
+  size_t tail;
+};
+
+const char* luajavaCopyLuaFunctionReader(lua_State *L, void *ud, size_t *size);
+
+int luajavaCopyLuaFunctionWriter(lua_State *L, const void *p, size_t sz, void *ud);
 
 #endif // LUAJAVA_LUAJAVA_API_H
