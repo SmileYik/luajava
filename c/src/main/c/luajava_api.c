@@ -1756,7 +1756,7 @@ int luajavaCopyLuaFunction(lua_State *srcL, lua_State *destL, HashMap map) {
   buffer->data = (char *) malloc(sizeof(char) * buffer->size);
 
   // dump from src
-  int ret = lua_dump(srcL, luajavaCopyLuaFunctionWriter, buffer, 1);
+  int ret = LUA_DUMP(srcL, luajavaCopyLuaFunctionWriter, buffer, 1);
   if (ret != LUA_OK) {
     free(buffer->data);
     free(buffer);
@@ -1764,7 +1764,7 @@ int luajavaCopyLuaFunction(lua_State *srcL, lua_State *destL, HashMap map) {
   }
 
   // load to dest
-  ret = lua_load(destL, luajavaCopyLuaFunctionReader, buffer, "CopiedClosure", "bt");
+  ret = LUA_LOAD(destL, luajavaCopyLuaFunctionReader, buffer, "CopiedClosure", "bt");
   free(buffer->data);
   free(buffer);
   if (ret != LUA_OK) return 0;
