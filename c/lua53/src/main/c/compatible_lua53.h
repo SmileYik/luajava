@@ -26,6 +26,9 @@
 
 #include "compatible_lua52.h"
 
+// lua_dump
+#define LUA_DUMP(L, LUA_WRITER, USERDATA, STRIP) lua_dump(L, LUA_WRITER, USERDATA, STRIP);
+
 #endif  // LUA_JAVA_COMPATIBLE_LUA53_HEADER
 
 

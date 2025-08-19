@@ -41,9 +41,8 @@
 #define LUAJAVA_GET_METATABLE( L , OBJ_IDX ) lua_getuservalue(L, OBJ_IDX)
 #define LUAJAVA_SET_METATABLE( L , OBJ_IDX ) lua_setuservalue(L, OBJ_IDX)
 
-// lua_dump / lua_load
-#define LUA_DUMP(L, LUA_WRITER, USERDATA, STRIP) lua_dump(L, LUA_WRITER, USERDATA, STRIP);
-#define LUA_LOAD(L, LUA_READER, USERDATA, CHUNCK_NAME, MODE) lua_load(L, LUA_READER, USERDATA, CHUNCK_NAME, MODE);
+// lua_load
+#define LUA_LOAD(L, LUA_READER, USERDATA, CHUNK_NAME, MODE) lua_load(L, LUA_READER, USERDATA, CHUNK_NAME, MODE);
 
 // lua 5.2 remove lua_open()
 #define lua_open()                      luaL_newstate()

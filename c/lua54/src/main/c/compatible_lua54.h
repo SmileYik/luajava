@@ -21,8 +21,8 @@
  * SOFTWARE.
  ******************************************************************************/
 
-#ifndef LUA_JAVA_COMPATIBLE_LUA53_HEADER
-#define LUA_JAVA_COMPATIBLE_LUA53_HEADER
+#ifndef LUA_JAVA_COMPATIBLE_LUA54_HEADER
+#define LUA_JAVA_COMPATIBLE_LUA54_HEADER
 
 #include "compatible_lua52.h"
 #include "compatible_lua53.h"
@@ -32,6 +32,6 @@
 #endif
 #define LUAJAVA_ENABLE_METHOD_RESUME_LUA_54
 
-#endif  // LUA_JAVA_COMPATIBLE_LUA53_HEADER
+#endif  // LUA_JAVA_COMPATIBLE_LUA54_HEADER
 
 
