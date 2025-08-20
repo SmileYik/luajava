@@ -502,6 +502,12 @@ public class LuaState {
 
     private native int _luaLoad(CPtr ptr, ILuaReadWriteEntity userdata, String chunkName, String mode);
 
+    /**
+     * copy value from a lua state to another lua state stack top.
+     * @return true / false
+     */
+    private native int _copyValue(CPtr srcL, int idx, CPtr destL);
+
     // ************************* debug method start ****************************
 
     private native void _setHook(CPtr ptr, int mask, int count);
@@ -546,6 +552,11 @@ public class LuaState {
      */
     private native String _setUpValue(CPtr ptr, int funcIndex, int n);
 
+    /**
+     * manual free LuaDebug pointer
+     * @see LuaState#_getStack
+     * @see LuaState#_getInfo
+     */
     private native void _freeLuaDebug(long arPtr);
 
     // ************************* debug method stop  ****************************
@@ -1080,6 +1091,10 @@ public class LuaState {
 
     public int load(ILuaReadWriteEntity userdata, String chunkName, String mode) {
         return _luaLoad(luaState, userdata, chunkName, mode);
+    }
+
+    public boolean copyValue(int idx, LuaState dest) {
+        return _copyValue(luaState, idx, dest.luaState) == 1;
     }
 
     // ************************* debug method start ****************************

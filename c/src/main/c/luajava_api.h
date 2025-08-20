@@ -64,6 +64,13 @@
 #define LUAJAVA_METATABLE_OBJECT  "LuaJavaMetatableObject"
 /* Defines the java array object metatable name */
 #define LUAJAVA_METATABLE_ARRAY   "LuaJavaMetatableArray"
+/* Defines whether the type is of a java Object */
+#define LUAJAVA_OBJECT_TYPE        "__JavaObjectType"
+#define LUAJAVA_OBJECT_TYPE_NOT_JAVA_OBJECT 0
+#define LUAJAVA_OBJECT_TYPE_CLASS  1
+#define LUAJAVA_OBJECT_TYPE_OBJECT 2
+#define LUAJAVA_OBJECT_TYPE_ARRAY  3
+
 /* Index metamethod name */
 #define LUAINDEXMETAMETHODTAG     "__index"
 /* New index metamethod name */
@@ -96,6 +103,16 @@
 #undef LUAJAVA_FORCE_SAME_METATABLE_ARRAY
 #define LUAJAVA_SET_METATABLE( L , OBJ_IDX ) lua_setmetatable(L, OBJ_IDX)
 #endif
+
+// the LuaCopyData size
+#define LUAJAVA_COPY_DATA_BUFFER_SIZE 1024
+// a struct used for lua_dump/lua_load function.
+struct LuaCopyData {
+  char *data;
+  size_t size;
+  size_t head;
+  size_t tail;
+};
 
 /***************************************************************************
  *
@@ -545,6 +562,24 @@ int isJavaObject(lua_State *L, int idx);
 
 /***************************************************************************
  *
+ * $FC luajavaGetJavaObjectType
+ *
+ * $ED Description
+ *    Returns the java type of given index represents a java object
+ *
+ * $EP Function Parameters
+ *    $P L - lua State
+ *    $P idx - index on the stack
+ *
+ * $FV Returned Value
+ *    int - java object type.
+ *
+ *$. **********************************************************************/
+
+int luajavaGetJavaObjectType(lua_State *L, int idx);
+
+/***************************************************************************
+ *
  * $FC isJavaObject
  *
  * $ED Description
@@ -785,20 +820,30 @@ int luajavaLuaWriter(lua_State *L, const void *p, size_t sz, void *ud);
 
 const char* luajavaLuaReader(lua_State *L, void *ud, size_t *size);
 
-int luajavaCopyLuaTopWrapper(lua_State *srcL, lua_State *destL);
+/***************************************************************************
+ *
+ * $FC luajavaCopyLuaValueWrapper
+ *
+ * $ED Description
+ *    copy source lua state target value into destination lua state
+ *
+ * $EP Function Parameters
+ *    $P srcL  - source lua state
+ *    $P idx   - target value index
+ *    $P destL - destination lua state
+ *
+ * $FV Returned Value
+ *    int: boolean
+ *
+ *$. **********************************************************************/
 
-int luajavaCopyLuaTop(lua_State *srcL, lua_State *destL, HashMap map);
+int luajavaCopyLuaValueWrapper(lua_State *srcL, int idx, lua_State *destL);
 
-int luajavaCopyLuaTable(lua_State *srcL, lua_State *destL, HashMap map);
+int luajavaCopyLuaValue(lua_State *srcL, int index, lua_State *destL, HashMap map);
 
-int luajavaCopyLuaFunction(lua_State *srcL, lua_State *destL, HashMap map);
+int luajavaCopyLuaTable(lua_State *srcL, int index, lua_State *destL, HashMap map);
 
-struct LuaCopyData {
-  char *data;
-  size_t size;
-  size_t head;
-  size_t tail;
-};
+int luajavaCopyLuaFunction(lua_State *srcL, int index, lua_State *destL, HashMap map);
 
 const char* luajavaCopyLuaFunctionReader(lua_State *L, void *ud, size_t *size);
 

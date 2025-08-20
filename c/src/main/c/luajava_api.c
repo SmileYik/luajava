@@ -55,6 +55,8 @@
 #include "compatible.h"
 #include "hashmap.h"
 
+#define DEBUG(STR, ...)  printf(STR, __VA_ARGS__); fflush(stdout)
+
 /**
  * Generate lua stack.
  */
@@ -1292,6 +1294,25 @@ int isJavaObject(lua_State *L, int idx) {
   return 1;
 }
 
+int luajavaGetJavaObjectType(lua_State *L, int idx) {
+  if (!lua_isuserdata(L, idx))
+    return 0;
+
+  if (lua_getmetatable(L, idx) == 0)
+    return 0;
+
+  lua_pushstring(L, LUAJAVA_OBJECT_TYPE);
+  lua_rawget(L, -2);
+
+  if (!lua_isnumber(L, -1)) {
+    lua_pop(L, 2);
+    return LUAJAVA_OBJECT_TYPE_NOT_JAVA_OBJECT;
+  }
+  int result = lua_tointeger(L, -1);
+  lua_pop(L, 2);
+  return result;
+}
+
 /***************************************************************************
  *
  *  Function: isJavaFunctionInstance
@@ -1491,6 +1512,11 @@ void luajavaNewJavaClassMetatable(lua_State *L) {
   lua_pushstring(L, LUAJAVAOBJECTIND);
   lua_pushboolean(L, 1);
   lua_rawset(L, -3);
+
+  /* Java Object Type integer */
+  lua_pushstring(L, LUAJAVA_OBJECT_TYPE);
+  lua_pushinteger(L, LUAJAVA_OBJECT_TYPE_CLASS);
+  lua_rawset(L, -3);
 }
 
 void luajavaNewJavaObjectMetatable(lua_State *L) {
@@ -1531,6 +1557,11 @@ void luajavaNewJavaObjectMetatable(lua_State *L) {
   lua_pushstring(L, LUAJAVAOBJECTIND);
   lua_pushboolean(L, 1);
   lua_rawset(L, -3);
+
+  /* Java Object Type integer */
+  lua_pushstring(L, LUAJAVA_OBJECT_TYPE);
+  lua_pushinteger(L, LUAJAVA_OBJECT_TYPE_OBJECT);
+  lua_rawset(L, -3);
 }
 
 void luajavaNewJavaArrayMetatable(lua_State *L) {
@@ -1570,6 +1601,11 @@ void luajavaNewJavaArrayMetatable(lua_State *L) {
   /* Is Java Object boolean */
   lua_pushstring(L, LUAJAVAOBJECTIND);
   lua_pushboolean(L, 1);
+  lua_rawset(L, -3);
+
+  /* Java Object Type integer */
+  lua_pushstring(L, LUAJAVA_OBJECT_TYPE);
+  lua_pushinteger(L, LUAJAVA_OBJECT_TYPE_ARRAY);
   lua_rawset(L, -3);
 }
 
@@ -1720,6 +1756,7 @@ const char* luajavaLuaReader(lua_State *L, void *ud, size_t *size) {
 
 int luajavaCopyLuaFunctionWriter(lua_State *L, const void *p, size_t sz, void *ud) {
   struct LuaCopyData *buffer = ud;
+  DEBUG("[COPY] [Func] [Writer] buffer size: %d, head: %d, tail: %d\n", buffer->size, buffer->head, buffer->tail);
   if (sz + buffer->tail > buffer->size) {
     size_t newSize = buffer->size;
     do {
@@ -1740,125 +1777,198 @@ int luajavaCopyLuaFunctionWriter(lua_State *L, const void *p, size_t sz, void *u
 
 const char* luajavaCopyLuaFunctionReader(lua_State *L, void *ud, size_t *size) {
   struct LuaCopyData *buffer = ud;
-  if (buffer->tail >= buffer->head) {
+  DEBUG("[COPY] [Func] [Reader] buffer size: %d, head: %d, tail: %d\n", buffer->size, buffer->head, buffer->tail);
+  if (buffer->tail <= buffer->head) {
     return NULL;
   }
   *size = buffer->tail - buffer->head;
+  char *data = buffer->data + buffer->head;
   buffer->head = buffer->tail;
-  return buffer->data;
+  return data;
 }
 
-int luajavaCopyLuaFunction(lua_State *srcL, lua_State *destL, HashMap map) {
+int luajavaCopyLuaFunction(lua_State *srcL, int index, lua_State *destL, HashMap map) {
+  // prepare copy buffer
   struct LuaCopyData *buffer = (struct LuaCopyData *) malloc(sizeof(struct LuaCopyData));
-  buffer->size = 8192;
+  buffer->size = LUAJAVA_COPY_DATA_BUFFER_SIZE;
   buffer->head = 0;
   buffer->tail = 0;
   buffer->data = (char *) malloc(sizeof(char) * buffer->size);
 
+  // copy function to the top.
+  lua_pushvalue(srcL, index);
   // dump from src
+  DEBUG("[COPY] [Func] Start dump function\n");
   int ret = LUA_DUMP(srcL, luajavaCopyLuaFunctionWriter, buffer, 1);
+  DEBUG("[COPY] [Func] Dump function result: %d\n", ret);
   if (ret != LUA_OK) {
     free(buffer->data);
     free(buffer);
+    lua_pop(srcL, 1);
     return 0;
   }
 
   // load to dest
+  DEBUG("[COPY] [Func] Start load function\n");
   ret = LUA_LOAD(destL, luajavaCopyLuaFunctionReader, buffer, "CopiedClosure", "bt");
+  DEBUG("[COPY] [Func] Load function result: %d\n", ret);
   free(buffer->data);
   free(buffer);
+  lua_pop(srcL, 1);
   if (ret != LUA_OK) return 0;
 
+  // put function ref to map
+  lua_pushvalue(destL, -1);
+  size_t srcPtr = (size_t) lua_topointer(srcL, index);
+  size_t destRef = luaL_ref(destL, LUA_REGISTRYINDEX);
+  hashMap_put(map, srcPtr, destRef);
+
   // copy upvalues
+  // pre-check the first upvalue is _ENV or not.
   int n = 1;
   const char *name = NULL;
-  while ((name = lua_getupvalue(srcL, -1, n)) != NULL) {
-    if (!luajavaCopyLuaTop(srcL, destL, map)) {
+//  DEBUG("[COPY] [Func] Start pre-check the first upvalue\n");
+//  if ((name = lua_getupvalue(srcL, index, n)) != NULL) {
+//    DEBUG("[COPY] [Func] The first upvalue is '%s'\n", name);
+//    if (strcmp(name, "_ENV") == 0) {
+//      DEBUG("[COPY] [Func] The first upvalue is '%s', skip copy the first upvalue\n", name);
+//      lua_pop(srcL, 1);
+//      n += 1;
+//    }
+//  }
+
+  DEBUG("[COPY] [Func] Start copy upvalues, n = %d\n", n);
+  while ((name = lua_getupvalue(srcL, index, n)) != NULL) {
+    DEBUG("[COPY] [Func] [%d] Copy upvalue '%s' type: %s\n", n, name, lua_typename(srcL, lua_type(srcL, -1)));
+    if (!luajavaCopyLuaValue(srcL, -1, destL, map)) {
+      DEBUG("[COPY] [Func] [%d] failed copy upvalue '%s' type: %s\n", n, name, lua_typename(srcL, lua_type(srcL, -1)));
       lua_pop(srcL, 1);
       lua_pop(destL, 1);
       return 0;
     }
-    lua_setupvalue(destL, -2, n);
+    name = lua_setupvalue(destL, -2, n);
     lua_pop(srcL, 1);
+    n += 1;
+    DEBUG("[COPY] [Func] Upvalue copied\n", n);
   }
+  DEBUG("[COPY] [Func] Finished copy upvalues, n = %d\n", n);
 
   return 1;
 }
 
-int luajavaCopyLuaTable(lua_State *srcL, lua_State *destL, HashMap map) {
+int luajavaCopyLuaTable(lua_State *srcL, int index, lua_State *destL, HashMap map) {
+  size_t srcPtr = (size_t) lua_topointer(srcL, index);
+
+  // after pushed nil, index may need change.
+  int offsetIndex = index < 0 ? index - 1 : index;
   lua_pushnil(srcL);
   lua_newtable(destL);
-  size_t srcPtr = (size_t) lua_topointer(srcL, -1);
+
+  // record table ref
+  DEBUG("[COPY] [Table] Record table ref\n");
+  lua_pushvalue(destL, -1);
   size_t destRef = luaL_ref(destL, LUA_REGISTRYINDEX);
   hashMap_put(map, srcPtr, destRef);
 
-  while (lua_next(srcL, -2) != 0) {
-    if (!luajavaCopyLuaTop(srcL, destL, map)) {
+  DEBUG("[COPY] [Table] Start foreach source lua state.\n");
+  while (lua_next(srcL, offsetIndex) != 0) {
+    // copy value to dest lua state top
+    if (!luajavaCopyLuaValue(srcL, -2, destL, map)) {
+      DEBUG("[COPY] [Table] Copy *value* '%s' failed\n", lua_typename(srcL, lua_type(srcL, -1)));
       lua_pop(srcL, 2);
       return 0;
     }
-    lua_pop(srcL, 1);
 
-    if (!luajavaCopyLuaTop(srcL, destL, map)) {
-      lua_pop(srcL, 1);
+    // copy key to dest lua state top
+    if (!luajavaCopyLuaValue(srcL, -1, destL, map)) {
+      DEBUG("[COPY] [Table] Copy *key* '%s' failed\n", lua_typename(srcL, lua_type(srcL, -1)));
+      lua_pop(srcL, 2);
       lua_pop(destL, 1);
       return 0;
     }
-    lua_pop(srcL, 1);
 
+    DEBUG("[COPY] [TABLE] Finished copied a key-value pair: %s - %s\n",
+          lua_typename(destL, lua_type(destL, -1)),
+          lua_typename(destL, lua_type(destL, -2)));
+
+    lua_pop(srcL, 1);
     lua_settable(destL, -3);
   }
+  return 1;
 }
 
-int luajavaCopyLuaTop(lua_State *srcL, lua_State *destL, HashMap map) {
-  // copy top
-  switch(lua_type(srcL, -1)) {
+int luajavaCopyLuaValue(lua_State *srcL, int index, lua_State *destL, HashMap map) {
+  // copy value
+  switch(lua_type(srcL, index)) {
     case LUA_TNIL:
+      DEBUG("[COPY] Start copy nil\n");
       lua_pushnil(destL);
       return 1;
     case LUA_TBOOLEAN:
-      lua_pushboolean(destL, lua_toboolean(srcL, -1));
+      DEBUG("[COPY] Start copy boolean\n");
+      lua_pushboolean(destL, lua_toboolean(srcL, index));
       return 1;
     case LUA_TLIGHTUSERDATA:
-      lua_pushlightuserdata(destL, lua_touserdata(srcL, -1));
+      DEBUG("[COPY] Start copy light userdata\n");
+      lua_pushlightuserdata(destL, lua_touserdata(srcL, index));
       return 1;
     case LUA_TNUMBER:
-      lua_pushnumber(destL, lua_tonumber(srcL, -1));
+      DEBUG("[COPY] Start copy number\n");
+      lua_pushnumber(destL, lua_tonumber(srcL, index));
       return 1;
     case LUA_TSTRING:
-      lua_pushstring(destL, lua_tostring(srcL, -1));
+      DEBUG("[COPY] Start copy string\n");
+      lua_pushstring(destL, lua_tostring(srcL, index));
       return 1;
     case LUA_TUSERDATA: {
-      if (isJavaObject(srcL, -1)) {
-        jobject *objPtr = (jobject *) lua_touserdata(srcL, 1);
-        pushJavaObject(destL, *objPtr);
-        return 1;
+      DEBUG("[COPY] Start copy userdata\n");
+      // copy java object
+      int objectType = luajavaGetJavaObjectType(srcL, index);
+      switch (objectType) {
+        case LUAJAVA_OBJECT_TYPE_CLASS:
+          pushJavaClass(destL, *((jobject *) lua_touserdata(srcL, index)));
+          return 1;
+        case LUAJAVA_OBJECT_TYPE_OBJECT:
+          pushJavaObject(destL, *((jobject *) lua_touserdata(srcL, index)));
+          return 1;
+        case LUAJAVA_OBJECT_TYPE_ARRAY:
+          pushJavaArray(destL, *((jobject *) lua_touserdata(srcL, index)));
+          return 1;
       }
       break;
     }
     case LUA_TFUNCTION: {
-      size_t ptr = (size_t) lua_topointer(srcL, -1);
+      DEBUG("[COPY] Start copy function\n");
+      size_t ptr = (size_t) lua_topointer(srcL, index);
       if (hashMap_get(map, ptr, &ptr)) {
+        DEBUG("[COPY] Copy same function\n");
         lua_rawgeti(destL, LUA_REGISTRYINDEX, ptr);
         return 1;
       }
-      return luajavaCopyLuaFunction(srcL, destL, map);
+      return luajavaCopyLuaFunction(srcL, index, destL, map);
     }
     case LUA_TTABLE: {
-      size_t ptr = (size_t) lua_topointer(srcL, -1);
+      DEBUG("[COPY] Start copy table\n");
+      size_t ptr = (size_t) lua_topointer(srcL, index);
       if (hashMap_get(map, ptr, &ptr)) {
+        DEBUG("[COPY] Copy same table\n");
         lua_rawgeti(destL, LUA_REGISTRYINDEX, ptr);
         return 1;
       }
-      return luajavaCopyLuaTable(srcL, destL, map);
+      return luajavaCopyLuaTable(srcL, index, destL, map);
     }
   }
   return 0;
 }
 
-int luajavaCopyLuaTopWrapper(lua_State *srcL, lua_State *destL) {
+int luajavaCopyLuaValueWrapper(lua_State *srcL, int idx, lua_State *destL) {
+  DEBUG("[COPY] [BEGIN] Start copy index `%d` to another lua state\n", idx);
   HashMap map = hashMap_new(32);
-  int ret = luajavaCopyLuaTop(srcL, destL, map);
+  int ret = luajavaCopyLuaValue(srcL, idx, destL, map);
+  hashMap_foreach(map, key, value, {
+    DEBUG("[COPY] [END] [DEST] Unref '%d'\n", value);
+    luaL_unref(destL, LUA_REGISTRYINDEX, value);
+  });
   hashMap_free(map);
   return ret;
 }

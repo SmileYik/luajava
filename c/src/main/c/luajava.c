@@ -1770,6 +1770,13 @@ JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1luaLoad(
   return (jint) result;
 }
 
+JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1copyValue(
+    JNIEnv *env, jobject jobj, jobject src, jint idx, jobject dest) {
+  lua_State *srcL = getStateFromCPtr(env, src);
+  lua_State *destL = getStateFromCPtr(env, dest);
+  return (jint) luajavaCopyLuaValueWrapper(srcL, idx, destL);
+}
+
 // ********************** Debug API ***********************
 
 /*

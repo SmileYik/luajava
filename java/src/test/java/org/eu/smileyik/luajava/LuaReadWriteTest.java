@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
 
 public class LuaReadWriteTest extends BaseTest {
 
@@ -63,5 +64,105 @@ public class LuaReadWriteTest extends BaseTest {
         int result = luaState.load(simpleRead, "LoadTest", "b");
         System.out.println("result: " + result);
         luaStateFacade.pcall(0, 0, 0).getOrSneakyThrow();
+    }
+
+    @Test
+    public void copyFunctionTest() throws IOException {
+        String lua =
+                "" +
+                        "local first = 'anc'\n" +
+                        "local mmmap = {a = 1, b = '2', c = true, d = {e = 1}, f = function() end}\n" +
+                        "print('啊')\n" +
+                        "function hello() \n" +
+                        "    print('hello world')\n return 1\n" +
+                        "end\n" +
+                        "local a = 1\n" +
+                        "print(a)\n" +
+                        "hello()\n" +
+                        "local h = function(name)\n" +
+                        "    local newName = 'hello ' .. name\n" +
+                        "    return function ()\n" +
+                        "        print(newName)\n" +
+                        "    end\n" +
+                        "end\n" +
+                        "hFunc = h('abc')\n" +
+                        "hFunc()\n";
+
+        LuaStateFacade a = newLuaState();
+        a.openLibs();
+        LuaState as = a.getLuaState();
+        a.loadString(lua).getOrSneakyThrow();
+        a.pcall(0, 0, 0).getOrSneakyThrow();
+        as.getGlobal("hello");
+        System.out.println("a function: " + a.type(-1));
+
+        byte[] luaData;
+        try (ILuaReadWriteEntity.SimpleWrite simpleWrite = new ILuaReadWriteEntity.SimpleWrite()) {
+            int i = as.dump(simpleWrite, false);
+            ByteArrayOutputStream outputStream = (ByteArrayOutputStream) simpleWrite.getOutputStream();
+            byte[] byteArray = outputStream.toByteArray();
+            System.out.println(Arrays.toString(byteArray));
+            System.out.println(new String(byteArray));
+            luaData = byteArray;
+        }
+
+
+        LuaStateFacade b = newLuaState();
+        b.openLibs();
+        LuaState bs = b.getLuaState();
+        ILuaReadWriteEntity.SimpleRead simpleRead = new ILuaReadWriteEntity.SimpleRead(
+                new ByteArrayInputStream(luaData), 2048
+        );
+        int result = bs.load(simpleRead, "LoadTest", "b");
+        System.out.println("result: " + result);
+        b.pcall(0, 0, 0).getOrSneakyThrow();
+    }
+
+    @Test
+    public void copyTest() throws ExecutionException, InterruptedException {
+        String lua =
+                "" +
+                        "local first = 'anc'\n" +
+                        "local mmmap = {a = 1, b = '2', c = true, d = {e = 1}, f = function() print('----f----') end}\n" +
+                        "mmmap.g = mmmap;\n" +
+                        "mmmap.h = mmmap;\n" +
+                        "mmmap.d.h = mmmap.g\n" +
+                        "print('啊')\n" +
+                        "function hello() \n" +
+                        "    print('hello world')\n return 1\n" +
+                        "end\n" +
+                        "local a = 1\n" +
+                        "print(a)\n" +
+                        "hello()\n" +
+                        "local h = function(name)\n" +
+                        "    local newName = 'hello ' .. name\n" +
+                        "    return function ()\n" +
+                        "        print(newName)\nprint(mmmap)\n for k, v in pairs(mmmap) do print(k, v) end\n" +
+                        "        mmmap.f()\n" +
+                        "        mmmap.h.f()\n" +
+                        "    end\n" +
+                        "end\n" +
+                        "hFunc = h('abc')\n" +
+                        "hFunc()\nreturn hello";
+
+        LuaStateFacade luaStateFacade = newLuaState();
+        System.out.println(LuaState.LUA_VERSION);
+        LuaState luaState = luaStateFacade.getLuaState();
+        luaState.openLibs();
+        luaStateFacade.loadString(lua);
+        luaStateFacade.pcall(0, 1, 0).getOrSneakyThrow();
+        luaState.getGlobal("hFunc");
+
+        LuaStateFacade another = newLuaState();
+        another.openLibs();
+
+        // luaState.getGlobal("hello");
+        if (luaState.copyValue(-1, another.getLuaState())) {
+            // SimpleRspServer.start(16500, another).waitConnection();
+            another.pcall(0, 1, 0).getOrSneakyThrow();
+            System.out.println("---" + another.isNumber(-1));
+        }
+
+        // debugServer.close();
     }
 }
