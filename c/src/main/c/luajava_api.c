@@ -55,7 +55,13 @@
 #include "compatible.h"
 #include "hashmap.h"
 
-#define DEBUG(STR, ...)  printf(STR, __VA_ARGS__); fflush(stdout)
+#ifdef DEBUG_FLAG
+#define DEBUGF(STR, ...) printf(STR, __VA_ARGS__); fflush(stdout)
+#define DEBUG(STR) printf(STR); fflush(stdout)
+#else
+  #define DEBUGF(STR, ...)
+  #define DEBUG(STR)
+#endif
 
 /**
  * Generate lua stack.
@@ -1756,7 +1762,7 @@ const char* luajavaLuaReader(lua_State *L, void *ud, size_t *size) {
 
 int luajavaCopyLuaFunctionWriter(lua_State *L, const void *p, size_t sz, void *ud) {
   struct LuaCopyData *buffer = ud;
-  DEBUG("[COPY] [Func] [Writer] buffer size: %d, head: %d, tail: %d\n", buffer->size, buffer->head, buffer->tail);
+  DEBUGF("[COPY] [Func] [Writer] buffer size: %d, head: %d, tail: %d\n", buffer->size, buffer->head, buffer->tail);
   if (sz + buffer->tail > buffer->size) {
     size_t newSize = buffer->size;
     do {
@@ -1777,7 +1783,7 @@ int luajavaCopyLuaFunctionWriter(lua_State *L, const void *p, size_t sz, void *u
 
 const char* luajavaCopyLuaFunctionReader(lua_State *L, void *ud, size_t *size) {
   struct LuaCopyData *buffer = ud;
-  DEBUG("[COPY] [Func] [Reader] buffer size: %d, head: %d, tail: %d\n", buffer->size, buffer->head, buffer->tail);
+  DEBUGF("[COPY] [Func] [Reader] buffer size: %d, head: %d, tail: %d\n", buffer->size, buffer->head, buffer->tail);
   if (buffer->tail <= buffer->head) {
     return NULL;
   }
@@ -1800,7 +1806,7 @@ int luajavaCopyLuaFunction(lua_State *srcL, int index, lua_State *destL, HashMap
   // dump from src
   DEBUG("[COPY] [Func] Start dump function\n");
   int ret = LUA_DUMP(srcL, luajavaCopyLuaFunctionWriter, buffer, 1);
-  DEBUG("[COPY] [Func] Dump function result: %d\n", ret);
+  DEBUGF("[COPY] [Func] Dump function result: %d\n", ret);
   if (ret != LUA_OK) {
     free(buffer->data);
     free(buffer);
@@ -1811,7 +1817,7 @@ int luajavaCopyLuaFunction(lua_State *srcL, int index, lua_State *destL, HashMap
   // load to dest
   DEBUG("[COPY] [Func] Start load function\n");
   ret = LUA_LOAD(destL, luajavaCopyLuaFunctionReader, buffer, "CopiedClosure", "bt");
-  DEBUG("[COPY] [Func] Load function result: %d\n", ret);
+  DEBUGF("[COPY] [Func] Load function result: %d\n", ret);
   free(buffer->data);
   free(buffer);
   lua_pop(srcL, 1);
@@ -1827,21 +1833,36 @@ int luajavaCopyLuaFunction(lua_State *srcL, int index, lua_State *destL, HashMap
   // pre-check the first upvalue is _ENV or not.
   int n = 1;
   const char *name = NULL;
-//  DEBUG("[COPY] [Func] Start pre-check the first upvalue\n");
-//  if ((name = lua_getupvalue(srcL, index, n)) != NULL) {
-//    DEBUG("[COPY] [Func] The first upvalue is '%s'\n", name);
-//    if (strcmp(name, "_ENV") == 0) {
-//      DEBUG("[COPY] [Func] The first upvalue is '%s', skip copy the first upvalue\n", name);
-//      lua_pop(srcL, 1);
-//      n += 1;
-//    }
-//  }
+  DEBUG("[COPY] [Func] Start pre-check the first upvalue\n");
+  if ((name = lua_getupvalue(srcL, index, n)) != NULL) {
+    DEBUGF("[COPY] [Func] The first upvalue is '%s'\n", name);
+    if (strcmp(name, "_ENV") == 0) {
+      // LUA 52, _ENV is nil
+      {
+        lua_getupvalue(destL, -1, n);
+        if (lua_isnil(destL, -1)) {
+          lua_pop(destL, 1);
 
-  DEBUG("[COPY] [Func] Start copy upvalues, n = %d\n", n);
+          luaL_loadstring(destL, "return _ENV");
+          lua_getupvalue(destL, -1, 1);
+          lua_setupvalue(destL, -3, 1);
+          lua_pop(destL, 1);
+          lua_getupvalue(destL, -1, n);
+        }
+        lua_pop(destL, 1);
+      }
+
+      DEBUGF("[COPY] [Func] The first upvalue is '%s', skip copy the first upvalue\n", name);
+      n += 1;
+    }
+    lua_pop(srcL, 1);
+  }
+
+  DEBUGF("[COPY] [Func] Start copy upvalues, n = %d\n", n);
   while ((name = lua_getupvalue(srcL, index, n)) != NULL) {
-    DEBUG("[COPY] [Func] [%d] Copy upvalue '%s' type: %s\n", n, name, lua_typename(srcL, lua_type(srcL, -1)));
+    DEBUGF("[COPY] [Func] [%d] Copy upvalue '%s' type: %s\n", n, name, lua_typename(srcL, lua_type(srcL, -1)));
     if (!luajavaCopyLuaValue(srcL, -1, destL, map)) {
-      DEBUG("[COPY] [Func] [%d] failed copy upvalue '%s' type: %s\n", n, name, lua_typename(srcL, lua_type(srcL, -1)));
+      DEBUGF("[COPY] [Func] [%d] failed copy upvalue '%s' type: %s\n", n, name, lua_typename(srcL, lua_type(srcL, -1)));
       lua_pop(srcL, 1);
       lua_pop(destL, 1);
       return 0;
@@ -1849,9 +1870,9 @@ int luajavaCopyLuaFunction(lua_State *srcL, int index, lua_State *destL, HashMap
     name = lua_setupvalue(destL, -2, n);
     lua_pop(srcL, 1);
     n += 1;
-    DEBUG("[COPY] [Func] Upvalue copied\n", n);
+    DEBUGF("[COPY] [Func] Upvalue copied\n", n);
   }
-  DEBUG("[COPY] [Func] Finished copy upvalues, n = %d\n", n);
+  DEBUGF("[COPY] [Func] Finished copy upvalues, n = %d\n", n);
 
   return 1;
 }
@@ -1872,27 +1893,27 @@ int luajavaCopyLuaTable(lua_State *srcL, int index, lua_State *destL, HashMap ma
 
   DEBUG("[COPY] [Table] Start foreach source lua state.\n");
   while (lua_next(srcL, offsetIndex) != 0) {
-    // copy value to dest lua state top
+    // copy key to dest lua state top
     if (!luajavaCopyLuaValue(srcL, -2, destL, map)) {
-      DEBUG("[COPY] [Table] Copy *value* '%s' failed\n", lua_typename(srcL, lua_type(srcL, -1)));
+      DEBUGF("[COPY] [Table] Copy *key* '%s' failed\n", lua_typename(srcL, lua_type(srcL, -2)));
       lua_pop(srcL, 2);
       return 0;
     }
 
-    // copy key to dest lua state top
+    // copy value to dest lua state top
     if (!luajavaCopyLuaValue(srcL, -1, destL, map)) {
-      DEBUG("[COPY] [Table] Copy *key* '%s' failed\n", lua_typename(srcL, lua_type(srcL, -1)));
+      DEBUGF("[COPY] [Table] Copy *value* '%s' failed\n", lua_typename(srcL, lua_type(srcL, -1)));
       lua_pop(srcL, 2);
       lua_pop(destL, 1);
       return 0;
     }
 
-    DEBUG("[COPY] [TABLE] Finished copied a key-value pair: %s - %s\n",
+    DEBUGF("[COPY] [TABLE] Finished copied a key-value pair: %s - %s\n",
           lua_typename(destL, lua_type(destL, -1)),
           lua_typename(destL, lua_type(destL, -2)));
 
     lua_pop(srcL, 1);
-    lua_settable(destL, -3);
+    lua_rawset(destL, -3);
   }
   return 1;
 }
@@ -1962,11 +1983,11 @@ int luajavaCopyLuaValue(lua_State *srcL, int index, lua_State *destL, HashMap ma
 }
 
 int luajavaCopyLuaValueWrapper(lua_State *srcL, int idx, lua_State *destL) {
-  DEBUG("[COPY] [BEGIN] Start copy index `%d` to another lua state\n", idx);
+  DEBUGF("[COPY] [BEGIN] Start copy index `%d` to another lua state\n", idx);
   HashMap map = hashMap_new(32);
   int ret = luajavaCopyLuaValue(srcL, idx, destL, map);
   hashMap_foreach(map, key, value, {
-    DEBUG("[COPY] [END] [DEST] Unref '%d'\n", value);
+    DEBUGF("[COPY] [END] [DEST] Unref '%d'\n", value);
     luaL_unref(destL, LUA_REGISTRYINDEX, value);
   });
   hashMap_free(map);

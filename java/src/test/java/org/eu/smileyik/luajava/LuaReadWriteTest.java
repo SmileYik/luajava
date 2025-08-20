@@ -137,9 +137,13 @@ public class LuaReadWriteTest extends BaseTest {
                         "local h = function(name)\n" +
                         "    local newName = 'hello ' .. name\n" +
                         "    return function ()\n" +
-                        "        print(newName)\nprint(mmmap)\n for k, v in pairs(mmmap) do print(k, v) end\n" +
-                        "        mmmap.f()\n" +
-                        "        mmmap.h.f()\n" +
+                        "        print(newName)\n" +
+                        "        print(mmmap)\n " +
+                        "        if mmmap ~= nil then \n" +
+                        "            for k, v in pairs(mmmap) do print(k, v) end\n" +
+                        "            mmmap.f()\n" +
+                        "            mmmap.h.f()\n" +
+                        "        end\n" +
                         "    end\n" +
                         "end\n" +
                         "hFunc = h('abc')\n" +
@@ -157,11 +161,15 @@ public class LuaReadWriteTest extends BaseTest {
         another.openLibs();
 
         // luaState.getGlobal("hello");
-        if (luaState.copyValue(-1, another.getLuaState())) {
-            // SimpleRspServer.start(16500, another).waitConnection();
-            another.pcall(0, 1, 0).getOrSneakyThrow();
-            System.out.println("---" + another.isNumber(-1));
+        for (int i = 0; i < 10; ++i) {
+            System.out.println("------------------------------ " + i);
+            if (luaState.copyValue(-1, another.getLuaState())) {
+                // SimpleRspServer.start(16500, another).waitConnection();
+                another.pcall(0, 1, 0).getOrSneakyThrow();
+                System.out.println("---" + another.isNumber(-1));
+            }
         }
+
 
         // debugServer.close();
     }
