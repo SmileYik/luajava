@@ -1,5 +1,6 @@
 package org.eu.smileyik.luajava;
 
+import org.eu.smileyik.luajava.type.LuaTable;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -123,7 +124,7 @@ public class LuaReadWriteTest extends BaseTest {
         String lua =
                 "" +
                         "local first = 'anc'\n" +
-                        "local mmmap = {a = 1, b = '2', c = true, d = {e = 1}, f = function() print('----f----') end}\n" +
+                        "mmmap = {a = 1, b = '2', c = true, d = {e = 1}, f = function() print('----f----') end}\n" +
                         "mmmap.g = mmmap;\n" +
                         "mmmap.h = mmmap;\n" +
                         "mmmap.d.h = mmmap.g\n" +
@@ -153,19 +154,31 @@ public class LuaReadWriteTest extends BaseTest {
         System.out.println(LuaState.LUA_VERSION);
         LuaState luaState = luaStateFacade.getLuaState();
         luaState.openLibs();
+        System.out.println("New _G: " + luaState.newGlobalTable());
+        // luaStateFacade.evalString("setfenv(1, _G)");
         luaStateFacade.loadString(lua);
         luaStateFacade.pcall(0, 1, 0).getOrSneakyThrow();
+        System.out.println(((LuaTable) luaStateFacade.getGlobal("_G").getOrSneakyThrow()));
         luaState.getGlobal("hFunc");
 
         LuaStateFacade another = newLuaState();
         another.openLibs();
+        LuaState anotherLuaState = another.getLuaState();
+        System.out.println("New _G: " + anotherLuaState.newGlobalTable());
+
+        luaState.getGlobal("_G");
+        anotherLuaState.getGlobal("_G");
+        System.out.println("Copy _G: " + luaState.copyTableIfNotExists(-1, anotherLuaState));
+        luaState.pop(1);
+        anotherLuaState.pop(1);
+
 
         // luaState.getGlobal("hello");
-        for (int i = 0; i < 10; ++i) {
+        for (int i = 0; i < 1; ++i) {
             System.out.println("------------------------------ " + i);
-            if (luaState.copyValue(-1, another.getLuaState())) {
+            if (luaState.copyValue(-1, anotherLuaState)) {
                 // SimpleRspServer.start(16500, another).waitConnection();
-                another.pcall(0, 1, 0).getOrSneakyThrow();
+                another.pcall(0, 0, 0).getOrSneakyThrow();
                 System.out.println("---" + another.isNumber(-1));
             }
         }

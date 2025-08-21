@@ -56,8 +56,8 @@
 #include "hashmap.h"
 
 #ifdef DEBUG_FLAG
-#define DEBUGF(STR, ...) printf(STR, __VA_ARGS__); fflush(stdout)
-#define DEBUG(STR) printf(STR); fflush(stdout)
+  #define DEBUGF(STR, ...) printf(STR, __VA_ARGS__); fflush(stdout)
+  #define DEBUG(STR) printf(STR); fflush(stdout)
 #else
   #define DEBUGF(STR, ...)
   #define DEBUG(STR)
@@ -1852,6 +1852,11 @@ int luajavaCopyLuaFunction(lua_State *srcL, int index, lua_State *destL, HashMap
         lua_pop(destL, 1);
       }
 
+      // COPY
+      // lua_getupvalue(destL, -1, n);
+      // luajavaDoCopyTableIfNotExists(srcL, -1, destL, map);
+      // lua_setupvalue(destL, -2, n);
+
       DEBUGF("[COPY] [Func] The first upvalue is '%s', skip copy the first upvalue\n", name);
       n += 1;
     }
@@ -1992,4 +1997,93 @@ int luajavaCopyLuaValueWrapper(lua_State *srcL, int idx, lua_State *destL) {
   });
   hashMap_free(map);
   return ret;
+}
+
+int luajavaDoCopyTableIfNotExists(lua_State *srcL, int index, lua_State *destL, HashMap map) {
+  // if index is negtive, after pushed nil need change index
+  int offsetIdx = index < 0 ? index - 1 : index;
+
+  lua_pushnil(srcL);
+  while (lua_next(srcL, offsetIdx)) {
+    DEBUGF("[COPY_TABLE_IF_NOT_EXISTS] Copy key '%s'\n", 
+            lua_isstring(srcL, -2) ? lua_tostring(srcL, -2) : "Not String");
+    // copy key
+    if (!luajavaCopyLuaValue(srcL, -2, destL, map)) {
+      lua_pop(srcL, 1);
+      continue;
+    }
+
+    // check nil
+    lua_pushvalue(destL, -1);
+    lua_rawget(destL, -3);
+    if (!lua_isnil(destL, -1)) {
+      DEBUGF("[COPY_TABLE_IF_NOT_EXISTS] Not nil, skip copy '%s'\n", 
+              lua_isstring(srcL, -2) ? lua_tostring(srcL, -2) : "Not String");
+      lua_pop(destL, 2);
+      lua_pop(srcL, 1);
+      continue;
+    }
+    lua_pop(destL, 1);
+
+    // copy value
+    if (!luajavaCopyLuaValue(srcL, -1, destL, map)) {
+      lua_pop(destL, 1);
+      lua_pop(srcL, 1);
+      continue;
+    }
+    lua_rawset(destL, -3);
+    lua_pop(srcL, 1);
+  }
+  return 1;
+}
+
+int luajavaCopyTableIfNotExists(lua_State *srcL, int index, lua_State *destL) {
+  DEBUGF("[COPY_TABLE_IF_NOT_EXISTS] [BEGIN] Start copy index `%d` to another lua state\n", index);
+  HashMap map = hashMap_new(32);
+  int ret = luajavaDoCopyTableIfNotExists(srcL, index, destL, map);
+  hashMap_foreach(map, key, value, {
+    DEBUGF("[COPY_TABLE_IF_NOT_EXISTS] [END] [DEST] Unref '%d'\n", value);
+    luaL_unref(destL, LUA_REGISTRYINDEX, value);
+  });
+  hashMap_free(map);
+  return ret;
+}
+
+int luajavaNewGlobalEnv(lua_State *L) {
+  lua_Integer gRef;
+  lua_getglobal(L, "_G");
+  lua_pushstring(L, "_LUAJAVA_G_REF");
+  lua_gettable(L, -2);
+  if (lua_isnumber(L, -1)) {
+    gRef = lua_tointeger(L, -1);
+    lua_pop(L, 2);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, gRef);
+  } else {
+    lua_pop(L, 1);
+    // _G ref
+    lua_pushvalue(L, -1);
+    gRef = luaL_ref(L, LUA_REGISTRYINDEX);
+    // push ref
+    lua_pushstring(L, "_LUAJAVA_G_REF");
+    lua_pushinteger(L, gRef);
+    lua_rawset(L, -3);
+  }
+
+  // new _G table
+  lua_newtable(L);
+  // metatable
+  lua_newtable(L);
+  lua_pushstring(L, "__index");
+  lua_pushvalue(L, -4);
+  lua_rawset(L, -3);
+
+  lua_setmetatable(L, -2);
+  lua_setglobal(L, "_G");
+
+#ifdef LUA_RIDX_GLOBALS
+  lua_getglobal(L, "_G");
+  lua_rawseti(L, LUA_REGISTRYINDEX, LUA_RIDX_GLOBALS);
+#endif
+
+  return 1;
 }

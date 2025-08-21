@@ -839,14 +839,73 @@ const char* luajavaLuaReader(lua_State *L, void *ud, size_t *size);
 
 int luajavaCopyLuaValueWrapper(lua_State *srcL, int idx, lua_State *destL);
 
+/**
+ * @brief copy target value to anther lua state stack top, 
+ * 
+ * @param srcL lua state
+ * @param index value index
+ * @param destL other lua state
+ * @param map map
+ * @return int boolean result.
+ */
 int luajavaCopyLuaValue(lua_State *srcL, int index, lua_State *destL, HashMap map);
 
+/**
+ * @brief copy target table value to anther lua state stack top, 
+ * 
+ * @param srcL lua state
+ * @param index table index
+ * @param destL other lua state
+ * @param map map
+ * @return int boolean result.
+ */
 int luajavaCopyLuaTable(lua_State *srcL, int index, lua_State *destL, HashMap map);
 
+/**
+ * @brief copy target function value to anther lua state stack top, 
+ * 
+ * @param srcL lua state
+ * @param index function index
+ * @param destL other lua state
+ * @param map map
+ * @return int boolean result.
+ */
 int luajavaCopyLuaFunction(lua_State *srcL, int index, lua_State *destL, HashMap map);
 
 const char* luajavaCopyLuaFunctionReader(lua_State *L, void *ud, size_t *size);
 
 int luajavaCopyLuaFunctionWriter(lua_State *L, const void *p, size_t sz, void *ud);
+
+/**
+ * @brief copy target table value to anther table at lua state stack top, 
+ *        will not copy the field if it is exists.  
+ * 
+ * @param srcL lua state
+ * @param index table index
+ * @param destL other lua state
+ * @param map map
+ * @return int boolean result.
+ */
+int luajavaDoCopyTableIfNotExists(lua_State *srcL, int index, lua_State *destL, HashMap map);
+
+/**
+ * @brief copy target table value to anther table at lua state stack top, 
+ *        will not copy the field if it is exists.  
+ * 
+ * @param srcL lua state
+ * @param index table index
+ * @param destL other lua state
+ * @return int boolean result.
+ */
+int luajavaCopyTableIfNotExists(lua_State *srcL, int index, lua_State *destL);
+
+/**
+ * @brief create a table, make it metatable __index to _G, and replace _G table to the new table.
+ *        but has some issue on lua 5.1
+ * 
+ * @param L lua state
+ * @return int boolean result
+ */
+int luajavaNewGlobalEnv(lua_State *L);
 
 #endif // LUAJAVA_LUAJAVA_API_H

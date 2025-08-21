@@ -1777,6 +1777,19 @@ JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1copyValue(
   return (jint) luajavaCopyLuaValueWrapper(srcL, idx, destL);
 }
 
+JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1newGlobalEnv(
+    JNIEnv *env, jobject jobj, jobject cptr) {
+  lua_State *L = getStateFromCPtr(env, cptr);
+  return luajavaNewGlobalEnv(L);
+}
+
+JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1copyTableIfNotExists(
+    JNIEnv *env, jobject jobj, jobject src, jint idx, jobject dest) {
+  lua_State *srcL = getStateFromCPtr(env, src);
+  lua_State *destL = getStateFromCPtr(env, dest);
+  return (jint) luajavaCopyTableIfNotExists(srcL, idx, destL);
+}
+
 // ********************** Debug API ***********************
 
 /*

@@ -508,6 +508,10 @@ public class LuaState {
      */
     private native int _copyValue(CPtr srcL, int idx, CPtr destL);
 
+    private native int _copyTableIfNotExists(CPtr srcL, int idx, CPtr destL);
+
+    private native int _newGlobalEnv(CPtr ptr);
+
     // ************************* debug method start ****************************
 
     private native void _setHook(CPtr ptr, int mask, int count);
@@ -1093,8 +1097,34 @@ public class LuaState {
         return _luaLoad(luaState, userdata, chunkName, mode);
     }
 
+    /**
+     * deep copy value from a lua state to another lua state stack top.
+     * can't copy cfunction, thread
+     * @param idx  source value index
+     * @param dest target lua state
+     * @return if success then return true
+     */
     public boolean copyValue(int idx, LuaState dest) {
         return _copyValue(luaState, idx, dest.luaState) == 1;
+    }
+
+    /**
+     * copy a table value to another table at another lua state stack top.
+     * just copy not exists fields.
+     * @param idx table index
+     * @param dest target lua state, make sure table value at the top.
+     * @return if success then return true.
+     */
+    public boolean copyTableIfNotExists(int idx, LuaState dest) {
+        return _copyTableIfNotExists(luaState, idx, dest.luaState) == 1;
+    }
+
+    /**
+     * new empty table replace _G table.
+     * if you used lua51 / luajit, it's not work.
+     */
+    public boolean newGlobalTable() {
+        return _newGlobalEnv(luaState) == 1;
     }
 
     // ************************* debug method start ****************************
