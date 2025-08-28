@@ -1229,8 +1229,8 @@ JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1next(
 JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1error(
     JNIEnv *env, jobject jobj, jobject cptr) {
   lua_State *L = getStateFromCPtr(env, cptr);
-
-  return (jint)lua_error(L);
+  lua_error(L);
+  return (jint) 1;
 }
 
 /************************************************************************
