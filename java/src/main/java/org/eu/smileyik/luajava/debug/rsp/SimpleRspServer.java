@@ -27,10 +27,10 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, RspDebugServer {
-    private static final boolean DEBUG_FLAG = true;
     private static final Logger LOG = Logger.getLogger(SimpleRspServer.class.getName());
 
     private final int port;
+    private boolean debugFlag = false;
     private final LuaStateFacade luaStateFacade;
     private final Set<BreakPoint> breakPoints = Collections.synchronizedSet(new HashSet<>());
     private final Lock commandLock = new ReentrantLock();
@@ -62,6 +62,11 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
             server.start();
         }).start();
         return future.get();
+    }
+
+    public RspDebugServer debug() {
+        this.debugFlag = true;
+        return this;
     }
 
     private void start() {
@@ -241,7 +246,7 @@ public class SimpleRspServer implements BiConsumer<LuaStateFacade, LuaDebug>, Rs
     }
 
     private void debug(String message) {
-        if (DEBUG_FLAG) {
+        if (debugFlag) {
             LOG.info(message);
         }
     }
