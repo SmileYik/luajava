@@ -535,14 +535,14 @@ public final class LuaJavaAPI {
         return ret;
     }
 
-    private static Method findMethod(LuaStateFacade luaStateFacade,Class<?> clazz,
+    private static Method findMethod(LuaStateFacade luaStateFacade, Class<?> clazz,
                                      String methodName, Object[] retObjs, int top) throws LuaException {
         // Convert lua params to java params
         int paramsCount = top - 1;
         Object[] objs = getLuaParams(luaStateFacade, paramsCount);
 
         LinkedList<LuaInvokedMethod<Method>> list = ReflectUtil.findMethodByParams(
-                clazz, methodName, objs, false,
+                clazz, methodName, objs, luaStateFacade.isJustUseFirstMethod(),
                 luaStateFacade.isIgnoreNotPublic(), false, false);
         if (list.isEmpty()) {
             return null;

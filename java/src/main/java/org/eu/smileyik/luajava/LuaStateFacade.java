@@ -65,6 +65,11 @@ public class LuaStateFacade implements AutoCloseable {
     private final int stateId;
     private final LuaState luaState;
     private final boolean ignoreNotPublic;
+    /**
+     * if set true, then will use the first result when searched method list include more than one result.
+     * and will not throw error.
+     */
+    private boolean justUseFirstMethod;
     private BiConsumer<LuaStateFacade, LuaDebug> debugHook = null;
 
     protected LuaStateFacade(int stateId, boolean ignoreNotPublic) {
@@ -87,6 +92,14 @@ public class LuaStateFacade implements AutoCloseable {
 
     public boolean isIgnoreNotPublic() {
         return ignoreNotPublic;
+    }
+
+    public boolean isJustUseFirstMethod() {
+        return justUseFirstMethod;
+    }
+
+    public void setJustUseFirstMethod(boolean justUseFirstMethod) {
+        this.justUseFirstMethod = justUseFirstMethod;
     }
 
     public void setDebugHook(BiConsumer<LuaStateFacade, LuaDebug> debugHook) {
