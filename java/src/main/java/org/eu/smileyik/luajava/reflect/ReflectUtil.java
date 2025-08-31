@@ -265,7 +265,16 @@ public class ReflectUtil {
             return result;
         }
 
-        while (clazz != null) {
+        Set<Class<?>> checkedClasses = new HashSet<>();
+        LinkedList<Class<?>> queue = new LinkedList<>();
+        queue.add(clazz);
+        while (!queue.isEmpty()) {
+            clazz = queue.removeFirst();
+            if (!checkedClasses.add(clazz)) {
+                continue;
+            }
+            findSuperclasses(queue, clazz);
+
             for (Method method : clazz.getDeclaredMethods()) {
                 if (method.getName().equals(name)) {
                     if (!checkExecutableModifiers(method, ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
@@ -274,7 +283,6 @@ public class ReflectUtil {
                     }
                 }
             }
-            clazz = clazz.getSuperclass();
         }
         CACHED_EXISTS_METHOD.putIfAbsent(cacheKey, false);
         return false;
@@ -313,9 +321,17 @@ public class ReflectUtil {
         Set<ReflectExecutableCacheKey> checkedMethods = new HashSet<>();
 
         // find methods
-        Class<?> c = clazz;
+        Set<Class<?>> checkedClasses = new HashSet<>();
+        LinkedList<Class<?>> queue = new LinkedList<>();
+        queue.add(clazz);
         int paramsCount = params.length;
-        while (c != null) {
+        while (!queue.isEmpty()) {
+            Class<?> c = queue.removeFirst();
+            if (!checkedClasses.add(c)) {
+                continue;
+            }
+            findSuperclasses(queue, c);
+
             for (Method method : c.getDeclaredMethods()) {
                 // filters
                 if (!method.getName().equals(methodName) ||
@@ -336,7 +352,6 @@ public class ReflectUtil {
                     if (currentPriority == FULL_MATCH) break;
                 }
             }
-            c = c.getSuperclass();
         }
         if (cacheKey != null) {
             CACHED_METHODS.get(cacheKey)
@@ -348,6 +363,18 @@ public class ReflectUtil {
             matchedList.subList(1, matchedList.size()).clear();
         }
         return matchedList;
+    }
+
+    private static void findSuperclasses(LinkedList<Class<?>> queue, Class<?> clazz) {
+        if (clazz.getSuperclass() != null) {
+            queue.addLast(clazz.getSuperclass());
+        }
+        Class<?>[] interfaces = clazz.getInterfaces();
+        for (Class<?> i : interfaces) {
+            if (i != null) {
+                queue.addLast(i);
+            }
+        }
     }
 
     /**
