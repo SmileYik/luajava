@@ -25,7 +25,10 @@ package org.eu.smileyik.luajava.reflect;
 
 import org.eu.smileyik.luajava.util.ParamRef;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.function.Function;
 
@@ -44,11 +47,11 @@ public interface ReflectUtil {
      * @param ignoreNotPublic ignore not public field
      * @return the target filed
      */
-    public Field findFieldByName(Class<?> clazz, String name,
-                                 boolean ignoreFinal,
-                                 boolean ignoreStatic,
-                                 boolean ignoreNotStatic,
-                                 boolean ignoreNotPublic);
+    public IFieldAccessor findFieldByName(Class<?> clazz, String name,
+                                          boolean ignoreFinal,
+                                          boolean ignoreStatic,
+                                          boolean ignoreNotStatic,
+                                          boolean ignoreNotPublic);
 
     /**
      * find constructor by params.
@@ -60,7 +63,7 @@ public interface ReflectUtil {
      * @param ignoreNotStatic ..
      * @return result. my be null
      */
-    public LuaInvokedMethod<Constructor<?>> findConstructorByParams(
+    public LuaInvokedMethod<IExecutable<Constructor<?>>> findConstructorByParams(
             Class<?> clazz, Object[] params, boolean ignoreNotPublic,
             boolean ignoreStatic, boolean ignoreNotStatic
     );
@@ -77,7 +80,7 @@ public interface ReflectUtil {
      * @param ignoreNotStatic skip the method witch is not static
      * @return list of suitable methods.
      */
-    public LinkedList<LuaInvokedMethod<Method>> findMethodByParams(
+    public LinkedList<LuaInvokedMethod<IExecutable<Method>>> findMethodByParams(
             Class<?> clazz, String methodName,
             Object[] params, boolean justFirst,
             boolean ignoreNotPublic,
@@ -115,7 +118,7 @@ public interface ReflectUtil {
      * @param ignoreNotStatic skip the method witch is not static
      * @return list of suitable methods.
      */
-    public LinkedList<LuaInvokedMethod<Method>> findMethodByParams(
+    public LinkedList<LuaInvokedMethod<IExecutable<Method>>> findMethodByParams(
             ReflectExecutableCacheKey cacheKey,
             Class<?> clazz, String methodName,
             Object[] params, boolean justFirst,

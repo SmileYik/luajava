@@ -45,7 +45,7 @@ public class SimpleReflectUtil implements ReflectUtil {
     private final LRUCache<ReflectExecutableCacheKey, Set<Method>> cachedMethods;
     private final LRUCache<ReflectExecutableCacheKey, Optional<Constructor<?>>> cachedConstructors;
 
-    private final LRUCache<ReflectFieldCacheKey, Field> cachedFields;
+    private final LRUCache<ReflectFieldCacheKey, IFieldAccessor> cachedFields;
     private final LRUCache<ReflectExecutableCacheKey, Boolean> cachedExistsMethod;
 
     public SimpleReflectUtil(int cacheCapacity) {
@@ -57,19 +57,20 @@ public class SimpleReflectUtil implements ReflectUtil {
 
     /**
      * find class defined field by field name.
-     * @param clazz             target class
-     * @param name              field name
-     * @param ignoreFinal       ignore final field
-     * @param ignoreStatic      ignore field
-     * @param ignoreNotStatic   ignore not field
-     * @param ignoreNotPublic   ignore not public field
+     *
+     * @param clazz           target class
+     * @param name            field name
+     * @param ignoreFinal     ignore final field
+     * @param ignoreStatic    ignore field
+     * @param ignoreNotStatic ignore not field
+     * @param ignoreNotPublic ignore not public field
      * @return the target filed
      */
-    public Field findFieldByName(Class<?> clazz, String name,
-                                        boolean ignoreFinal,
-                                        boolean ignoreStatic,
-                                        boolean ignoreNotStatic,
-                                        boolean ignoreNotPublic) {
+    public IFieldAccessor findFieldByName(Class<?> clazz, String name,
+                                          boolean ignoreFinal,
+                                          boolean ignoreStatic,
+                                          boolean ignoreNotStatic,
+                                          boolean ignoreNotPublic) {
         ReflectFieldCacheKey cacheKey = new ReflectFieldCacheKey(
                 clazz, name, ignoreFinal, ignoreStatic, ignoreNotStatic, ignoreNotPublic);
         if (cachedFields.containsKey(cacheKey)) {
@@ -90,8 +91,13 @@ public class SimpleReflectUtil implements ReflectUtil {
             return null;
         });
 
-        if (target != null) cachedFields.putIfAbsent(cacheKey, target);
-        return target;
+        if (target != null) {
+            ReflectField reflectField = new ReflectField(target);
+            cachedFields.putIfAbsent(cacheKey, reflectField);
+            return reflectField;
+        }
+
+        return null;
     }
 
     /**
@@ -103,7 +109,7 @@ public class SimpleReflectUtil implements ReflectUtil {
      * @param ignoreNotStatic   ..
      * @return result. my be null
      */
-    public LuaInvokedMethod<Constructor<?>> findConstructorByParams(
+    public LuaInvokedMethod<IExecutable<Constructor<?>>> findConstructorByParams(
             Class<?> clazz, Object[] params, boolean ignoreNotPublic,
             boolean ignoreStatic, boolean ignoreNotStatic
     ) {
@@ -133,7 +139,8 @@ public class SimpleReflectUtil implements ReflectUtil {
                             currentConst.overwriteParam(i, overwrite.getParamAndClear());
                         }
                     }
-                    return currentConst;
+
+                    return wrapConstructor(currentConst);
                 }
                 return null;
             }
@@ -162,7 +169,29 @@ public class SimpleReflectUtil implements ReflectUtil {
         if (allowCache) {
             cachedConstructors.put(cacheKey, Optional.ofNullable(target == null ? null : target.getExecutable()));
         }
-        return target;
+        return wrapConstructor(target);
+    }
+
+    private LuaInvokedMethod<IExecutable<Constructor<?>>> wrapConstructor(LuaInvokedMethod<?> input) {
+        if (input == null) return null;
+        LuaInvokedMethod<Object> output = (LuaInvokedMethod<Object>) input;
+        output.setExecutable(new ReflectConstructor((Constructor<?>) input.getExecutable()));
+        return (LuaInvokedMethod<IExecutable<Constructor<?>>>) input;
+    }
+
+    private LuaInvokedMethod<IExecutable<Method>> wrapMethod(LuaInvokedMethod<?> input) {
+        if (input == null) return null;
+        LuaInvokedMethod<Object> output = (LuaInvokedMethod<Object>) input;
+        output.setExecutable(new ReflectMethod((Method) input.getExecutable()));
+        return (LuaInvokedMethod<IExecutable<Method>>) input;
+    }
+
+    private LinkedList<LuaInvokedMethod<IExecutable<Method>>> wrapMethod(LinkedList<?> list) {
+        List<LuaInvokedMethod<?>> input = (List<LuaInvokedMethod<?>>) list;
+        for (LuaInvokedMethod<?> method : input) {
+            wrapMethod(method);
+        }
+        return (LinkedList<LuaInvokedMethod<IExecutable<Method>>>) list;
     }
 
     /**
@@ -176,7 +205,7 @@ public class SimpleReflectUtil implements ReflectUtil {
      * @param ignoreNotStatic skip the method witch is not
      * @return list of suitable methods.
      */
-    public LinkedList<LuaInvokedMethod<Method>> findMethodByParams(
+    public LinkedList<LuaInvokedMethod<IExecutable<Method>>> findMethodByParams(
             Class<?> clazz, String methodName,
             Object[] params, boolean justFirst,
             boolean ignoreNotPublic,
@@ -226,7 +255,8 @@ public class SimpleReflectUtil implements ReflectUtil {
         } else if (justFirst && matchedList.size() > 1) {
             matchedList.subList(1, matchedList.size()).clear();
         }
-        return matchedList;
+
+        return wrapMethod(matchedList);
     }
 
     /**
@@ -277,7 +307,7 @@ public class SimpleReflectUtil implements ReflectUtil {
      * @param ignoreNotStatic skip the method witch is not
      * @return list of suitable methods.
      */
-    public LinkedList<LuaInvokedMethod<Method>> findMethodByParams(
+    public LinkedList<LuaInvokedMethod<IExecutable<Method>>> findMethodByParams(
             ReflectExecutableCacheKey cacheKey,
             Class<?> clazz, String methodName,
             Object[] params, boolean justFirst,
@@ -322,12 +352,12 @@ public class SimpleReflectUtil implements ReflectUtil {
                 }
             }
 
-            for (Class<?> i : clazz.getInterfaces()) {
+            for (Class<?> i : currentClass.getInterfaces()) {
                 if (visited.add(i)) {
                     stack.push(i);
                 }
             }
-            Class<?> superclass = clazz.getSuperclass();
+            Class<?> superclass = currentClass.getSuperclass();
             if (superclass != null && visited.add(superclass)) {
                 stack.push(superclass);
             }
@@ -342,6 +372,6 @@ public class SimpleReflectUtil implements ReflectUtil {
         if (justFirst && matchedList.size() > 1) {
             matchedList.subList(1, matchedList.size()).clear();
         }
-        return matchedList;
+        return wrapMethod(matchedList);
     }
 }

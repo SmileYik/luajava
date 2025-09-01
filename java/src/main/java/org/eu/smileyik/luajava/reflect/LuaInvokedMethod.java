@@ -23,11 +23,10 @@
 
 package org.eu.smileyik.luajava.reflect;
 
-import java.lang.reflect.Executable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class LuaInvokedMethod<T extends Executable> {
+public class LuaInvokedMethod<T> {
     private T executable;
     private final Map<Integer, Object> overwriteParams;
 
@@ -43,6 +42,10 @@ public class LuaInvokedMethod<T extends Executable> {
     public void reset(T executable) {
         this.executable = executable;
         this.overwriteParams.clear();
+    }
+
+    public void setExecutable(T executable) {
+        this.executable = executable;
     }
 
     public void clear() {
