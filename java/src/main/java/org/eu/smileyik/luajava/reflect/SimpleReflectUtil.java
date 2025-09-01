@@ -172,28 +172,6 @@ public class SimpleReflectUtil implements ReflectUtil {
         return wrapConstructor(target);
     }
 
-    private LuaInvokedMethod<IExecutable<Constructor<?>>> wrapConstructor(LuaInvokedMethod<?> input) {
-        if (input == null) return null;
-        LuaInvokedMethod<Object> output = (LuaInvokedMethod<Object>) input;
-        output.setExecutable(new ReflectConstructor((Constructor<?>) input.getExecutable()));
-        return (LuaInvokedMethod<IExecutable<Constructor<?>>>) input;
-    }
-
-    private LuaInvokedMethod<IExecutable<Method>> wrapMethod(LuaInvokedMethod<?> input) {
-        if (input == null) return null;
-        LuaInvokedMethod<Object> output = (LuaInvokedMethod<Object>) input;
-        output.setExecutable(new ReflectMethod((Method) input.getExecutable()));
-        return (LuaInvokedMethod<IExecutable<Method>>) input;
-    }
-
-    private LinkedList<LuaInvokedMethod<IExecutable<Method>>> wrapMethod(LinkedList<?> list) {
-        List<LuaInvokedMethod<?>> input = (List<LuaInvokedMethod<?>>) list;
-        for (LuaInvokedMethod<?> method : input) {
-            wrapMethod(method);
-        }
-        return (LinkedList<LuaInvokedMethod<IExecutable<Method>>>) list;
-    }
-
     /**
      * find method(s) by gave params (cacheable version).
      * @param clazz      target class
@@ -327,41 +305,31 @@ public class SimpleReflectUtil implements ReflectUtil {
         // results.
         LinkedList<LuaInvokedMethod<Method>> matchedList = new LinkedList<>();
 
-        int priority = Integer.MAX_VALUE;
-        Set<Class<?>> visited = new HashSet<>();
-        Deque<Class<?>> stack = new LinkedList<>();
-        stack.add(clazz);
-        while (!stack.isEmpty()) {
-            Class<?> currentClass = stack.pop();
-            for (Method method : currentClass.getDeclaredMethods()) {
-                // filters
-                if (!method.getName().equals(methodName) ||
-                        method.getParameterCount() != paramsCount ||
-                        ReflectUtil.checkExecutableModifiers(method, ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
-                    continue;
-                }
+        ReflectUtil.foreachClass(clazz, true, new Function<Class<?>, Boolean>() {
+            int priority = Integer.MAX_VALUE;
+            @Override
+            public Boolean apply(Class<?> currentClass) {
+                for (Method method : currentClass.getDeclaredMethods()) {
+                    // filters
+                    if (!method.getName().equals(methodName) ||
+                            method.getParameterCount() != paramsCount ||
+                            ReflectUtil.checkExecutableModifiers(method, ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
+                        continue;
+                    }
 
-                ReflectExecutableCacheKey check = new ReflectExecutableCacheKey(null, methodName, method.getParameterTypes());
-                if (checkedMethods.contains(check)) continue;
-                int currentPriority = ReflectUtil.checkMethodPriority(method,
-                        currentMethod, matchedList, paramsCount, params, priority, overwrite);
-                if (currentPriority != NOT_MATCH) {
-                    priority = currentPriority;
-                    checkedMethods.add(check);
-                    if (currentPriority == FULL_MATCH) break;
+                    ReflectExecutableCacheKey check = new ReflectExecutableCacheKey(null, methodName, method.getParameterTypes());
+                    if (checkedMethods.contains(check)) continue;
+                    int currentPriority = ReflectUtil.checkMethodPriority(method,
+                            currentMethod, matchedList, paramsCount, params, priority, overwrite);
+                    if (currentPriority != NOT_MATCH) {
+                        priority = currentPriority;
+                        checkedMethods.add(check);
+                        if (currentPriority == FULL_MATCH) return true;
+                    }
                 }
+                return null;
             }
-
-            for (Class<?> i : currentClass.getInterfaces()) {
-                if (visited.add(i)) {
-                    stack.push(i);
-                }
-            }
-            Class<?> superclass = currentClass.getSuperclass();
-            if (superclass != null && visited.add(superclass)) {
-                stack.push(superclass);
-            }
-        }
+        });
 
         if (cacheKey != null) {
             cachedMethods.get(cacheKey)
@@ -373,5 +341,27 @@ public class SimpleReflectUtil implements ReflectUtil {
             matchedList.subList(1, matchedList.size()).clear();
         }
         return wrapMethod(matchedList);
+    }
+
+    private LuaInvokedMethod<IExecutable<Constructor<?>>> wrapConstructor(LuaInvokedMethod<?> input) {
+        if (input == null) return null;
+        LuaInvokedMethod<Object> output = (LuaInvokedMethod<Object>) input;
+        output.setExecutable(new ReflectConstructor((Constructor<?>) input.getExecutable()));
+        return (LuaInvokedMethod<IExecutable<Constructor<?>>>) input;
+    }
+
+    private LuaInvokedMethod<IExecutable<Method>> wrapMethod(LuaInvokedMethod<?> input) {
+        if (input == null) return null;
+        LuaInvokedMethod<Object> output = (LuaInvokedMethod<Object>) input;
+        output.setExecutable(new ReflectMethod((Method) input.getExecutable()));
+        return (LuaInvokedMethod<IExecutable<Method>>) input;
+    }
+
+    private LinkedList<LuaInvokedMethod<IExecutable<Method>>> wrapMethod(LinkedList<?> list) {
+        List<LuaInvokedMethod<?>> input = (List<LuaInvokedMethod<?>>) list;
+        for (LuaInvokedMethod<?> method : input) {
+            wrapMethod(method);
+        }
+        return (LinkedList<LuaInvokedMethod<IExecutable<Method>>>) list;
     }
 }
