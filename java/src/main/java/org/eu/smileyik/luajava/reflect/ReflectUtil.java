@@ -61,7 +61,7 @@ public interface ReflectUtil {
      * @param ignoreNotPublic ignore not public constructor
      * @param ignoreStatic    ..
      * @param ignoreNotStatic ..
-     * @return result. my be null
+     * @return result. may be null
      */
     public LuaInvokedMethod<IExecutable<Constructor<?>>> findConstructorByParams(
             Class<?> clazz, Object[] params, boolean ignoreNotPublic,
@@ -157,8 +157,10 @@ public interface ReflectUtil {
      * if returned is NOT_MATCH then means priority is not changed.
      */
     public static <T extends Executable> int checkMethodPriority(
-            T method, LuaInvokedMethod<T> currentMethod,
-            List<LuaInvokedMethod<T>> matchedList,
+            T method,
+            IExecutable<T> wrapperedMethod,
+            LuaInvokedMethod<IExecutable<T>> currentMethod,
+            List<LuaInvokedMethod<IExecutable<T>>> matchedList,
             int paramsCount, Object[] params,
             int priority, ParamRef<Object> overwrite
 
@@ -166,15 +168,14 @@ public interface ReflectUtil {
         // calculate priority.
         int currentPriority = 0;
         Class<?>[] parameters = method.getParameterTypes();
-        currentMethod.reset(method);
+        currentMethod.reset(wrapperedMethod);
         for (int i = 0; i < paramsCount; i++) {
             if (currentPriority >= priority) {
                 currentPriority = NOT_MATCH;
                 break;
             }
 
-            int p = isConvertableType(priority - currentPriority,
-                    params[i], parameters[i], overwrite);
+            int p = isConvertableType(priority - currentPriority, params[i], parameters[i], overwrite);
             if (p == NOT_MATCH) {
                 currentPriority = NOT_MATCH;
                 overwrite.clear();

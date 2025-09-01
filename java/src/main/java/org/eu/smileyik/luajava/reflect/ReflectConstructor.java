@@ -3,9 +3,13 @@ package org.eu.smileyik.luajava.reflect;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
-public class ReflectConstructor implements IExecutable<Constructor<?>> {
+public class ReflectConstructor implements IExecutable<Constructor<?>>, Copiable {
 
-    protected final Constructor<?> constructor;
+    protected Constructor<?> constructor;
+
+    protected ReflectConstructor() {
+
+    }
 
     public ReflectConstructor(Constructor<?> constructor) {
         this.constructor = constructor;
@@ -19,5 +23,13 @@ public class ReflectConstructor implements IExecutable<Constructor<?>> {
     @Override
     public Constructor<?> getExecutable() {
         return constructor;
+    }
+
+    protected void setConstructor(Constructor<?> constructor) {
+        this.constructor = constructor;
+    }
+
+    public ReflectConstructor copy() {
+        return new ReflectConstructor(constructor);
     }
 }
