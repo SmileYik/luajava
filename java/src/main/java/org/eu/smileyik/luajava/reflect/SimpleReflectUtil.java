@@ -1,17 +1,17 @@
 /*
  * ReflectUtil.java, SmileYik, 2025-8-10
  * Copyright (c) 2025 Smile Yik
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -31,10 +31,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,11 +48,17 @@ public class SimpleReflectUtil implements ReflectUtil {
     private final LRUCache<ReflectFieldCacheKey, IFieldAccessor> cachedFields;
     private final LRUCache<ReflectExecutableCacheKey, Boolean> cachedExistsMethod;
 
+    private final LRUCache<Class<?>, Map<String, Set<Method>>> classMethods;
+    private final LRUCache<Class<?>, Map<String, Field>> classFields;
+
     public SimpleReflectUtil(int cacheCapacity) {
         cachedMethods = new LRUCache<>(cacheCapacity);
         cachedConstructors = new LRUCache<>(cacheCapacity);
         cachedFields = new LRUCache<>(cacheCapacity);
         cachedExistsMethod = new LRUCache<>(cacheCapacity);
+
+        classMethods = new LRUCache<>(cacheCapacity);
+        classFields = new LRUCache<>(cacheCapacity);
     }
 
     /**
@@ -80,22 +83,21 @@ public class SimpleReflectUtil implements ReflectUtil {
             return cachedFields.get(cacheKey);
         }
 
-        Field target = ReflectUtil.foreachClass(clazz, false, currentClass -> {
-            for (Field field : currentClass.getDeclaredFields()) {
-                if (field.getName().equals(name)) {
-                    int modifiers = field.getModifiers();
-                    if (ignoreFinal && Modifier.isFinal(modifiers)) continue;
-                    if (ignoreStatic && Modifier.isStatic(modifiers)) continue;
-                    if (ignoreNotStatic && !Modifier.isStatic(modifiers)) continue;
-                    if (ignoreNotPublic && !Modifier.isPublic(modifiers)) continue;
-                    return field;
-                }
+        Object target = ReflectUtil.foreachClass(clazz, false, currentClass -> {
+            Field field = findFieldsByName(clazz, name);
+            if (field != null) {
+                int modifiers = field.getModifiers();
+                if (ignoreFinal && Modifier.isFinal(modifiers)) return EMPTY;
+                else if (ignoreStatic && Modifier.isStatic(modifiers)) return EMPTY;
+                else if (ignoreNotStatic && !Modifier.isStatic(modifiers)) return EMPTY;
+                else if (ignoreNotPublic && !Modifier.isPublic(modifiers)) return EMPTY;
+                return field;
             }
             return null;
         });
 
-        if (target != null) {
-            ReflectField reflectField = new ReflectField(target);
+        if (target instanceof Field) {
+            ReflectField reflectField = new ReflectField((Field) target);
             cachedFields.putIfAbsent(cacheKey, reflectField);
             return reflectField;
         }
@@ -265,9 +267,8 @@ public class SimpleReflectUtil implements ReflectUtil {
         }
 
         result = null != ReflectUtil.foreachClass(clazz, true, currentClass -> {
-            for (Method method : currentClass.getDeclaredMethods()) {
-                if (method.getName().equals(name) &&
-                        !ReflectUtil.checkExecutableModifiers(method, ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
+            for (Method method : findMethodsByName(currentClass, name)) {
+                if (!ReflectUtil.checkExecutableModifiers(method, ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
                     return true;
                 }
             }
@@ -314,10 +315,9 @@ public class SimpleReflectUtil implements ReflectUtil {
             int priority = Integer.MAX_VALUE;
             @Override
             public Boolean apply(Class<?> currentClass) {
-                for (Method method : currentClass.getDeclaredMethods()) {
+                for (Method method : findMethodsByName(currentClass, methodName)) {
                     // filters
-                    if (!method.getName().equals(methodName) ||
-                            method.getParameterCount() != paramsCount ||
+                    if (method.getParameterCount() != paramsCount ||
                             ReflectUtil.checkExecutableModifiers(method, ignoreNotPublic, ignoreStatic, ignoreNotStatic)) {
                         continue;
                     }
@@ -346,5 +346,34 @@ public class SimpleReflectUtil implements ReflectUtil {
             matchedList.subList(1, matchedList.size()).clear();
         }
         return matchedList;
+    }
+
+    protected Set<Method> findMethodsByName(Class<?> clazz, String name) {
+        Map<String, Set<Method>> map = classMethods.get(clazz);
+        if (map != null) {
+            return map.getOrDefault(name, Collections.emptySet());
+        }
+
+        Map<String, Set<Method>> methods = new HashMap<>();
+        for (Method method : clazz.getDeclaredMethods()) {
+            methods.computeIfAbsent(method.getName(), k -> new HashSet<>())
+                    .add(method);
+        }
+        classMethods.put(clazz, methods);
+        return methods.getOrDefault(name, Collections.emptySet());
+    }
+
+    protected Field findFieldsByName(Class<?> clazz, String name) {
+        Map<String, Field> map = classFields.get(clazz);
+        if (map != null) {
+            return map.getOrDefault(name, null);
+        }
+
+        Map<String, Field> fields = new HashMap<>();
+        for (Field field : clazz.getDeclaredFields()) {
+            fields.put(field.getName(), field);
+        }
+        classFields.put(clazz, fields);
+        return fields.getOrDefault(name, null);
     }
 }
