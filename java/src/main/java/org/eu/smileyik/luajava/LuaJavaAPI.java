@@ -52,6 +52,7 @@ import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.reflect.ConvertablePriority;
 import org.eu.smileyik.luajava.reflect.LuaInvokedMethod;
 import org.eu.smileyik.luajava.reflect.ReflectUtil;
+import org.eu.smileyik.luajava.reflect.SimpleReflectUtil;
 import org.eu.smileyik.luajava.util.*;
 
 import java.io.IOException;
@@ -63,14 +64,28 @@ import java.util.LinkedList;
  * Class that contains functions accessed by lua.
  *
  * @author Thiago Ponte
+ * @author Smile Yik
  */
 public final class LuaJavaAPI {
+    private static ReflectUtil reflectUtil = new SimpleReflectUtil(1024);
     private static final String METATABLE_KEY_ITERATOR = "__JavaIterator";
     /**
      * if index name starts with this then ignore field check.
      */
     private static final String FORCE_ACCESS_METHOD_PREFIX = "_m_";
+
     private LuaJavaAPI() {
+    }
+
+    /**
+     * Replace current reflect util instance.
+     * @param reflectUtil Notnull
+     */
+    public static void setReflectUtil(ReflectUtil reflectUtil) {
+        if (reflectUtil == null) {
+            return;
+        }
+        LuaJavaAPI.reflectUtil = reflectUtil;
     }
 
     public static int objectIter(int luaState) throws LuaException {
@@ -265,7 +280,7 @@ public final class LuaJavaAPI {
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         // like a.b = 1
         Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
-        Field field = ReflectUtil.findFieldByName(targetClass, fieldName,
+        Field field = reflectUtil.findFieldByName(targetClass, fieldName,
                 false, false, false, luaStateFacade.isIgnoreNotPublic());
         if (field == null) {
             throw new LuaException("Error accessing field " + fieldName);
@@ -404,7 +419,7 @@ public final class LuaJavaAPI {
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
         boolean isStatic = targetClass == obj;
-        Field field = ReflectUtil.findFieldByName(targetClass, fieldName,
+        Field field = reflectUtil.findFieldByName(targetClass, fieldName,
                 false, false, isStatic, luaStateFacade.isIgnoreNotPublic());
         if (field == null) return 0;
         try {
@@ -441,7 +456,7 @@ public final class LuaJavaAPI {
 
         Class<?> clazz = obj.getClass();
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
-        return ReflectUtil.existsMethodByName(
+        return reflectUtil.existsMethodByName(
                 clazz, methodName, luaStateFacade.isIgnoreNotPublic(), false, false);
     }
 
@@ -458,7 +473,7 @@ public final class LuaJavaAPI {
 
         Class<?> clazz = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
-        return ReflectUtil.existsMethodByName(
+        return reflectUtil.existsMethodByName(
                 clazz, methodName, luaStateFacade.isIgnoreNotPublic(), false, true);
     }
 
@@ -519,7 +534,7 @@ public final class LuaJavaAPI {
         int paramsCount = top - 1;
         Object[] objs = getLuaParams(luaStateFacade, paramsCount);
 
-        LuaInvokedMethod<Constructor<?>> result = ReflectUtil.findConstructorByParams(
+        LuaInvokedMethod<Constructor<?>> result = reflectUtil.findConstructorByParams(
                 clazz, objs, luaStateFacade.isIgnoreNotPublic(), false, false);
 
         if (result == null) {
@@ -541,7 +556,7 @@ public final class LuaJavaAPI {
         int paramsCount = top - 1;
         Object[] objs = getLuaParams(luaStateFacade, paramsCount);
 
-        LinkedList<LuaInvokedMethod<Method>> list = ReflectUtil.findMethodByParams(
+        LinkedList<LuaInvokedMethod<Method>> list = reflectUtil.findMethodByParams(
                 clazz, methodName, objs, luaStateFacade.isJustUseFirstMethod(),
                 luaStateFacade.isIgnoreNotPublic(), false, false);
         if (list.isEmpty()) {
