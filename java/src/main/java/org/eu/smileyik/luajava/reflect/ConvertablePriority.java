@@ -26,6 +26,7 @@ package org.eu.smileyik.luajava.reflect;
 import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.type.LuaArray;
 import org.eu.smileyik.luajava.util.BoxedTypeHelper;
+import org.eu.smileyik.luajava.util.LRUCache;
 import org.eu.smileyik.luajava.util.ParamRef;
 
 import java.lang.reflect.Array;
@@ -70,6 +71,9 @@ public class ConvertablePriority {
     public static final Map<Integer, Byte> DOUBLE_CONVERT_PRIMITIVE;
     public static final Map<Integer, Byte> DOUBLE_ARRAY_CONVERT_PRIMITIVE;
     public static final Map<Integer, Function<LuaArray, ?>> UNBOXED_LUA_ARRAY_TRANSFORMERS;
+    public static final Map<Integer, Function<Object[], ?>> OBJECT_ARRAY_TRANSFORMERS;
+
+    private static final LRUCache<Long, Object[]> LUA_ARRAY_CACHE = new LRUCache<>(64);
 
     static {
         Map<Integer, Byte> doubleConvert = new HashMap<>();
@@ -112,6 +116,17 @@ public class ConvertablePriority {
         unboxedLuaArrayTransformers.put(byte[].class.hashCode(), ConvertablePriority::luaArrayToByteArray);
         unboxedLuaArrayTransformers.put(double[].class.hashCode(), ConvertablePriority::luaArrayToDoubleArray);
         UNBOXED_LUA_ARRAY_TRANSFORMERS = Collections.unmodifiableMap(unboxedLuaArrayTransformers);
+
+        Map<Integer, Function<Object[], ?>> objectArrayTransformers = new HashMap<>();
+        objectArrayTransformers.put(int[].class.hashCode(), ConvertablePriority::objectArrayToIntArray);
+        objectArrayTransformers.put(long[].class.hashCode(), ConvertablePriority::objectArrayToLongArray);
+        objectArrayTransformers.put(float[].class.hashCode(), ConvertablePriority::objectArrayToFloatArray);
+        objectArrayTransformers.put(boolean[].class.hashCode(), ConvertablePriority::objectArrayToBooleanArray);
+        objectArrayTransformers.put(char[].class.hashCode(), ConvertablePriority::objectArrayToCharArray);
+        objectArrayTransformers.put(short[].class.hashCode(), ConvertablePriority::objectArrayToShortArray);
+        objectArrayTransformers.put(byte[].class.hashCode(), ConvertablePriority::objectArrayToByteArray);
+        objectArrayTransformers.put(double[].class.hashCode(), ConvertablePriority::objectArrayToDoubleArray);
+        OBJECT_ARRAY_TRANSFORMERS = Collections.unmodifiableMap(objectArrayTransformers);
     }
 
     public static byte double2TypePriority(Class<?> target) {
@@ -138,29 +153,24 @@ public class ConvertablePriority {
         if (priority == NOT_MATCH) return NOT_MATCH;
         if (limitedPriority < priority) return NOT_MATCH;
 
-//        Result<?, ? extends Exception> result;
-//        if (componentType.isPrimitive()) {
-//            Object array = UNBOXED_LUA_ARRAY_TRANSFORMERS.get(toType).apply(luaObj);
-//            if (array != null) {
-//                if (overwrite != null) {
-//                    overwrite.setParam(array);
-//                }
-//                return priority;
-//            } else {
-//                return NOT_MATCH;
-//            }
-//        } else {
-//            result = luaObj.asArray(componentType).justCast();
-//        }
-//        if (result.isError()) {
-//            return NOT_MATCH;
-//        } else if (overwrite != null) {
-//            overwrite.setParam(result.getValue());
-//        }
-
+        long luaPointer = luaObj.rawGetLuaPointer();
+        Object[] objects = LUA_ARRAY_CACHE.computeIfAbsent(luaPointer, ptr -> {
+            Object[] array = new Object[luaObj.length()];
+            luaObj.rawForEach(Integer.class, Object.class, (i, v) -> {
+                array[i] = v;
+                return false;
+            });
+            return array;
+        });
         Object array = componentType.isPrimitive() ?
-                UNBOXED_LUA_ARRAY_TRANSFORMERS.get(toType.hashCode()).apply(luaObj) :
-                luaArrayToObjectArray(luaObj, componentType);
+                OBJECT_ARRAY_TRANSFORMERS.get(toType.hashCode()).apply(objects) :
+                objectArrayToObjectArray(objects, componentType);
+
+//        Object array = componentType.isPrimitive() ?
+//                UNBOXED_LUA_ARRAY_TRANSFORMERS.get(toType.hashCode()).apply(luaObj) :
+//                luaArrayToObjectArray(luaObj, componentType);
+
+
         if (array == null) return NOT_MATCH;
         else if (overwrite != null) {
             overwrite.setParam(array);
@@ -234,6 +244,113 @@ public class ConvertablePriority {
         }
 
         return NOT_MATCH;
+    }
+
+    private static Object objectArrayToObjectArray(Object[] objects, Class<?> toType) {
+        Object array = Array.newInstance(toType, objects.length);
+        Object obj;
+        for (int i = 0; i < objects.length; i++) {
+            obj = objects[i];
+            if (obj == null) continue;
+            else if (toType.isInstance(obj)) Array.set(array, i, obj);
+            else return null;
+        }
+        return array;
+    }
+
+    private static byte[] objectArrayToByteArray(Object[] objects) {
+        byte[] array = new byte[objects.length];
+        Object obj;
+        for (int i = 0; i < objects.length; i++) {
+            obj = objects[i];
+            if (obj == null) return null;
+            else if (obj instanceof Number) array[i] = ((Number) obj).byteValue();
+            else return null;
+        }
+        return array;
+    }
+
+    private static short[] objectArrayToShortArray(Object[] objects) {
+        short[] array = new short[objects.length];
+        Object obj;
+        for (int i = 0; i < objects.length; i++) {
+            obj = objects[i];
+            if (obj == null) return null;
+            else if (obj instanceof Number) array[i] = ((Number) obj).shortValue();
+            else return null;
+        }
+        return array;
+    }
+
+    private static int[] objectArrayToIntArray(Object[] objects) {
+        int[] array = new int[objects.length];
+        Object obj;
+        for (int i = 0; i < objects.length; i++) {
+            obj = objects[i];
+            if (obj == null) return null;
+            else if (obj instanceof Number) array[i] = ((Number) obj).intValue();
+            else return null;
+        }
+        return array;
+    }
+
+    private static long[] objectArrayToLongArray(Object[] objects) {
+        long[] array = new long[objects.length];
+        Object obj;
+        for (int i = 0; i < objects.length; i++) {
+            obj = objects[i];
+            if (obj == null) return null;
+            else if (obj instanceof Number) array[i] = ((Number) obj).longValue();
+            else return null;
+        }
+        return array;
+    }
+
+    private static float[] objectArrayToFloatArray(Object[] objects) {
+        float[] array = new float[objects.length];
+        Object obj;
+        for (int i = 0; i < objects.length; i++) {
+            obj = objects[i];
+            if (obj == null) return null;
+            else if (obj instanceof Number) array[i] = ((Number) obj).floatValue();
+            else return null;
+        }
+        return array;
+    }
+
+    private static double[] objectArrayToDoubleArray(Object[] objects) {
+        double[] array = new double[objects.length];
+        Object obj;
+        for (int i = 0; i < objects.length; i++) {
+            obj = objects[i];
+            if (obj == null) return null;
+            else if (obj instanceof Number) array[i] = ((Number) obj).doubleValue();
+            else return null;
+        }
+        return array;
+    }
+
+    private static boolean[] objectArrayToBooleanArray(Object[] objects) {
+        boolean[] array = new boolean[objects.length];
+        Object obj;
+        for (int i = 0; i < objects.length; i++) {
+            obj = objects[i];
+            if (obj instanceof Boolean) array[i] = (boolean) obj;
+            else return null;
+        }
+        return array;
+    }
+
+    private static char[] objectArrayToCharArray(Object[] objects) {
+        char[] array = new char[objects.length];
+        Object obj;
+        for (int i = 0; i < objects.length; i++) {
+            obj = objects[i];
+            if (obj == null) return null;
+            else if (obj instanceof String) array[i] = ((String) obj).charAt(0);
+            else return null;
+        }
+        return array;
     }
 
     private static Object luaArrayToObjectArray(LuaArray luaObj, Class<?> toType) {

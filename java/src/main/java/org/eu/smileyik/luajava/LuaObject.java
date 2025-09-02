@@ -145,13 +145,15 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
      * @param index of the object on the lua stack
      */
     protected static Result<LuaObject, ? extends LuaException> create(LuaStateFacade luaState, int index) {
-        return Result.success(luaState.lock((L) -> {
-            if (L.isNil(index)) {
-                return null;
-            }
-            return InnerTypeHelper.createLuaObject(luaState, index)
-                    .orElseGet(() -> new LuaObject(luaState, index));
-        }));
+        return luaState.lock((L) -> {
+            return rawCreate(luaState, index);
+        });
+    }
+
+    protected static Result<LuaObject, ? extends LuaException> rawCreate(LuaStateFacade luaState, int index) {
+        return luaState.getLuaState().isNil(index) ? Result.success(null) :
+                Result.success(InnerTypeHelper.rawCreateLuaObject(luaState, index)
+                        .orElseGet(() -> new LuaObject(luaState, index)));
     }
 
     /**
@@ -418,18 +420,22 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
         return Objects.hash(getLuaPointer(), luaState);
     }
 
-    public synchronized long getLuaPointer() {
+    public long getLuaPointer() {
+        return luaState.lock(l -> {
+            return rawGetLuaPointer();
+        });
+    }
+
+    public long rawGetLuaPointer() {
         if (isClosed()) return 0;
         if (!gotLuaPointer) {
-            luaPointer = luaState.lock(l -> {
-                try {
-                    rawPush();
-                    return l.toPointer(-1);
-                }  finally {
-                    luaState.pop(1);
-                }
-            });
-            gotLuaPointer = true;
+            try {
+                rawPush();
+                return luaPointer = getLuaState().getLuaState().toPointer(-1);
+            }  finally {
+                luaState.getLuaState().pop(1);
+                gotLuaPointer = true;
+            }
         }
         return luaPointer;
     }

@@ -48,13 +48,17 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
 
     protected static LuaTable createTable(LuaStateFacade luaStateFacade, int index) {
         return luaStateFacade.lock(l -> {
-            Optional<Integer> result = isArrayTable(l, index);
-            if (result.isPresent()) {
-                return new LuaArray(luaStateFacade, index, result.get());
-            } else {
-                return new LuaTable(luaStateFacade, index);
-            }
+            return rawCreateTable(luaStateFacade, index);
         });
+    }
+
+    protected static LuaTable rawCreateTable(LuaStateFacade luaStateFacade, int index) {
+        Optional<Integer> result = isArrayTable(luaStateFacade.getLuaState(), index);
+        if (result.isPresent()) {
+            return new LuaArray(luaStateFacade, index, result.get());
+        } else {
+            return new LuaTable(luaStateFacade, index);
+        }
     }
 
     @Override

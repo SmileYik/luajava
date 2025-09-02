@@ -376,6 +376,17 @@ public class LuaStateFacade implements AutoCloseable {
     }
 
     /**
+     * Creates a reference to an object in the <code>index</code> position
+     * of the stack
+     *
+     * @param index position on the stack
+     * @return LuaObject
+     */
+    public Result<LuaObject, ? extends LuaException> rawGetLuaObject(int index) {
+        return LuaObject.rawCreate(this, index);
+    }
+
+    /**
      * Function that returns a Java Object equivalent to the one in the given
      * position of the Lua Stack.
      *
@@ -407,7 +418,7 @@ public class LuaStateFacade implements AutoCloseable {
                 return Result.success(luaState.toString(idx));
             case LUA_TFUNCTION:
             case LUA_TTABLE:
-                return getLuaObject(idx).justCast();
+                return rawGetLuaObject(idx).justCast();
             case LUA_TNUMBER:
                 return Result.success(luaState.toNumber(idx));
             case LUA_TUSERDATA:

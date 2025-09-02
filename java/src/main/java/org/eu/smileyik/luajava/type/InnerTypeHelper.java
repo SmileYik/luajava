@@ -38,22 +38,26 @@ public class InnerTypeHelper {
      */
     public static Optional<LuaObject> createLuaObject(LuaStateFacade luaState, int idx) {
         return luaState.lock(l -> {
-            int type = l.type(idx);
-            switch (type) {
-                case LuaType.FUNCTION:
-                    return Optional.of(new LuaFunction(luaState, idx));
-                case LuaType.TABLE:
-                    return Optional.of(LuaTable.createTable(luaState, idx));
-                case LuaType.BOOLEAN:
-                    return Optional.of(new LuaBoolean(luaState, idx));
-                case LuaType.NUMBER:
-                    return Optional.of(new LuaNumber(luaState, idx));
-                case LuaType.USERDATA:
-                    return Optional.of(new LuaUserdata(luaState, idx));
-                case LuaType.STRING:
-                    return Optional.of(new LuaString(luaState, idx));
-            }
-            return Optional.empty();
+            return rawCreateLuaObject(luaState, idx);
         });
+    }
+
+    public static Optional<LuaObject> rawCreateLuaObject(LuaStateFacade luaState, int idx) {
+        int type = luaState.getLuaState().type(idx);
+        switch (type) {
+            case LuaType.FUNCTION:
+                return Optional.of(new LuaFunction(luaState, idx));
+            case LuaType.TABLE:
+                return Optional.of(LuaTable.rawCreateTable(luaState, idx));
+            case LuaType.BOOLEAN:
+                return Optional.of(new LuaBoolean(luaState, idx));
+            case LuaType.NUMBER:
+                return Optional.of(new LuaNumber(luaState, idx));
+            case LuaType.USERDATA:
+                return Optional.of(new LuaUserdata(luaState, idx));
+            case LuaType.STRING:
+                return Optional.of(new LuaString(luaState, idx));
+        }
+        return Optional.empty();
     }
 }
