@@ -30,6 +30,11 @@ public class LuaInvokedMethod<T> {
     private T executable;
     private final Map<Integer, Object> overwriteParams;
 
+    public LuaInvokedMethod(T executable, LuaInvokedMethod<T> other) {
+        this.executable = executable;
+        this.overwriteParams = new HashMap<>(other.overwriteParams);
+    }
+
     public LuaInvokedMethod(LuaInvokedMethod<T> other) {
         this.executable = (other.executable instanceof Copiable) ?
                 (T) ((Copiable) other.executable).copy() : other.executable;

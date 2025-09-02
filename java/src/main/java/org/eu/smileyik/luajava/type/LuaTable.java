@@ -31,6 +31,7 @@ import org.eu.smileyik.luajava.exception.Result;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettable {
 
@@ -245,6 +246,49 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
             }
             return null;
         });
+    }
+
+    public <K, V> Result<Boolean, ? extends Exception> forEach(Class<K> kClass,
+                                                               Class<V> vClass, BiFunction<K, V, Boolean> function) {
+        return luaState.lock(l -> {
+            return rawForEach(kClass, vClass, function);
+        });
+    }
+
+    /**
+     * foreach table entry. it will stop if function return true or throw exception.
+     * @param kClass   Key type
+     * @param vClass   Value type
+     * @param function function, return true then stop loop
+     * @param <K> Key Type, Cannot be primitive type
+     * @param <V> Value Type, Cannot be primitive type
+     * @throws Exception any exception
+     * @return if break then return false
+     */
+    public <K, V> Result<Boolean, ? extends Exception> rawForEach(Class<K> kClass,
+                                                                  Class<V> vClass, BiFunction<K, V, Boolean> function) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
+        LuaState l = getLuaState().getLuaState();
+        int top = l.getTop();
+        try {
+            push();
+            l.pushNil();
+            while (l.next(-2) != 0) {
+                // i want out of loop if happened exception.
+                Result<Object, ? extends LuaException> keyResult = luaState.toJavaObject(-2);
+                if (keyResult.isError()) return keyResult.justCast();
+                Result<Object, ? extends LuaException> valueResult = luaState.toJavaObject(-1);
+                if (valueResult.isError()) return valueResult.justCast();
+                if (function.apply(kClass.cast(keyResult.getValue()), vClass.cast(valueResult.getValue()))) {
+                    return Result.success(false);
+                }
+                l.pop(1);
+            }
+            l.pop(1);
+        } finally {
+            l.setTop(top);
+        }
+        return Result.success(true);
     }
 
     /**

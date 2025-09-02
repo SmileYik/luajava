@@ -32,6 +32,7 @@ import org.eu.smileyik.luajava.exception.Result;
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -298,6 +299,30 @@ public class LuaArray extends LuaTable {
             }
             return null;
         });
+    }
+
+    @Override
+    public <K, V> Result<Boolean, ? extends Exception> rawForEach(Class<K> kClass,
+                                                                  Class<V> vClass, BiFunction<K, V, Boolean> function) {
+        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
+        LuaState l = getLuaState().getLuaState();
+        int top = l.getTop();
+        try {
+            push();
+            for (int i = 1; i <= len; i++) {
+                l.rawGetI(-1, i);
+                Result<Object, ? extends LuaException> valueResult = luaState.toJavaObject(-1);
+                if (valueResult.isError()) return valueResult.justCast();
+                if (function.apply(kClass.cast(i - 1), vClass.cast(valueResult.getValue()))) {
+                    return Result.success(false);
+                }
+                l.pop(1);
+            }
+            l.pop(1);
+        } finally {
+            l.setTop(top);
+        }
+        return Result.success(true);
     }
 
     public <V> Result<Void, ? extends Exception> forEach(Class<V> vClass, BiConsumer<Integer, V> consumer) {

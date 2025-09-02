@@ -28,9 +28,11 @@ import org.eu.smileyik.luajava.type.LuaArray;
 import org.eu.smileyik.luajava.util.BoxedTypeHelper;
 import org.eu.smileyik.luajava.util.ParamRef;
 
+import java.lang.reflect.Array;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 public class ConvertablePriority {
     public static final byte NOT_MATCH  = -1;
@@ -65,50 +67,61 @@ public class ConvertablePriority {
 
     public static final byte ANY_TO_OBJECT = 70;
 
-    public static final Map<Class<?>, Byte> DOUBLE_CONVERT_PRIMITIVE;
-    public static final Map<Class<?>, Byte> DOUBLE_ARRAY_CONVERT_PRIMITIVE;
+    public static final Map<Integer, Byte> DOUBLE_CONVERT_PRIMITIVE;
+    public static final Map<Integer, Byte> DOUBLE_ARRAY_CONVERT_PRIMITIVE;
+    public static final Map<Integer, Function<LuaArray, ?>> UNBOXED_LUA_ARRAY_TRANSFORMERS;
 
     static {
-        Map<Class<?>, Byte> doubleConvert = new HashMap<>();
-        doubleConvert.put(Double.TYPE, DOUBLE_TO_DOUBLE);
-        doubleConvert.put(Double.class, DOUBLE_TO_DOUBLE);
-        doubleConvert.put(Float.TYPE, DOUBLE_TO_FLOAT);
-        doubleConvert.put(Long.TYPE, DOUBLE_TO_LONG);
-        doubleConvert.put(Integer.TYPE, DOUBLE_TO_INT);
-        doubleConvert.put(Short.TYPE, DOUBLE_TO_SHORT);
-        doubleConvert.put(Byte.TYPE, DOUBLE_TO_BYTE);
-        doubleConvert.put(Float.class, DOUBLE_TO_FLOAT);
-        doubleConvert.put(Long.class, DOUBLE_TO_LONG);
-        doubleConvert.put(Integer.class, DOUBLE_TO_INT);
-        doubleConvert.put(Short.class, DOUBLE_TO_SHORT);
-        doubleConvert.put(Byte.class, DOUBLE_TO_BYTE);
+        Map<Integer, Byte> doubleConvert = new HashMap<>();
+        doubleConvert.put(Double.TYPE.hashCode(), DOUBLE_TO_DOUBLE);
+        doubleConvert.put(Double.class.hashCode(), DOUBLE_TO_DOUBLE);
+        doubleConvert.put(Float.TYPE.hashCode(), DOUBLE_TO_FLOAT);
+        doubleConvert.put(Long.TYPE.hashCode(), DOUBLE_TO_LONG);
+        doubleConvert.put(Integer.TYPE.hashCode(), DOUBLE_TO_INT);
+        doubleConvert.put(Short.TYPE.hashCode(), DOUBLE_TO_SHORT);
+        doubleConvert.put(Byte.TYPE.hashCode(), DOUBLE_TO_BYTE);
+        doubleConvert.put(Float.class.hashCode(), DOUBLE_TO_FLOAT);
+        doubleConvert.put(Long.class.hashCode(), DOUBLE_TO_LONG);
+        doubleConvert.put(Integer.class.hashCode(), DOUBLE_TO_INT);
+        doubleConvert.put(Short.class.hashCode(), DOUBLE_TO_SHORT);
+        doubleConvert.put(Byte.class.hashCode(), DOUBLE_TO_BYTE);
         DOUBLE_CONVERT_PRIMITIVE = Collections.unmodifiableMap(doubleConvert);
 
         doubleConvert.clear();
-        doubleConvert.put(Double.TYPE, ARRAY_DOUBLE_TO_DOUBLE);
-        doubleConvert.put(Double.class, ARRAY_DOUBLE_TO_DOUBLE);
-        doubleConvert.put(Float.TYPE, ARRAY_DOUBLE_TO_FLOAT);
-        doubleConvert.put(Long.TYPE, ARRAY_DOUBLE_TO_LONG);
-        doubleConvert.put(Integer.TYPE, ARRAY_DOUBLE_TO_INT);
-        doubleConvert.put(Short.TYPE, ARRAY_DOUBLE_TO_SHORT);
-        doubleConvert.put(Byte.TYPE, ARRAY_DOUBLE_TO_BYTE);
-        doubleConvert.put(Float.class, ARRAY_DOUBLE_TO_FLOAT);
-        doubleConvert.put(Long.class, ARRAY_DOUBLE_TO_LONG);
-        doubleConvert.put(Integer.class, ARRAY_DOUBLE_TO_INT);
-        doubleConvert.put(Short.class, ARRAY_DOUBLE_TO_SHORT);
-        doubleConvert.put(Byte.class, ARRAY_DOUBLE_TO_BYTE);
-
+        doubleConvert.put(Double.TYPE.hashCode(), ARRAY_DOUBLE_TO_DOUBLE);
+        doubleConvert.put(Double.class.hashCode(), ARRAY_DOUBLE_TO_DOUBLE);
+        doubleConvert.put(Float.TYPE.hashCode(), ARRAY_DOUBLE_TO_FLOAT);
+        doubleConvert.put(Long.TYPE.hashCode(), ARRAY_DOUBLE_TO_LONG);
+        doubleConvert.put(Integer.TYPE.hashCode(), ARRAY_DOUBLE_TO_INT);
+        doubleConvert.put(Short.TYPE.hashCode(), ARRAY_DOUBLE_TO_SHORT);
+        doubleConvert.put(Byte.TYPE.hashCode(), ARRAY_DOUBLE_TO_BYTE);
+        doubleConvert.put(Float.class.hashCode(), ARRAY_DOUBLE_TO_FLOAT);
+        doubleConvert.put(Long.class.hashCode(), ARRAY_DOUBLE_TO_LONG);
+        doubleConvert.put(Integer.class.hashCode(), ARRAY_DOUBLE_TO_INT);
+        doubleConvert.put(Short.class.hashCode(), ARRAY_DOUBLE_TO_SHORT);
+        doubleConvert.put(Byte.class.hashCode(), ARRAY_DOUBLE_TO_BYTE);
         DOUBLE_ARRAY_CONVERT_PRIMITIVE = Collections.unmodifiableMap(doubleConvert);
+
+        Map<Integer, Function<LuaArray, ?>> unboxedLuaArrayTransformers = new HashMap<>();
+        unboxedLuaArrayTransformers.put(int[].class.hashCode(), ConvertablePriority::luaArrayToIntArray);
+        unboxedLuaArrayTransformers.put(long[].class.hashCode(), ConvertablePriority::luaArrayToLongArray);
+        unboxedLuaArrayTransformers.put(float[].class.hashCode(), ConvertablePriority::luaArrayToFloatArray);
+        unboxedLuaArrayTransformers.put(boolean[].class.hashCode(), ConvertablePriority::luaArrayToBooleanArray);
+        unboxedLuaArrayTransformers.put(char[].class.hashCode(), ConvertablePriority::luaArrayToCharArray);
+        unboxedLuaArrayTransformers.put(short[].class.hashCode(), ConvertablePriority::luaArrayToShortArray);
+        unboxedLuaArrayTransformers.put(byte[].class.hashCode(), ConvertablePriority::luaArrayToByteArray);
+        unboxedLuaArrayTransformers.put(double[].class.hashCode(), ConvertablePriority::luaArrayToDoubleArray);
+        UNBOXED_LUA_ARRAY_TRANSFORMERS = Collections.unmodifiableMap(unboxedLuaArrayTransformers);
     }
 
     public static byte double2TypePriority(Class<?> target) {
         if (target == null) return NOT_MATCH;
-        return DOUBLE_CONVERT_PRIMITIVE.getOrDefault(target, NOT_MATCH);
+        return DOUBLE_CONVERT_PRIMITIVE.getOrDefault(target.hashCode(), NOT_MATCH);
     }
 
     public static byte arrayPriority(Class<?> componentType) {
         if (componentType == null) return NOT_MATCH;
-        Byte b = DOUBLE_ARRAY_CONVERT_PRIMITIVE.get(componentType);
+        Byte b = DOUBLE_ARRAY_CONVERT_PRIMITIVE.get(componentType.hashCode());
         if (b != null) return b;
         if (componentType.isPrimitive()) {
             return ARRAY_TO_PRIMITIVE_ARRAY;
@@ -125,17 +138,34 @@ public class ConvertablePriority {
         if (priority == NOT_MATCH) return NOT_MATCH;
         if (limitedPriority < priority) return NOT_MATCH;
 
-        Result<?, ? extends Exception> result;
-        if (componentType.isPrimitive()) {
-            result = luaObj.asPrimitiveArray(toType);
-        } else {
-            result = luaObj.asArray(componentType).justCast();
+//        Result<?, ? extends Exception> result;
+//        if (componentType.isPrimitive()) {
+//            Object array = UNBOXED_LUA_ARRAY_TRANSFORMERS.get(toType).apply(luaObj);
+//            if (array != null) {
+//                if (overwrite != null) {
+//                    overwrite.setParam(array);
+//                }
+//                return priority;
+//            } else {
+//                return NOT_MATCH;
+//            }
+//        } else {
+//            result = luaObj.asArray(componentType).justCast();
+//        }
+//        if (result.isError()) {
+//            return NOT_MATCH;
+//        } else if (overwrite != null) {
+//            overwrite.setParam(result.getValue());
+//        }
+
+        Object array = componentType.isPrimitive() ?
+                UNBOXED_LUA_ARRAY_TRANSFORMERS.get(toType.hashCode()).apply(luaObj) :
+                luaArrayToObjectArray(luaObj, componentType);
+        if (array == null) return NOT_MATCH;
+        else if (overwrite != null) {
+            overwrite.setParam(array);
         }
-        if (result.isError()) {
-            return NOT_MATCH;
-        } else if (overwrite != null) {
-            overwrite.setParam(result.getValue());
-        }
+
         return priority;
     }
 
@@ -204,5 +234,121 @@ public class ConvertablePriority {
         }
 
         return NOT_MATCH;
+    }
+
+    private static Object luaArrayToObjectArray(LuaArray luaObj, Class<?> toType) {
+        Object array = Array.newInstance(toType, luaObj.length());
+        Result<Boolean, ? extends Exception> result = luaObj.rawForEach(Integer.class, Object.class, (k, v) -> {
+            if (v == null || toType.isInstance(v)) {
+                Array.set(array, k, v);
+                return false;
+            }
+            return true;
+        });
+        return result.isSuccess() && result.getValue() ? array : null;
+    }
+
+    private static byte[] luaArrayToByteArray(LuaArray luaArray) {
+        byte[] array = new byte[luaArray.length()];
+        Result<Boolean, ? extends Exception> result = luaArray.rawForEach(Integer.class, Object.class, (k, v) -> {
+            if (v == null) return true;
+            else if (v instanceof Number) {
+                array[k] = ((Number) v).byteValue();
+                return false;
+            }
+            return true;
+        });
+        return result.isSuccess() && result.getValue() ? array : null;
+    }
+
+    private static short[] luaArrayToShortArray(LuaArray luaArray) {
+        short[] array = new short[luaArray.length()];
+        Result<Boolean, ? extends Exception> result = luaArray.rawForEach(Integer.class, Object.class, (k, v) -> {
+            if (v == null) return true;
+            else if (v instanceof Number) {
+                array[k] = ((Number) v).shortValue();
+                return false;
+            }
+            return true;
+        });
+        return result.isSuccess() && result.getValue() ? array : null;
+    }
+
+    private static int[] luaArrayToIntArray(LuaArray luaArray) {
+        int[] array = new int[luaArray.length()];
+        Result<Boolean, ? extends Exception> result = luaArray.rawForEach(Integer.class, Object.class, (k, v) -> {
+            if (v == null) return true;
+            else if (v instanceof Number) {
+                array[k] = ((Number) v).intValue();
+                return false;
+            }
+            return true;
+        });
+        return result.isSuccess() && result.getValue() ? array : null;
+    }
+
+    private static long[] luaArrayToLongArray(LuaArray luaArray) {
+        long[] array = new long[luaArray.length()];
+        Result<Boolean, ? extends Exception> result = luaArray.rawForEach(Integer.class, Object.class, (k, v) -> {
+            if (v == null) return true;
+            else if (v instanceof Number) {
+                array[k] = ((Number) v).longValue();
+                return false;
+            }
+            return true;
+        });
+        return result.isSuccess() && result.getValue() ? array : null;
+    }
+
+    private static double[] luaArrayToDoubleArray(LuaArray luaArray) {
+        double[] array = new double[luaArray.length()];
+        Result<Boolean, ? extends Exception> result = luaArray.rawForEach(Integer.class, Object.class, (k, v) -> {
+            if (v == null) return true;
+            else if (v instanceof Number) {
+                array[k] = ((Number) v).doubleValue();
+                return false;
+            }
+            return true;
+        });
+        return result.isSuccess() && result.getValue() ? array : null;
+    }
+
+    private static float[] luaArrayToFloatArray(LuaArray luaArray) {
+        float[] array = new float[luaArray.length()];
+        Result<Boolean, ? extends Exception> result = luaArray.rawForEach(Integer.class, Object.class, (k, v) -> {
+            if (v == null) return true;
+            else if (v instanceof Number) {
+                array[k] = ((Number) v).floatValue();
+                return false;
+            }
+            return true;
+        });
+        return result.isSuccess() && result.getValue() ? array : null;
+    }
+
+    private static boolean[] luaArrayToBooleanArray(LuaArray luaArray) {
+        boolean[] array = new boolean[luaArray.length()];
+        Result<Boolean, ? extends Exception> result = luaArray.rawForEach(Integer.class, Object.class, (k, v) -> {
+            if (v == null) return true;
+            else if (v instanceof Boolean) {
+                array[k] = (Boolean) v;
+                return false;
+            }
+            return true;
+        });
+        return result.isSuccess() && result.getValue() ? array : null;
+    }
+
+    private static char[] luaArrayToCharArray(LuaArray luaArray) {
+        char[] array = new char[luaArray.length()];
+        Result<Boolean, ? extends Exception> result = luaArray.rawForEach(Integer.class, Object.class, (k, v) -> {
+            if (v == null) return true;
+            else if (v instanceof String) {
+                array[k] = ((String) v).charAt(0);
+                return false;
+            }
+            return true;
+        });
+        return result.isSuccess() && result.getValue() ? array : null;
     }
 }
