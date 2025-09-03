@@ -71,7 +71,8 @@ public class LuaArray extends LuaTable {
 
     @Override
     public String toString() {
-        return asDeepList(Object.class).replaceErrorString(Object::toString).toString();
+        Result<List<Object>, ? extends Exception> result = asDeepList(Object.class);
+        return result.isError() ? result.toString() : result.getValue().toString();
     }
 
     @Override
@@ -304,16 +305,15 @@ public class LuaArray extends LuaTable {
     @Override
     public <K, V> Result<Boolean, ? extends Exception> rawForEach(Class<K> kClass,
                                                                   Class<V> vClass, BiFunction<K, V, Boolean> function) {
-        if (isClosed()) return Result.failure(new LuaException("This lua state is closed!"));
         LuaState l = getLuaState().getLuaState();
         int top = l.getTop();
         try {
-            push();
+            rawPush();
             for (int i = 1; i <= len; i++) {
                 l.rawGetI(-1, i);
-                Result<Object, ? extends LuaException> valueResult = luaState.toJavaObject(-1);
+                Result<Object, ? extends LuaException> valueResult = luaState.rawToJavaObject(-1);
                 if (valueResult.isError()) return valueResult.justCast();
-                if (function.apply(kClass.cast(i - 1), vClass.cast(valueResult.getValue()))) {
+                if (function.apply((K) (Integer) (i - 1), (V) valueResult.getValue())) {
                     return Result.success(false);
                 }
                 l.pop(1);

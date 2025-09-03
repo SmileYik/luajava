@@ -107,6 +107,11 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
         return false;
     }
 
+    @Override
+    public boolean isLuaPointerObject() {
+        return true;
+    }
+
     /**
      * force cast to LuaTable.
      * @return if this instance is not LuaArray then will return itself.

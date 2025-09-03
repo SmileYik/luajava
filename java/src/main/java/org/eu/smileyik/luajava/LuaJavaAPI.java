@@ -193,13 +193,8 @@ public final class LuaJavaAPI {
         method = methodWrapper.getExecutable();
         Object ret;
         try {
-            boolean isStatic = Modifier.isStatic(method.getModifiers());
-            if (!method.canAccess(isStatic ? null : obj)) {
-                method.setAccessible(true);
-            }
-
-            //if (obj instanceof Class)
-            if (isStatic) {
+            method.setAccessible(true);
+            if (Modifier.isStatic(method.getModifiers())) {
                 ret = methodWrapper.invoke(null, objs);
             } else {
                 ret = methodWrapper.invoke(obj, objs);
@@ -285,10 +280,6 @@ public final class LuaJavaAPI {
         }
         // checkField method already checked the obj can access this field or not.
         Field field = fieldAccessor.getField();
-        if (!field.canAccess(Modifier.isStatic(field.getModifiers()) ? null : obj)) {
-            field.setAccessible(true);
-        }
-
         LuaState L = luaStateFacade.getLuaState();
         Class<?> type = field.getType();
         Result<Object, Object> setObjRet = compareTypes(luaStateFacade, L, type, 3);
@@ -296,6 +287,7 @@ public final class LuaJavaAPI {
             throw new LuaException("Invalid type.");
         }
         try {
+            field.setAccessible(true);
             fieldAccessor.set(obj, setObjRet.getValue());
         } catch (IllegalAccessException e) {
             throw new LuaException("Field not accessible.", e);
@@ -422,16 +414,8 @@ public final class LuaJavaAPI {
                 false, false, isStatic, luaStateFacade.isIgnoreNotPublic());
         if (fieldAccessor == null) return 0;
         try {
-            Field field = fieldAccessor.getField();
-            Object ret;
-            if (field.canAccess(Modifier.isStatic(field.getModifiers()) ? null : obj)) {
-                ret = fieldAccessor.get(obj);
-            } else if (!luaStateFacade.isIgnoreNotPublic()) {
-                field.setAccessible(true);
-                ret = fieldAccessor.get(obj);
-            } else {
-                return 0;
-            }
+            fieldAccessor.getField().setAccessible(true);
+            Object ret = fieldAccessor.get(obj);
             luaStateFacade.rawPushObjectValue(ret).justThrow(LuaException.class);
             return 1;
         } catch (IllegalAccessException ignore) { }

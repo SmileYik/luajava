@@ -128,14 +128,12 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
      */
     protected LuaObject(LuaStateFacade luaState, int index) {
         this.luaState = luaState;
-        this.cleanTask = luaState.lock(L -> {
-            L.pushValue(index);
-            ref = L.Lref(LuaState.LUA_REGISTRYINDEX);
-
-            CleanTask cleanTask = new CleanTask(luaState, ref);
-            ResourceCleaner.getInstance().register(this, cleanTask);
-            return cleanTask;
-        });
+        LuaState L = luaState.getLuaState();
+        L.pushValue(index);
+        ref = L.Lref(LuaState.LUA_REGISTRYINDEX);
+        CleanTask cleanTask = new CleanTask(luaState, ref);
+        ResourceCleaner.getInstance().register(this, cleanTask);
+        this.cleanTask = cleanTask;
     }
 
     /**
@@ -288,7 +286,6 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
 
     @Override
     public void rawPush() {
-        if (isClosed()) return;
         luaState.getLuaState().rawGetI(LuaState.LUA_REGISTRYINDEX, ref);
     }
 
@@ -421,13 +418,13 @@ public class LuaObject implements ILuaObject, IInnerLuaObject, AutoCloseable {
     }
 
     public long getLuaPointer() {
+        if (isClosed()) return 0;
         return luaState.lock(l -> {
             return rawGetLuaPointer();
         });
     }
 
     public long rawGetLuaPointer() {
-        if (isClosed()) return 0;
         if (!gotLuaPointer) {
             try {
                 rawPush();

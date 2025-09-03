@@ -49,4 +49,9 @@ public class LuaFunction extends LuaObject implements ILuaCallable {
     public int type() {
         return LuaType.FUNCTION;
     }
+
+    @Override
+    public boolean isLuaPointerObject() {
+        return true;
+    }
 }
