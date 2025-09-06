@@ -812,13 +812,11 @@ JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1toBoolean(
  *      Lua Exported Function
  ************************************************************************/
 
-JNIEXPORT jstring JNICALL Java_org_eu_smileyik_luajava_LuaState__1toString(
+JNIEXPORT jobject JNICALL Java_org_eu_smileyik_luajava_LuaState__1toString(
     JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
   lua_State *L = getStateFromCPtr(env, cptr);
-
   const char *str = lua_tostring(L, idx);
-
-  return (*env)->NewStringUTF(env, str);
+  return (*env)->NewDirectByteBuffer(env, str, strlen(str));
 }
 
 /************************************************************************
