@@ -1,4 +1,4 @@
-package org.eu.smileyik.luajava.test;
+package org.eu.smileyik.luajava.test2;
 
 import org.eu.smileyik.luajava.BaseTest;
 import org.eu.smileyik.luajava.LuaStateFacade;
@@ -41,7 +41,7 @@ public class StringTest extends BaseTest {
     @Test
     public void testFile() {
         LuaStateFacade facade = newLuaState();
-        facade.evalFile("test/stringtest.lua");
+        facade.evalFile("test/2/stringtest.lua");
         assertEquals(a, facade.getGlobal("a").getOrSneakyThrow());
         assertEquals(b, facade.getGlobal("b").getOrSneakyThrow());
         assertEquals(c, facade.getGlobal("c").getOrSneakyThrow());

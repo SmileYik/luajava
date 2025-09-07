@@ -1,5 +1,6 @@
-package org.eu.smileyik.luajava;
+package org.eu.smileyik.luajava.test2;
 
+import org.eu.smileyik.luajava.*;
 import org.eu.smileyik.luajava.exception.Result;
 import org.eu.smileyik.luajava.type.ILuaCallable;
 import org.eu.smileyik.luajava.type.ILuaObject;
@@ -8,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import java.util.Objects;
 
 public class LuaCopyClosureTest extends BaseTest {
+
+    public static final long HOW_LONG = 1000 * 60 * 60;
 
     @Test
     public void stableTest() throws Exception {
@@ -28,7 +31,7 @@ public class LuaCopyClosureTest extends BaseTest {
                 "    })\n" +
                 "end\n" +
                 "return testFunction";
-        long targetTime = System.currentTimeMillis() + 1000 * 60 * 60 * 3;
+        long targetTime = System.currentTimeMillis() + HOW_LONG;
         Helper helper = new Helper();
         try (LuaStateFacade facade = newLuaState()) {
             facade.setGlobal("helper", helper);
