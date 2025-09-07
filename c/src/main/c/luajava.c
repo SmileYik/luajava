@@ -71,7 +71,7 @@
 static void set_info(lua_State *L) {
     lua_pushliteral(L, "_COPYRIGHT");
     lua_pushliteral(L, "Copyright (C) 2003-2007 Kepler Project\n"
-                                         "Copyright (c) 2025 Smile Yik");
+                        "Copyright (c) 2025 Smile Yik");
     lua_settable(L, -3);
     lua_pushliteral(L, "_DESCRIPTION");
     lua_pushliteral(L, "LuaJava is a script tool for Java");
@@ -182,17 +182,18 @@ JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState_luajava_1open(
  ************************************************************************/
 
 JNIEXPORT jobject JNICALL
-Java_org_eu_smileyik_luajava_LuaState__1getObjectFromUserdata(JNIEnv *env,
-                                                                                                                                jobject jobj,
-                                                                                                                                jobject cptr,
-                                                                                                                                jint index) {
+Java_org_eu_smileyik_luajava_LuaState__1getObjectFromUserdata(
+    JNIEnv *env,
+    jobject jobj,
+    jobject cptr,
+    jint index
+) {
     /* Get luastate */
     lua_State *L = getStateFromCPtr(env, cptr);
     jobject *obj;
 
     if (!isJavaObject(L, index)) {
-        (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/Exception"),
-                                         "Index is not a java object");
+        (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/Exception"), "Index is not a java object");
         return NULL;
     }
 
@@ -259,9 +260,10 @@ JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1pushJavaArray(
 
 JNIEXPORT void JNICALL
 Java_org_eu_smileyik_luajava_LuaState__1pushJavaFunction(JNIEnv *env,
-                                                                                                                     jobject jobj,
-                                                                                                                     jobject cptr,
-                                                                                                                     jobject obj) {
+    jobject jobj,
+    jobject cptr,
+    jobject obj
+) {
     /* Get luastate */
     lua_State *L = getStateFromCPtr(env, cptr);
 
@@ -303,9 +305,9 @@ Java_org_eu_smileyik_luajava_LuaState__1pushJavaFunction(JNIEnv *env,
 
 JNIEXPORT jboolean JNICALL
 Java_org_eu_smileyik_luajava_LuaState__1isJavaFunction(JNIEnv *env,
-                                                                                                                 jobject jobj,
-                                                                                                                 jobject cptr,
-                                                                                                                 jint idx) {
+                                                        jobject jobj,
+                                                        jobject cptr,
+                                                        jint idx) {
     /* Get luastate */
     lua_State *L = getStateFromCPtr(env, cptr);
     jobject *obj;
@@ -812,11 +814,61 @@ JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1toBoolean(
  *      Lua Exported Function
  ************************************************************************/
 
-JNIEXPORT jobject JNICALL Java_org_eu_smileyik_luajava_LuaState__1toString(
-        JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
+JNIEXPORT jstring JNICALL Java_org_eu_smileyik_luajava_LuaState__1toString(
+    JNIEnv *env, jobject jobj, jobject cptr, jint idx
+) {
     lua_State *L = getStateFromCPtr(env, cptr);
     const char *str = lua_tostring(L, idx);
-    return (*env)->NewDirectByteBuffer(env, str, strlen(str));
+    size_t strLen = strlen(str);
+    jchar *to = (jchar *) malloc(sizeof(jchar) * (strLen + 1));
+    if (to == NULL) {
+        return (*env)->NewStringUTF(env, str);
+    }
+    size_t toIdx = 0;
+    const unsigned char *ptr = (const unsigned char *) str;
+    unsigned int cp;
+    while (*ptr) {
+        cp = 0;
+        if ((*ptr & 0x80) == 0) {
+            cp = *ptr;
+            ptr += 1;
+        } else if ((*ptr & 0xE0) == 0xC0) {
+            if (ptr + 1 < (const unsigned char *) str + strLen) {
+                cp = ((*ptr & 0x1F) << 6) | (ptr[1] & 0x3F);
+                ptr += 2;
+            }
+        } else if ((*ptr & 0xF0) == 0xE0) {
+            if (ptr + 2 < (const unsigned char *) str + strLen) {
+                cp = ((*ptr & 0x0F) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
+                ptr += 3;
+            }
+        } else if ((*ptr & 0xF8) == 0xF0) {
+            if (ptr + 3 < (const unsigned char *) str + strLen) {
+                cp = ((*ptr & 0x07) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
+                ptr += 4;
+            }
+        } else {
+            ptr++;
+            continue;
+        }
+
+        if (cp) {
+            if (cp <= 0xFFFF) {
+                // BMP character
+                to[toIdx++] = (jchar) cp;
+            } else {
+                // Non-BMP character, needs surrogate pair
+                cp -= 0x10000;
+                to[toIdx++] = (jchar) (0xD800 + (cp >> 10));
+                to[toIdx++] = (jchar)(0xDC00 + (cp & 0x3FF));
+            }
+        } else {
+            ptr++;
+        }
+    }
+    jstring jstr = (*env)->NewString(env, to, toIdx);
+    free(to);
+    return jstr;
 }
 
 /************************************************************************
@@ -1407,9 +1459,9 @@ JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1LargError(
 
 JNIEXPORT jstring JNICALL
 Java_org_eu_smileyik_luajava_LuaState__1LcheckString(JNIEnv *env,
-                                                                                                             jobject jobj,
-                                                                                                             jobject cptr,
-                                                                                                             jint numArg) {
+                                                    jobject jobj,
+                                                    jobject cptr,
+                                                    jint numArg) {
     lua_State *L = getStateFromCPtr(env, cptr);
     const char *res;
 
@@ -1446,9 +1498,9 @@ JNIEXPORT jstring JNICALL Java_org_eu_smileyik_luajava_LuaState__1LoptString(
 
 JNIEXPORT jdouble JNICALL
 Java_org_eu_smileyik_luajava_LuaState__1LcheckNumber(JNIEnv *env,
-                                                                                                             jobject jobj,
-                                                                                                             jobject cptr,
-                                                                                                             jint numArg) {
+                                                    jobject jobj,
+                                                    jobject cptr,
+                                                    jint numArg) {
     lua_State *L = getStateFromCPtr(env, cptr);
 
     return (jdouble)luaL_checknumber(L, (int)numArg);
@@ -1604,21 +1656,21 @@ JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1LunRef(
  *      Lua Exported Function
  ************************************************************************/
 
- JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1LgetN
+JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1LgetN
     (JNIEnv * env , jobject jobj , jobject cptr , jint t)
 {
      lua_State * L = getStateFromCPtr( env , cptr );
      // luaL_getn 方法在 Lua 5.1 中不存在
      // 可以设置或读取表中的n字段.
-     if (!lua_istable( L, (int) t )) {
-         lua_pushstring(L, "Target object type is not table!"); \
-         lua_error(L);
-     }
-     lua_getfield( L , (int) t, "n" );
-     lua_Integer len = lua_tointeger( L , (int) t );
-     lua_pop( L, 1 );
+    if (!lua_istable( L, (int) t )) {
+        lua_pushstring(L, "Target object type is not table!"); \
+        lua_error(L);
+    }
+    lua_getfield( L , (int) t, "n" );
+    lua_Integer len = lua_tointeger( L , (int) t );
+    lua_pop( L, 1 );
 
-     return ( jint ) len;
+    return ( jint ) len;
 }
 
 /************************************************************************
@@ -1627,16 +1679,16 @@ JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1LunRef(
  ************************************************************************/
 
 
- JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1LsetN
+JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1LsetN
     (JNIEnv * env , jobject jobj , jobject cptr , jint t , jint n)
 {
      lua_State * L = getStateFromCPtr( env , cptr );
      // luaL_setn 方法在 Lua 5.1 中不存在
      // 可以设置或读取表中的n字段.
-     lua_pushstring( L , "n" );
-     lua_pushinteger( L, (int) n );
-     if ( t < 0 ) t -= 2;
-     lua_settable( L , t );
+    lua_pushstring( L , "n" );
+    lua_pushinteger( L, (int) n );
+    if ( t < 0 ) t -= 2;
+    lua_settable( L , t );
 }
 
 /************************************************************************

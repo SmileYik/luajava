@@ -60,10 +60,10 @@
  ************************************************************************/
 
 JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1getGcCount(
-    JNIEnv *env, jobject jobj, jobject cptr) {
-  lua_State *L = getStateFromCPtr(env, cptr);
+        JNIEnv *env, jobject jobj, jobject cptr) {
+    lua_State *L = getStateFromCPtr(env, cptr);
 
-  return (jint)lua_getgccount(L);
+    return (jint)lua_getgccount(L);
 }
 
 /*
@@ -72,8 +72,8 @@ JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1getGcCount(
  * Signature: (Lorg/eu/smileyik/luajava/CPtr;)V
  */
 JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1getGlobalTable(
-    JNIEnv *env, jobject jobj, jobject cptr) {
-  lua_State *L = getStateFromCPtr(env, cptr);
-  if (!L) return;
-  lua_pushvalue(L, LUA_GLOBALSINDEX);
+        JNIEnv *env, jobject jobj, jobject cptr) {
+    lua_State *L = getStateFromCPtr(env, cptr);
+    if (!L) return;
+    lua_pushvalue(L, LUA_GLOBALSINDEX);
 }

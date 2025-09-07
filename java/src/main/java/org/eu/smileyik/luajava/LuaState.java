@@ -49,11 +49,8 @@ package org.eu.smileyik.luajava;
 
 import org.eu.smileyik.luajava.debug.LuaDebug;
 
-import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.eu.smileyik.luajava.Utf8Reader.readUTF8OrMUTF8;
 
 /**
  * LuaState if the main class of LuaJava for the Java developer.
@@ -328,7 +325,7 @@ public class LuaState {
 
     private native int _toBoolean(CPtr ptr, int idx);
 
-    private native ByteBuffer _toString(CPtr ptr, int idx);
+    private native String _toString(CPtr ptr, int idx);
 
     private native long _toPointer(CPtr ptr, int idx);
 
@@ -762,7 +759,7 @@ public class LuaState {
     }
 
     public String toString(int idx) {
-        return readUTF8OrMUTF8(_toString(luaState, idx));
+        return _toString(luaState, idx);
     }
 
     public long toPointer(int idx) {
