@@ -59,7 +59,9 @@ public class LoadLibrary {
         }
         for (File file : Objects.requireNonNull(sharedDir.listFiles())) {
             if (file.isFile()) {
-                System.load(file.getAbsolutePath());
+                if (file.getName().endsWith(".dll") || file.getName().endsWith(".so") || file.getName().endsWith(".dylib")) {
+                    System.load(file.getAbsolutePath());
+                }
             }
         }
     }
