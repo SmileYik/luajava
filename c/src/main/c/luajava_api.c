@@ -1325,13 +1325,14 @@ int isLuaArray(lua_State *L, int idx) {
     if (idx < 0) idx -= 1;
     int i = 0;
     lua_pushnil(L);
-    while (lua_next(L, -idx)) {
-        if (!lua_isinteger(L, -2)) {
+    while (lua_next(L, idx)) {
+        if (!lua_isnumber(L, -2)) {
             lua_pop(L, 2);
             return -1;
         }
-        lua_Integer idx = lua_tointeger(L, -2);
-        if (idx <= i) {
+        lua_Number number = lua_tonumber(L, -2);
+        lua_Integer idx = (lua_Integer) number;
+        if (idx != number || idx <= i) {
             lua_pop(L, 2);
             return -1;
         }
