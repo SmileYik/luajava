@@ -96,7 +96,7 @@ public class SimpleReflectUtil implements ReflectUtil {
             return null;
         });
 
-        if (target != null) {
+        if (target != null && target != EMPTY) {
             Field field = (Field) target;
             field.setAccessible(true);
             ReflectField reflectField = new ReflectField((Field) target);

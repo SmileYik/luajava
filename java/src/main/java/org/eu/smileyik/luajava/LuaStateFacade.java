@@ -299,7 +299,11 @@ public class LuaStateFacade implements AutoCloseable {
                 break;
         }
         if (luaState.isString(-1)) {
-            ret = ret == null ? luaState.toString(-1) : (ret + luaState.toString(-1));
+            try {
+                ret = ret == null ? luaState.toString(-1) : (ret + luaState.toString(-1));
+            } finally {
+                luaState.pop(1);
+            }
         }
         return ret;
     }

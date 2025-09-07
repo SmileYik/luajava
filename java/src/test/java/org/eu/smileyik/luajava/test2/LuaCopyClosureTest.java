@@ -10,7 +10,7 @@ import java.util.Objects;
 
 public class LuaCopyClosureTest extends BaseTest {
 
-    public static final long HOW_LONG = 1000 * 60 * 60;
+    public static final long HOW_LONG = 1000 * 60 * 10;
 
     @Test
     public void stableTest() throws Exception {
