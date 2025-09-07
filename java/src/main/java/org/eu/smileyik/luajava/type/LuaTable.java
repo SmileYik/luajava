@@ -53,9 +53,9 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
     }
 
     protected static LuaTable rawCreateTable(LuaStateFacade luaStateFacade, int index) {
-        Optional<Integer> result = isArrayTable(luaStateFacade.getLuaState(), index);
-        if (result.isPresent()) {
-            return new LuaArray(luaStateFacade, index, result.get());
+        int len = luaStateFacade.getLuaState().isLuaArray(index);
+        if (len >= 0) {
+            return new LuaArray(luaStateFacade, index, len);
         } else {
             return new LuaTable(luaStateFacade, index);
         }
@@ -397,34 +397,5 @@ public class LuaTable extends LuaObject implements ILuaCallable, ILuaFieldGettab
      */
     public Result<Void, ? extends LuaException> remove(Object key) {
         return put(key, null);
-    }
-
-    /**
-     * Check the table is Array or not. Will traverse the table.
-     * <strong>SHOULD CALL IN LuaStateFacade.lock()</strong>
-     * @param L     lua state
-     * @param index index
-     * @return the array length, if the table is empty ({})
-     *         or the table only a series of consecutive numbers starting with 1 as key.
-     */
-    private static Optional<Integer> isArrayTable(LuaState L, int index) {
-        if (index < 0) index -= 1;
-        int i = 0;
-        L.pushNil();
-        while (L.next(index) != 0) {
-            if (L.type(-2) != LuaType.NUMBER) {
-                L.pop(2);
-                return Optional.empty();
-            }
-            double number = L.toNumber(-2);
-            int idx = (int) number;
-            if (number != idx || idx <= i) {
-                L.pop(2);
-                return Optional.empty();
-            }
-            i = idx;
-            L.pop(1);
-        }
-        return Optional.of(i);
     }
 }

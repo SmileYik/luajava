@@ -321,6 +321,17 @@ Java_org_eu_smileyik_luajava_LuaState__1isJavaFunction(JNIEnv *env,
     return isJavaFunctionInstance(env, obj);
 }
 
+JNIEXPORT jint JNICALL
+Java_org_eu_smileyik_luajava_LuaState__1isLuaArray(
+    JNIEnv *env,
+    jobject jobj,
+    jobject cptr,
+    jint idx
+) {
+    lua_State *L = getStateFromCPtr(env, cptr);
+    return isLuaArray(L, (int) idx);
+}
+
 /*********************** LUA API FUNCTIONS ******************************/
 
 /************************************************************************

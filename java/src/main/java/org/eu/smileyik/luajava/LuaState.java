@@ -1377,6 +1377,11 @@ public class LuaState {
     private native boolean _isJavaFunction(CPtr L, int idx);
 
     /**
+     * if is lua array then return the array length, else return -1
+     */
+    private native int _isLuaArray(CPtr L, int idx);
+
+    /**
      * Gets a Object from Lua
      *
      * @param idx index of the lua stack
@@ -1441,5 +1446,13 @@ public class LuaState {
      */
     public boolean isJavaFunction(int idx) {
         return _isJavaFunction(luaState, idx);
+    }
+
+    /**
+     * check a table is array-style table.
+     * @return if is lua array then return the array length, else return -1
+     */
+    public int isLuaArray(int idx) {
+        return _isLuaArray(luaState, idx);
     }
 }

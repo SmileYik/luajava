@@ -218,41 +218,41 @@
         lua_error(L); \
     }
 
-static jclass        java_object_class                     = NULL;
+static jclass    java_object_class           = NULL;
 static jmethodID java_object_method_toString = NULL;
 
-static jclass        throwable_class                 = NULL;
-static jmethodID get_message_method            = NULL;
+static jclass    throwable_class         = NULL;
+static jmethodID get_message_method      = NULL;
 
-static jclass        java_function_class         = NULL;
-static jmethodID java_function_method        = NULL;
-static jclass        java_lang_class                 = NULL;
-static jmethodID java_lang_class_static_method_forName     = NULL;
+static jclass    java_function_class     = NULL;
+static jmethodID java_function_method    = NULL;
+static jclass    java_lang_class         = NULL;
+static jmethodID java_lang_class_static_method_forName   = NULL;
 
-static jclass        luajava_api_class             = NULL;
-static jmethodID luajava_api_static_method_checkField             = NULL;
-static jmethodID luajava_api_static_method_checkMethod            = NULL;
-static jmethodID luajava_api_static_method_objectIndex            = NULL;
-static jmethodID luajava_api_static_method_classIndex             = NULL;
-static jmethodID luajava_api_static_method_arrayIndex             = NULL;
-static jmethodID luajava_api_static_method_arrayNewIndex        = NULL;
-static jmethodID luajava_api_static_method_objectConcat         = NULL;
-static jmethodID luajava_api_static_method_objectNewIndex     = NULL;
-static jmethodID luajava_api_static_method_javaNew                    = NULL;
-static jmethodID luajava_api_static_method_javaNewInstance    = NULL;
-static jmethodID luajava_api_static_method_javaLoadLib            = NULL;
-static jmethodID luajava_api_static_method_debugLuaHook         = NULL;
-static jmethodID luajava_api_static_method_newLuaDebug            = NULL;
-static jmethodID luajava_api_static_method_luaWrite                 = NULL;
-static jmethodID luajava_api_static_method_luaRead                    = NULL;
+static jclass    luajava_api_class       = NULL;
+static jmethodID luajava_api_static_method_checkField       = NULL;
+static jmethodID luajava_api_static_method_checkMethod      = NULL;
+static jmethodID luajava_api_static_method_objectIndex      = NULL;
+static jmethodID luajava_api_static_method_classIndex       = NULL;
+static jmethodID luajava_api_static_method_arrayIndex       = NULL;
+static jmethodID luajava_api_static_method_arrayNewIndex    = NULL;
+static jmethodID luajava_api_static_method_objectConcat     = NULL;
+static jmethodID luajava_api_static_method_objectNewIndex   = NULL;
+static jmethodID luajava_api_static_method_javaNew          = NULL;
+static jmethodID luajava_api_static_method_javaNewInstance  = NULL;
+static jmethodID luajava_api_static_method_javaLoadLib      = NULL;
+static jmethodID luajava_api_static_method_debugLuaHook     = NULL;
+static jmethodID luajava_api_static_method_newLuaDebug      = NULL;
+static jmethodID luajava_api_static_method_luaWrite         = NULL;
+static jmethodID luajava_api_static_method_luaRead          = NULL;
 
-static jclass        luajava_rw_entity_class                                        = NULL;
-static jmethodID luajava_rw_entity_method_bufferSize                = NULL;
-static jmethodID luajava_rw_entity_method_setDataPtr                = NULL;
-static jmethodID luajava_rw_entity_method_getDataPtr                = NULL;
+static jclass    luajava_rw_entity_class                    = NULL;
+static jmethodID luajava_rw_entity_method_bufferSize        = NULL;
+static jmethodID luajava_rw_entity_method_setDataPtr        = NULL;
+static jmethodID luajava_rw_entity_method_getDataPtr        = NULL;
 
-static jclass        cptr_class = NULL;
-static jfieldID    cptr_field_peer = NULL;
+static jclass    cptr_class = NULL;
+static jfieldID  cptr_field_peer = NULL;
 
 static unsigned char setup_luajava_api_result = 0;
 /********************* Implementations ***************************/
@@ -1298,6 +1298,52 @@ int isJavaObject(lua_State *L, int idx) {
     }
     lua_pop(L, 2);
     return 1;
+}
+
+/***************************************************************************
+ *
+ *    Function: isLuaArray
+ *    ****/
+
+int isLuaArray(lua_State *L, int idx) {
+    // check metatable
+    // if (lua_getmetatable(L, idx)) {
+    //     lua_pushstring(L, LUA_ARRAYLEN_METATABLE_TAG);
+    //     lua_rawget(L, -2);
+    //     if (lua_isinteger(L, -1)) {
+    //         lua_Integer i = lua_tointeger(L, -1);
+    //         lua_pop(L, 2);
+    //         return i;
+    //     }
+    //     lua_pop(L, 1);
+    // } else {
+    //     lua_newtable(L);
+    //     lua_pushvalue(L, -1);
+    //     lua_setmetatable(L, idx < 0 ? idx - 2 : idx);
+    // }
+    
+    if (idx < 0) idx -= 1;
+    int i = 0;
+    lua_pushnil(L);
+    while (lua_next(L, -idx)) {
+        if (!lua_isinteger(L, -2)) {
+            lua_pop(L, 2);
+            return -1;
+        }
+        lua_Integer idx = lua_tointeger(L, -2);
+        if (idx <= i) {
+            lua_pop(L, 2);
+            return -1;
+        }
+        i = idx;
+        lua_pop(L, 1);
+    }
+
+    // lua_pushstring(L, LUA_ARRAYLEN_METATABLE_TAG);
+    // lua_pushinteger(L, i);
+    // lua_rawset(L, -3);
+    // lua_pop(L, 1);
+    return i;
 }
 
 int luajavaGetJavaObjectType(lua_State *L, int idx) {

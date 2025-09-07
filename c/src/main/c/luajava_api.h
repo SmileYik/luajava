@@ -88,6 +88,8 @@
 /* Constant that defines where in the metatable should I place the function name
  */
 #define LUAJAVAOBJFUNCCALLED      "__FunctionCalled"
+/* tag the length of array-style table, tag -1 means it's not a array-style table */
+#define LUA_ARRAYLEN_METATABLE_TAG "__LuaArrayLen"
 
 /* if not define get meta table method, then use lua_getmetatable */
 #ifndef LUAJAVA_GET_METATABLE
@@ -559,6 +561,24 @@ int pushJavaClass(lua_State *L, jobject javaObject);
  *$. **********************************************************************/
 
 int isJavaObject(lua_State *L, int idx);
+
+/***************************************************************************
+ *
+ * $FC isJavaObject
+ *
+ * $ED Description
+ *    Returns 1 is given index represents a java object
+ *
+ * $EP Function Parameters
+ *    $P L - lua State
+ *    $P idx - index on the stack
+ *
+ * $FV Returned Value
+ *    int - Boolean.
+ *
+ *$. **********************************************************************/
+
+int isLuaArray(lua_State *L, int idx);
 
 /***************************************************************************
  *
