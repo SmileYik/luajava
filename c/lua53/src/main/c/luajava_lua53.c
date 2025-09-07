@@ -33,10 +33,10 @@
  * Signature: (Lorg/eu/smileyik/luajava/CPtr;II)V
  */
 JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1rotate(
-    JNIEnv *env, jobject jobj, jobject cptr, jint idx, jint n) {
-  lua_State *L = getStateFromCPtr(env, cptr);
-  if (!L) return;
-  lua_rotate(L, idx, n);
+        JNIEnv *env, jobject jobj, jobject cptr, jint idx, jint n) {
+    lua_State *L = getStateFromCPtr(env, cptr);
+    if (!L) return;
+    lua_rotate(L, idx, n);
 }
 
 /*
@@ -46,7 +46,7 @@ JNIEXPORT void JNICALL Java_org_eu_smileyik_luajava_LuaState__1rotate(
  */
 JNIEXPORT void JNICALL
 Java_org_eu_smileyik_luajava_LuaState__1openUtf8(JNIEnv *env, jobject jobj, jobject cptr) {
-  lua_State *L = getStateFromCPtr(env, cptr);
-  if (!L) return;
-  luaopen_utf8(L);
+    lua_State *L = getStateFromCPtr(env, cptr);
+    if (!L) return;
+    luaopen_utf8(L);
 }

@@ -108,10 +108,10 @@
 #define LUAJAVA_COPY_DATA_BUFFER_SIZE 1024
 // a struct used for lua_dump/lua_load function.
 struct LuaCopyData {
-  char *data;
-  size_t size;
-  size_t head;
-  size_t tail;
+    char *data;
+    size_t size;
+    size_t head;
+    size_t tail;
 };
 
 /***************************************************************************
