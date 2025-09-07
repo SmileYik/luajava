@@ -6,33 +6,38 @@ import org.eu.smileyik.luajava.type.ILuaCallable;
 import org.eu.smileyik.luajava.type.ILuaObject;
 import org.junit.jupiter.api.Test;
 
+import java.util.LinkedList;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class LuaCopyClosureTest extends BaseTest {
 
     public static final long HOW_LONG = 1000 * 60 * 10;
+    public static final String lua = "local banned_ench = {[1] = 1, [2] = 2, [3] = 3}\n" +
+            "local Thread = luajava.bindClass(\"java.lang.Thread\")\n" +
+            "local Date = luajava.bindClass(\"java.util.Date\")\n" +
+            "local SimpleDateFormat = luajava.bindClass(\"java.text.SimpleDateFormat\")\n" +
+            "local MessageFormat = luajava.bindClass(\"java.text.MessageFormat\")\n" +
+            "local function testFunction(abc)\n" +
+            "    local sum = 0\n" +
+            "    for k, v in pairs(banned_ench) do\n" +
+            "        sum = sum + k\n" +
+            "    end\n" +
+            "    local date = luajava.new(Date)\n" +
+            "    local dateformat = luajava.new(SimpleDateFormat, \"yyyy-MM-dd HH:mm:ss\")\n" +
+            "    local message = MessageFormat:format(\"{0} - Still not player join sever...?, abc is {1}, sum is {2}, current time is {3}\", {\n" +
+            "        Thread:currentThread():getName(), abc, sum, 123\n" +
+            "    })\n" +
+            "end\n" +
+            "return testFunction";
 
     @Test
     public void stableTest() throws Exception {
-        String lua = "local banned_ench = {[1] = 1, [2] = 2, [3] = 3}\n" +
-                "local Thread = luajava.bindClass(\"java.lang.Thread\")\n" +
-                "local Date = luajava.bindClass(\"java.util.Date\")\n" +
-                "local SimpleDateFormat = luajava.bindClass(\"java.text.SimpleDateFormat\")\n" +
-                "local MessageFormat = luajava.bindClass(\"java.text.MessageFormat\")\n" +
-                "local function testFunction(abc)\n" +
-                "    local sum = 0\n" +
-                "    for k, v in pairs(banned_ench) do\n" +
-                "        sum = sum + k\n" +
-                "    end\n" +
-                "    local date = luajava.new(Date)\n" +
-                "    local dateformat = luajava.new(SimpleDateFormat, \"yyyy-MM-dd HH:mm:ss\")\n" +
-                "    local message = MessageFormat:format(\"{0} - Still not player join sever...?, abc is {1}, sum is {2}, current time is {3}\", {\n" +
-                "        Thread:currentThread():getName(), abc, sum, 123\n" +
-                "    })\n" +
-                "end\n" +
-                "return testFunction";
         long targetTime = System.currentTimeMillis() + HOW_LONG;
-        Helper helper = new Helper();
+        Helper helper = new Helper(1);
         try (LuaStateFacade facade = newLuaState()) {
             facade.setGlobal("helper", helper);
             facade.evalString(lua).justThrow();
@@ -49,12 +54,68 @@ public class LuaCopyClosureTest extends BaseTest {
         }
     }
 
+    @Test
+    public void multiThreadTest() throws Exception {
+        long targetTime = System.currentTimeMillis() + HOW_LONG;
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+        Helper helper = new Helper(4);
+        try (LuaStateFacade facade = newLuaState()) {
+            facade.setGlobal("helper", helper);
+            facade.evalString(lua).justThrow();
+            ILuaCallable callable = (ILuaCallable) facade.toJavaObject(-1).getOrThrow();
+            int i = 0;
+            while (System.currentTimeMillis() < targetTime) {
+                final int finalI = i++;
+                executor.execute(() -> {
+                    helper.submit(callable, 0, System.currentTimeMillis()).getOrSneakyThrow();
+                    if (finalI % 1000 == 0) {
+                        System.gc();
+                    }
+                });
+            }
+        } finally {
+            helper.close();
+        }
+    }
+
     public static final class Helper {
-        private final LuaStateFacade facade = newLuaState();
+        private final LinkedList<LuaStateFacade> facades = new LinkedList<>();
+        private final ReentrantLock lock = new ReentrantLock();
+        private final Condition condition = lock.newCondition();
+
+        public Helper(int size) {
+            for (int i = 0; i < size; i++) {
+                facades.add(newLuaState());
+            }
+        }
+
+        public LuaStateFacade getLuaState() {
+            lock.lock();
+            try {
+                if (facades.isEmpty()) {
+                    condition.await();
+                }
+                return facades.removeFirst();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        public void returnLuaState(LuaStateFacade luaState) {
+            lock.lock();
+            try {
+                this.facades.add(luaState);
+                condition.signal();
+            } finally {
+                lock.unlock();
+            }
+        }
 
         public Result<Object[], LuaException> submit(ILuaCallable luaCallable, int _nres, Object... params) {
             LuaStateFacade srcF = luaCallable.getLuaState();
-            LuaStateFacade destF = facade;
+            LuaStateFacade destF = getLuaState();
             LuaState srcL = srcF.getLuaState();
             LuaState destL = destF.getLuaState();
 
@@ -105,6 +166,7 @@ public class LuaCopyClosureTest extends BaseTest {
                 destL.setTop(0);
                 destL.gc(LuaState.LUA_GCCOLLECT, 0);
                 destF.unlock();
+                returnLuaState(destF);
             }
             return Result.success();
         }
@@ -184,7 +246,14 @@ public class LuaCopyClosureTest extends BaseTest {
         }
 
         public void close() {
-            facade.close();
+            lock.lock();
+            try {
+                for (LuaStateFacade facade : facades) {
+                    facade.close();
+                }
+            } finally {
+                lock.unlock();
+            }
         }
     }
 }

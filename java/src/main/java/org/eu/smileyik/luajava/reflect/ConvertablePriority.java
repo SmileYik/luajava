@@ -73,7 +73,7 @@ public class ConvertablePriority {
     public static final Map<Integer, Function<LuaArray, ?>> UNBOXED_LUA_ARRAY_TRANSFORMERS;
     public static final Map<Integer, Function<Object[], ?>> OBJECT_ARRAY_TRANSFORMERS;
 
-    private static final LRUCache<Long, Object[]> LUA_ARRAY_CACHE = new LRUCache<>(64);
+    private static final Map<Long, Object[]> LUA_ARRAY_CACHE = Collections.synchronizedMap(new LRUCache<>(64));
 
     static {
         Map<Integer, Byte> doubleConvert = new HashMap<>();

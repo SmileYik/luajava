@@ -42,23 +42,23 @@ public class SimpleReflectUtil implements ReflectUtil {
     // 筛选掉带 LuaArray 的, LuaArray 都不给带缓存查询.
     private final static Function<Class<?>, Boolean> isAllowCache = clazz -> clazz != LuaArray.class;
 
-    private final LRUCache<ReflectExecutableCacheKey, Set<IExecutable<Method>>> cachedMethods;
-    private final LRUCache<ReflectExecutableCacheKey, Optional<IExecutable<Constructor<?>>>> cachedConstructors;
+    private final Map<ReflectExecutableCacheKey, Set<IExecutable<Method>>> cachedMethods;
+    private final Map<ReflectExecutableCacheKey, Optional<IExecutable<Constructor<?>>>> cachedConstructors;
 
-    private final LRUCache<ReflectFieldCacheKey, IFieldAccessor> cachedFields;
-    private final LRUCache<ReflectExecutableCacheKey, Boolean> cachedExistsMethod;
+    private final Map<ReflectFieldCacheKey, IFieldAccessor> cachedFields;
+    private final Map<ReflectExecutableCacheKey, Boolean> cachedExistsMethod;
 
-    private final LRUCache<Class<?>, Map<String, Set<Method>>> classMethods;
-    private final LRUCache<Class<?>, Map<String, Field>> classFields;
+    private final Map<Class<?>, Map<String, Set<Method>>> classMethods;
+    private final Map<Class<?>, Map<String, Field>> classFields;
 
     public SimpleReflectUtil(int cacheCapacity) {
-        cachedMethods = new LRUCache<>(cacheCapacity);
-        cachedConstructors = new LRUCache<>(cacheCapacity);
-        cachedFields = new LRUCache<>(cacheCapacity);
-        cachedExistsMethod = new LRUCache<>(cacheCapacity);
+        cachedMethods = Collections.synchronizedMap(new LRUCache<>(cacheCapacity));
+        cachedConstructors = Collections.synchronizedMap(new LRUCache<>(cacheCapacity));
+        cachedFields = Collections.synchronizedMap(new LRUCache<>(cacheCapacity));
+        cachedExistsMethod = Collections.synchronizedMap(new LRUCache<>(cacheCapacity));
 
-        classMethods = new LRUCache<>(cacheCapacity);
-        classFields = new LRUCache<>(cacheCapacity);
+        classMethods = Collections.synchronizedMap(new LRUCache<>(cacheCapacity));
+        classFields = Collections.synchronizedMap(new LRUCache<>(cacheCapacity));
     }
 
     /**
