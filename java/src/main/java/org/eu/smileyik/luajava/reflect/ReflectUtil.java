@@ -190,9 +190,11 @@ public interface ReflectUtil {
         if (currentPriority != NOT_MATCH) {
             if (currentPriority < priority) {
                 matchedList.clear();
+                method.setAccessible(true);
                 matchedList.add(currentMethod.done());
                 return currentPriority;
             } else if (currentPriority == priority) {
+                method.setAccessible(true);
                 matchedList.add(currentMethod.done());
                 return currentPriority;
             }

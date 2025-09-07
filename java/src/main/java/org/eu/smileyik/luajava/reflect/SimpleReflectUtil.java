@@ -96,7 +96,9 @@ public class SimpleReflectUtil implements ReflectUtil {
             return null;
         });
 
-        if (target instanceof Field) {
+        if (target != null) {
+            Field field = (Field) target;
+            field.setAccessible(true);
             ReflectField reflectField = new ReflectField((Field) target);
             cachedFields.putIfAbsent(cacheKey, reflectField);
             return reflectField;

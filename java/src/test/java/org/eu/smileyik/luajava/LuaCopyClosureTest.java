@@ -100,6 +100,7 @@ public class LuaCopyClosureTest extends BaseTest {
                 }
             } finally {
                 destL.setTop(0);
+                destL.gc(LuaState.LUA_GCCOLLECT, 0);
                 destF.unlock();
             }
             return Result.success();

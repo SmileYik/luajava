@@ -53,7 +53,10 @@ import org.eu.smileyik.luajava.reflect.*;
 import org.eu.smileyik.luajava.util.*;
 
 import java.io.IOException;
-import java.lang.reflect.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
@@ -83,6 +86,10 @@ public final class LuaJavaAPI {
             return;
         }
         LuaJavaAPI.reflectUtil = reflectUtil;
+    }
+
+    public static ReflectUtil getReflectUtil() {
+        return reflectUtil;
     }
 
     public static int objectIter(int luaState) throws LuaException {
@@ -139,9 +146,9 @@ public final class LuaJavaAPI {
         Object b = facade.rawToJavaObject(2).getOrThrow(LuaException.class);
         String ret = null;
         if (a instanceof String) {
-            ret = (String) a + BoxedTypeHelper.toString(b);
+            ret = a + BoxedTypeHelper.toString(b);
         } else if (b instanceof String) {
-            ret = BoxedTypeHelper.toString(a) + (String) b;
+            ret = BoxedTypeHelper.toString(a) + b;
         } else {
             throw new LuaException("In the concat operation, at least one string type is required. left: " + a + ", right: " + b);
         }
@@ -158,56 +165,46 @@ public final class LuaJavaAPI {
      * @param classIndex is class static method or object method.
      * @return number of returned objects
      */
-    public static int objectIndex(int luaState, Object obj, String methodName, boolean classIndex)
-            throws LuaException {
+    public static int objectIndex(int luaState, Object obj, String methodName, boolean classIndex) throws Exception {
         // remove method prefix
         if (methodName != null && methodName.startsWith(FORCE_ACCESS_METHOD_PREFIX)) {
             methodName = methodName.substring(FORCE_ACCESS_METHOD_PREFIX.length());
             if (methodName.isEmpty())  return 0;
         }
 
+        Class<?> clazz;
+        if (classIndex) {
+            if (obj instanceof Class) {
+                clazz = (Class<?>) obj;
+            } else {
+                throw new LuaException("Object is not a class: " + obj);
+            }
+        } else {
+            clazz = obj.getClass();
+        }
+
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         LuaState L = luaStateFacade.getLuaState();
 
         int top = L.getTop();
-
         Object[] objs = new Object[top - 1];
-        Method method = null;
-
-        Class<?> clazz;
-        if (classIndex) {
-            if (!(obj instanceof Class)) {
-                throw new LuaException("Object is not a class: " + obj);
-            }
-            clazz = (Class<?>) obj;
-        } else {
-            clazz = obj.getClass();
-        }
         IExecutable<Method> methodWrapper = findMethod(luaStateFacade, clazz, methodName, objs, top);
 
         // If method is null means there isn't one receiving the given arguments
         if (methodWrapper == null) {
-            throw new LuaException("Invalid method call. No such method.");
+            throw new LuaException(String.format("Invalid method call. No such method named '%s' in class %s", methodName, clazz.getName()));
         }
 
-        method = methodWrapper.getExecutable();
+        Method method = methodWrapper.getExecutable();
         Object ret;
         try {
-            method.setAccessible(true);
-            if (Modifier.isStatic(method.getModifiers())) {
-                ret = methodWrapper.invoke(null, objs);
-            } else {
-                ret = methodWrapper.invoke(obj, objs);
-            }
-        } catch (Exception e) {
-            throw new LuaException(e);
+            ret = methodWrapper.invoke(Modifier.isStatic(method.getModifiers()) ? null : obj, objs);
+        } finally {
+            closeParamsObject(objs);
         }
 
         // Void function returns null
-        if (ret == null) {
-            return 0;
-        }
-
+        if (ret == null) return 0;
         // push result
         luaStateFacade.rawPushObjectValue(ret).justThrow(LuaException.class);
         return 1;
@@ -226,11 +223,10 @@ public final class LuaJavaAPI {
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         if (!obj.getClass().isArray())
             throw new LuaException("Object indexed is not an array.");
-        if (Array.getLength(obj) < index)
+        else if (Array.getLength(obj) < index)
             throw new LuaException("Index out of bounds.");
 
-        luaStateFacade.rawPushObjectValue(Array.get(obj, index - 1))
-                .justThrow(LuaException.class);
+        luaStateFacade.rawPushObjectValue(Array.get(obj, index - 1)).justThrow(LuaException.class);
         return 1;
     }
 
@@ -245,17 +241,13 @@ public final class LuaJavaAPI {
      * @return number of returned objects
      * @throws LuaException
      */
-    public static int classIndex(int luaState, Class<?> clazz, String searchName)
-            throws LuaException {
-
+    public static int classIndex(int luaState, Class<?> clazz, String searchName) throws LuaException {
         int res = checkField(luaState, clazz, searchName);
         if (res != 0) {
             return 1;
-        }
-        if (checkClassMethod(luaState, clazz, searchName)) {
+        } else if (checkClassMethod(luaState, clazz, searchName)) {
             return 2;
         }
-
         return 0;
     }
 
@@ -268,26 +260,22 @@ public final class LuaJavaAPI {
      * @return number of returned objects
      * @throws LuaException
      */
-    public static int objectNewIndex(int luaState, Object obj, String fieldName)
-            throws LuaException {
-        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
+    public static int objectNewIndex(int luaState, Object obj, String fieldName) throws LuaException {
         // like a.b = 1
+        LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         Class<?> targetClass = obj instanceof Class<?> ? (Class<?>) obj : obj.getClass();
         IFieldAccessor fieldAccessor = reflectUtil.findFieldByName(targetClass, fieldName,
                 false, false, false, luaStateFacade.isIgnoreNotPublic());
         if (fieldAccessor == null) {
-            throw new LuaException("Error accessing field " + fieldName);
+            throw new LuaException(String.format("Error accessing field '%s' in class %s", fieldName, targetClass.getName()));
         }
         // checkField method already checked the obj can access this field or not.
-        Field field = fieldAccessor.getField();
-        LuaState L = luaStateFacade.getLuaState();
-        Class<?> type = field.getType();
-        Result<Object, Object> setObjRet = compareTypes(luaStateFacade, L, type, 3);
+        Class<?> type = fieldAccessor.getField().getType();
+        Result<Object, Object> setObjRet = compareTypes(luaStateFacade, luaStateFacade.getLuaState(), type, 3);
         if (setObjRet.isError()) {
             throw new LuaException("Invalid type.");
         }
         try {
-            field.setAccessible(true);
             fieldAccessor.set(obj, setObjRet.getValue());
         } catch (IllegalAccessException e) {
             throw new LuaException("Field not accessible.", e);
@@ -333,16 +321,8 @@ public final class LuaJavaAPI {
      * @return number of returned objects
      * @throws LuaException
      */
-    public static int javaNewInstance(int luaState, String className)
-            throws LuaException {
-        Class<?> clazz;
-        try {
-            clazz = Class.forName(className);
-        } catch (ClassNotFoundException e) {
-            throw new LuaException(e);
-        }
-
-        return javaNew(luaState, clazz);
+    public static int javaNewInstance(int luaState, String className) throws Exception {
+        return javaNew(luaState, Class.forName(className));
     }
 
     /**
@@ -370,15 +350,8 @@ public final class LuaJavaAPI {
      * @return number of returned objects
      * @throws LuaException
      */
-    public static int javaLoadLib(int luaState, String className, String methodName)
-            throws LuaException {
-        Class<?> clazz;
-        try {
-            clazz = Class.forName(className);
-        } catch (ClassNotFoundException e) {
-            throw new LuaException(e);
-        }
-
+    public static int javaLoadLib(int luaState, String className, String methodName) throws Exception {
+        Class<?> clazz = Class.forName(className);
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         try {
             Method mt = clazz.getMethod(methodName, LuaState.class);
@@ -414,7 +387,6 @@ public final class LuaJavaAPI {
                 false, false, isStatic, luaStateFacade.isIgnoreNotPublic());
         if (fieldAccessor == null) return 0;
         try {
-            fieldAccessor.getField().setAccessible(true);
             Object ret = fieldAccessor.get(obj);
             luaStateFacade.rawPushObjectValue(ret).justThrow(LuaException.class);
             return 1;
@@ -435,7 +407,7 @@ public final class LuaJavaAPI {
         // remove method prefix
         if (methodName != null && methodName.startsWith(FORCE_ACCESS_METHOD_PREFIX)) {
             methodName = methodName.substring(FORCE_ACCESS_METHOD_PREFIX.length());
-            if (methodName.isEmpty())  return false;
+            if (methodName.isEmpty()) return false;
         }
 
         Class<?> clazz = obj.getClass();
@@ -517,21 +489,31 @@ public final class LuaJavaAPI {
 
         int paramsCount = top - 1;
         Object[] objs = getLuaParams(luaStateFacade, paramsCount);
-
-        LuaInvokedMethod<IExecutable<Constructor<?>>> result = reflectUtil.findConstructorByParams(
-                clazz, objs, luaStateFacade.isIgnoreNotPublic(), false, false);
-
-        if (result == null) {
-            throw new LuaException("Couldn't instantiate java Object");
-        }
-        result.getOverwriteParams().forEach((idx, obj) -> objs[idx] = obj);
-        Object ret;
         try {
-            ret = result.getExecutable().invoke(null, objs);
-        } catch (Exception e) {
-            throw new LuaException(e);
+            LuaInvokedMethod<IExecutable<Constructor<?>>> result = reflectUtil.findConstructorByParams(
+                    clazz, objs, luaStateFacade.isIgnoreNotPublic(), false, false);
+
+            if (result == null) {
+                throw new LuaException("Couldn't instantiate java Object");
+            }
+            result.getOverwriteParams().forEach((idx, obj) -> {
+                Object old = objs[idx];
+                try {
+                    objs[idx] = obj;
+                } finally {
+                    closeParamsObject(old);
+                }
+            });
+            Object ret;
+            try {
+                ret = result.getExecutable().invoke(null, objs);
+            } catch (Exception e) {
+                throw new LuaException(e);
+            }
+            return ret;
+        } finally {
+            closeParamsObject(objs);
         }
-        return ret;
     }
 
     private static IExecutable<Method> findMethod(LuaStateFacade luaStateFacade, Class<?> clazz,
@@ -543,15 +525,38 @@ public final class LuaJavaAPI {
         LinkedList<LuaInvokedMethod<IExecutable<Method>>> list = reflectUtil.findMethodByParams(
                 clazz, methodName, objs, luaStateFacade.isJustUseFirstMethod(),
                 luaStateFacade.isIgnoreNotPublic(), false, false);
+
         if (list.isEmpty()) {
+            closeParamsObject(objs);
             return null;
         } else if (list.size() > 1) {
+            closeParamsObject(objs);
             throw new LuaException("Found multi result for method " + methodName + " in class " + clazz);
         }
+
         LuaInvokedMethod<IExecutable<Method>> invokedMethod = list.getFirst();
-        invokedMethod.getOverwriteParams().forEach((idx, obj) -> objs[idx] = obj);
+        invokedMethod.getOverwriteParams().forEach((idx, obj) -> {
+            Object old = objs[idx];
+            try {
+                objs[idx] = obj;
+            } finally {
+                closeParamsObject(old);
+            }
+        });
         System.arraycopy(objs, 0, retObjs, 0, objs.length);
         return invokedMethod.getExecutable();
+    }
+
+    private static void closeParamsObject(Object obj) {
+        if (obj instanceof LuaObject) {
+            ((LuaObject) obj).close();
+        }
+    }
+
+    private static void closeParamsObject(Object[] objs) {
+        for (Object obj : objs) {
+            closeParamsObject(obj);
+        }
     }
 
     // **************** Debug API ****************
