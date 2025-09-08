@@ -196,12 +196,7 @@ public final class LuaJavaAPI {
         }
 
         Method method = methodWrapper.getExecutable();
-        Object ret;
-        try {
-            ret = methodWrapper.invoke(Modifier.isStatic(method.getModifiers()) ? null : obj, objs);
-        } finally {
-            closeParamsObject(objs);
-        }
+        Object ret = methodWrapper.invoke(Modifier.isStatic(method.getModifiers()) ? null : obj, objs);
 
         // Void function returns null
         if (ret == null) return 0;
@@ -489,31 +484,27 @@ public final class LuaJavaAPI {
 
         int paramsCount = top - 1;
         Object[] objs = getLuaParams(luaStateFacade, paramsCount);
-        try {
-            LuaInvokedMethod<IExecutable<Constructor<?>>> result = reflectUtil.findConstructorByParams(
-                    clazz, objs, luaStateFacade.isIgnoreNotPublic(), false, false);
+        LuaInvokedMethod<IExecutable<Constructor<?>>> result = reflectUtil.findConstructorByParams(
+                clazz, objs, luaStateFacade.isIgnoreNotPublic(), false, false);
 
-            if (result == null) {
-                throw new LuaException("Couldn't instantiate java Object");
-            }
-            result.getOverwriteParams().forEach((idx, obj) -> {
-                Object old = objs[idx];
-                try {
-                    objs[idx] = obj;
-                } finally {
-                    closeParamsObject(old);
-                }
-            });
-            Object ret;
-            try {
-                ret = result.getExecutable().invoke(null, objs);
-            } catch (Exception e) {
-                throw new LuaException(e);
-            }
-            return ret;
-        } finally {
-            closeParamsObject(objs);
+        if (result == null) {
+            throw new LuaException("Couldn't instantiate java Object");
         }
+        result.getOverwriteParams().forEach((idx, obj) -> {
+            Object old = objs[idx];
+            try {
+                objs[idx] = obj;
+            } finally {
+                closeParamsObject(old);
+            }
+        });
+        Object ret;
+        try {
+            ret = result.getExecutable().invoke(null, objs);
+        } catch (Exception e) {
+            throw new LuaException(e);
+        }
+        return ret;
     }
 
     private static IExecutable<Method> findMethod(LuaStateFacade luaStateFacade, Class<?> clazz,
@@ -527,10 +518,8 @@ public final class LuaJavaAPI {
                 luaStateFacade.isIgnoreNotPublic(), false, false);
 
         if (list.isEmpty()) {
-            closeParamsObject(objs);
             return null;
         } else if (list.size() > 1) {
-            closeParamsObject(objs);
             throw new LuaException("Found multi result for method " + methodName + " in class " + clazz);
         }
 
