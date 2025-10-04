@@ -68,9 +68,7 @@ public class LuaCopyClosureTest extends BaseTest {
                 final int finalI = i++;
                 executor.execute(() -> {
                     helper.submit(callable, 0, System.currentTimeMillis()).getOrSneakyThrow();
-                    if (finalI % 1000 == 0) {
-                        System.gc();
-                    }
+                    System.gc();
                 });
             }
         } finally {
