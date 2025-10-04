@@ -35,11 +35,11 @@ jobs:
     - name: macOS - Test
       if: runner.os == 'macOS'
       run: |
-        make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew" clean
-        make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew" luajava4Lua54
-        make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew" test
-        make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew" clean
-        make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew" luajava4Luajit
+        make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew" clean && \
+        make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew" luajava4Lua54 && \
+        make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew" test && \
+        make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew" clean && \
+        make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew" luajava4Luajit && \
         make COMMAND="MACOSX_DEPLOYMENT_TARGET=12.0 ./gradlew" test
       
     - name: Windows - Prepare VS Shell
@@ -50,9 +50,9 @@ jobs:
     - name: Windows - Test
       if: runner.os == 'Windows'
       run: |
-        make COMMAND="./gradlew" clean
-        make COMMAND="./gradlew" luajava4Lua54
-        make COMMAND="./gradlew" test
-        make COMMAND="./gradlew" clean
-        make COMMAND="./gradlew" luajava4Luajit
+        make COMMAND="./gradlew" clean && \
+        make COMMAND="./gradlew" luajava4Lua54 && \
+        make COMMAND="./gradlew" test && \
+        make COMMAND="./gradlew" clean && \
+        make COMMAND="./gradlew" luajava4Luajit && \
         make COMMAND="./gradlew" test
