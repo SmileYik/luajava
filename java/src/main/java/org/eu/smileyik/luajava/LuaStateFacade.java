@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import static org.eu.smileyik.luajava.LuaState.*;
 
@@ -71,6 +72,7 @@ public class LuaStateFacade implements AutoCloseable {
      */
     private boolean justUseFirstMethod;
     private BiConsumer<LuaStateFacade, LuaDebug> debugHook = null;
+    private Function<Throwable, Throwable> throwableHook = null;
 
     protected LuaStateFacade(int stateId, boolean ignoreNotPublic) {
         this.stateId = stateId;
@@ -112,6 +114,21 @@ public class LuaStateFacade implements AutoCloseable {
         if (debugHook != null) {
             debugHook.accept(this, ar);
         }
+    }
+
+    /**
+     * This function cannot throw any throwable!!!
+     * @param throwableHook This function cannot throw any throwable!!!
+     */
+    public void setThrowableHook(Function<Throwable, Throwable> throwableHook) {
+        this.throwableHook = throwableHook;
+    }
+
+    protected Throwable throwsByC(Throwable throwable) {
+        if (throwableHook != null) {
+            return throwableHook.apply(throwable);
+        }
+        return throwable;
     }
 
     public <T> Result<T, ? extends Exception> lockThrowAll(LuaStateDangerFunction<T> function) {

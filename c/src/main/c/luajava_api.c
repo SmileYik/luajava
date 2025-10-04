@@ -199,13 +199,10 @@
         const char *cStr; \
         \
         (*javaEnv)->ExceptionClear(javaEnv); \
-        jStr = (*javaEnv)->CallObjectMethod(javaEnv, exp, get_message_method); \
+        exp = (*javaEnv)->CallStaticObjectMethod(javaEnv, luajava_api_class, luajava_api_static_method_throwsByC, (jint) getLuaStateIndex(L), exp); \
+        jStr = (*javaEnv)->CallObjectMethod(javaEnv, exp, java_object_method_toString); \
         \
         CLEANCODE \
-        \
-        if (jStr == NULL) { \
-            jStr = (*javaEnv)->CallObjectMethod(javaEnv, exp, java_object_method_toString); \
-        } \
         \
         cStr = (*javaEnv)->GetStringUTFChars(javaEnv, jStr, NULL); \
         \
@@ -245,6 +242,7 @@ static jmethodID luajava_api_static_method_debugLuaHook     = NULL;
 static jmethodID luajava_api_static_method_newLuaDebug      = NULL;
 static jmethodID luajava_api_static_method_luaWrite         = NULL;
 static jmethodID luajava_api_static_method_luaRead          = NULL;
+static jmethodID luajava_api_static_method_throwsByC        = NULL;
 
 static jclass    luajava_rw_entity_class                    = NULL;
 static jmethodID luajava_rw_entity_method_bufferSize        = NULL;
@@ -301,7 +299,9 @@ void setupLuaJavaApi(JNIEnv *env) {
     BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_luaWrite, luajava_api_class, 
                                                     "luaWrite", "(ILjava/nio/ByteBuffer;Lorg/eu/smileyik/luajava/ILuaReadWriteEntity;)V");     
     BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_luaRead, luajava_api_class, 
-                                                    "luaRead", "(ILjava/nio/ByteBuffer;Lorg/eu/smileyik/luajava/ILuaReadWriteEntity;)I"); 
+                                                    "luaRead", "(ILjava/nio/ByteBuffer;Lorg/eu/smileyik/luajava/ILuaReadWriteEntity;)I");
+    BIND_JAVA_STATIC_METHOD(env, luajava_api_static_method_throwsByC, luajava_api_class,
+                                                    "throwsByC", "(ILjava/lang/Throwable;)Ljava/lang/Throwable;");
 
     BIND_JAVA_CLASS(tempClass, env, java_function_class, "org/eu/smileyik/luajava/JavaFunction");
     BIND_JAVA_NORMAL_METHOD(env, java_function_method, java_function_class, 

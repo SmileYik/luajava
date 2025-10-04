@@ -584,5 +584,27 @@ public final class LuaJavaAPI {
         LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
         return entity.luaRead(luaStateFacade, out);
     }
+
+    // **************** Exception API ****************
+
+    /**
+     * This method will be called by lua state has exception.
+     * @param luaState
+     * @param throwable
+     * @return
+     */
+    public static Throwable throwsByC(int luaState, Throwable throwable) {
+        try {
+            LuaStateFacade luaStateFacade = LuaStateFactory.getExistingState(luaState);
+            Throwable newOne = luaStateFacade.throwsByC(throwable);
+            return newOne == null ? throwable : newOne;
+        } catch (Throwable e) {
+            try {
+                e.printStackTrace(System.err);
+            } catch (Throwable ignored) {
+            }
+        }
+        return throwable;
+    }
 }
  
