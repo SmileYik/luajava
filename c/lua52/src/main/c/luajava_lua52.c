@@ -36,7 +36,6 @@ JNIEXPORT jint JNICALL Java_org_eu_smileyik_luajava_LuaState__1rawlen(
         JNIEnv *env, jobject jobj, jobject cptr, jint idx) {
     lua_State *L = getStateFromCPtr(env, cptr);
     if (!L) return 0;
-    lua_absindex;
     return (jint) lua_rawlen(L, idx);
 }
 

@@ -1,0 +1,109 @@
+plugins {
+    id 'c'
+}
+
+group = 'org.keplerproject'
+version = '1.0-SNAPSHOT'
+
+def LUA_MAJOR_VERSION = "Lua55"
+def LUA_VERSION = "lua-5.5.0"
+def LUA_HOME = layout.buildDirectory.dir("$LUA_VERSION").getOrNull()
+def LUA_SRC = layout.buildDirectory.dir("$LUA_VERSION/src").getOrNull()
+
+if (!layout.buildDirectory.asFile.get().exists()) {
+    layout.buildDirectory.asFile.get().mkdir()
+}
+
+repositories {
+    mavenCentral()
+}
+
+model {
+    platforms {
+        x86 {
+            architecture "x86"
+        }
+        x64 {
+            architecture "x86_64"
+        }
+        arm64 {
+            architecture "aarch64"
+        }
+    }
+}
+
+model {
+    components {
+        "$LUA_VERSION"(NativeLibrarySpec) {
+            targetPlatform myTargetPlatform
+            sources {
+                c {
+                    exportedHeaders {
+                        srcDir "${LUA_SRC}"
+                    }
+                }
+            }
+        }
+
+        "luajava4${LUA_MAJOR_VERSION}"(NativeLibrarySpec) {
+            targetPlatform myTargetPlatform
+            sources {
+                c {
+                    lib library: "$LUA_VERSION", linkage: 'static'
+                    exportedHeaders {
+                        srcDir project(':c').layout.projectDirectory.dir('src/main/c')
+                        srcDir project(':c:lua52').layout.projectDirectory.dir('src/main/c')
+                        srcDir project(':c:lua53').layout.projectDirectory.dir('src/main/c')
+                        srcDir project(':c:lua54').layout.projectDirectory.dir('src/main/c')
+                        srcDir "src/main/c"
+                        srcDir "src/main/compatible"
+                        srcDir layout.buildDirectory.dir('headers')
+                        srcDir "${System.properties['java.home']}/include"
+                        srcDir "${System.properties['java.home']}/include/linux"
+                        srcDir "${System.properties['java.home']}/include/win32"
+                        srcDir "${System.properties['java.home']}/include/darwin"
+                    }
+                    source {
+                        srcDir project(':c').layout.projectDirectory.dir('src/main/c')
+                        srcDir project(':c:lua52').layout.projectDirectory.dir('src/main/c')
+                        srcDir project(':c:lua53').layout.projectDirectory.dir('src/main/c')
+                        srcDir "src/main/c"
+                        include "**/*.c"
+                    }
+                }
+            }
+
+            binaries.all {
+                checkedBy $.tasks.buildLua
+                checkedBy $.tasks.generateHeader
+
+                if (toolChain in VisualCpp) {
+                    cppCompiler.define 'WIN64'
+                    cppCompiler.define "LUAJAVA_VERSION", "\"$LUAJAVA_VERSION\""
+                    linker.args "lua.lib", "/LIBPATH:${LUA_SRC}"
+                } else {
+                    cCompiler.define "LUAJAVA_VERSION", "\"$LUAJAVA_VERSION\""
+                    linker.args "-L${LUA_SRC}", '-llua', *additionLinkerArgs
+                }
+            }
+        }
+    }
+}
+
+tasks.register('generateHeader') {
+    group("luajava")
+    generateCHeader(layout.buildDirectory.get())
+}
+
+tasks.register("buildLua") {
+    group("lua")
+    downloadLua(LUA_VERSION, layout.buildDirectory.get())
+    decompressLuaSource(LUA_VERSION, layout.buildDirectory.get(), LUA_HOME)
+    doBuildLua(LUA_SRC)
+}
+
+build {
+    doLast {
+        copyOutput(LUA_MAJOR_VERSION, LUA_VERSION, LUA_SRC)
+    }
+}
